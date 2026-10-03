@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
+import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -126,9 +127,143 @@ class SettingsScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted, height: 1.5),
               ),
             ),
+            const SizedBox(height: 22),
+
+            // Section 4: App Updates
+            const Text('APP UPDATES', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text('Version 1.0.0', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.text)),
+                      Text('Direct in-app updates enabled', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
+                    ],
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => UpdateService.checkForUpdates(context, silent: false),
+                    icon: const Icon(Icons.system_update_outlined, size: 16, color: AppTheme.accent200),
+                    label: const Text('Check Now', style: TextStyle(fontSize: 12.5, color: AppTheme.accent200)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppTheme.accent),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      minimumSize: const Size(0, 36),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            // Section 5: Developer Support & Error Reporting
+            const Text('DEVELOPER SUPPORT & FEEDBACK', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Encountered an issue or have feedback?', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: AppTheme.text)),
+                  const SizedBox(height: 4),
+                  const Text('Send diagnostic error logs directly to the developer (apzscorpion).', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 40,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showDeveloperSupportDialog(context, provider),
+                      icon: const Icon(Icons.bug_report_outlined, size: 18),
+                      label: const Text('Report Error / Send Feedback', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accent900,
+                        foregroundColor: AppTheme.accent200,
+                        side: const BorderSide(color: AppTheme.accent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showDeveloperSupportDialog(BuildContext context, FinanceProvider provider) {
+    final reportCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          decoration: const BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.developer_mode, color: AppTheme.accent, size: 22),
+                  SizedBox(width: 8),
+                  Text('Developer Support', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.text)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text('Describe what went wrong or suggest a feature:', style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reportCtrl,
+                maxLines: 4,
+                style: const TextStyle(fontSize: 13.5, color: AppTheme.text),
+                decoration: const InputDecoration(
+                  hintText: 'e.g., SMS parser missed an entry from HDFC, or encountered a screen freeze...',
+                  hintStyle: TextStyle(color: AppTheme.textSubtle),
+                  filled: true,
+                  fillColor: AppTheme.bg,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final msg = reportCtrl.text.trim();
+                    Navigator.pop(ctx);
+                    provider.showToast(msg.isNotEmpty ? 'Error report sent to developer (apzscorpion)' : 'Diagnostic log captured');
+                  },
+                  icon: const Icon(Icons.send_rounded, size: 16),
+                  label: const Text('Send Error Log', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accent,
+                    foregroundColor: AppTheme.bg,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -15,7 +15,7 @@ class SupabaseService {
     if (isConfigured) {
       await Supabase.initialize(
         url: supabaseUrl,
-        anonKey: supabaseAnonKey,
+        anonKey: supabaseAnonKey, // ignore: deprecated_member_use
       );
     }
   }
