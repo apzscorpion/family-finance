@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
-import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -125,37 +124,6 @@ class SettingsScreen extends StatelessWidget {
               child: const Text(
                 'Turning off SMS reading keeps manual tracking working. Parsed data stays in your family workspace; raw messages are never uploaded.',
                 style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted, height: 1.5),
-              ),
-            ),
-            const SizedBox(height: 22),
-
-            // Section 4: App Updates
-            const Text('APP UPDATES', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Version 1.0.0', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.text)),
-                      Text('Direct in-app updates enabled', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
-                    ],
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => UpdateService.checkForUpdates(context, silent: false),
-                    icon: const Icon(Icons.system_update_outlined, size: 16, color: AppTheme.accent200),
-                    label: const Text('Check Now', style: TextStyle(fontSize: 12.5, color: AppTheme.accent200)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppTheme.accent),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      minimumSize: const Size(0, 36),
-                    ),
-                  ),
-                ],
               ),
             ),
           ],

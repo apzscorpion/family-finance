@@ -11,6 +11,7 @@ import 'screens/family_screen.dart';
 import 'screens/sms_inbox_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/notifs_screen.dart';
+import 'screens/notes_screen.dart';
 import 'screens/auth_screen.dart';
 import 'services/supabase_service.dart';
 import 'widgets/quick_add_sheet.dart';
@@ -144,11 +145,14 @@ class MainNavigationScreen extends StatelessWidget {
   Widget _buildSubPageWidget(String pageName) {
     switch (pageName) {
       case 'sms':
+      case 'sms_inbox':
         return const SmsInboxScreen();
       case 'settings':
         return const SettingsScreen();
       case 'notifs':
         return const NotifsScreen();
+      case 'notes':
+        return const NotesScreen();
       default:
         return const SizedBox.shrink();
     }

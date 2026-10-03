@@ -46,8 +46,12 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
   String _selectedMethod = 'UPI';
   String _selectedMemberId = 'asif';
 
-  final List<String> _expenseCatKeys = ['groceries', 'dining', 'transport', 'fuel', 'shopping', 'bills', 'health', 'education'];
-  final List<String> _incomeCatKeys = ['salary', 'business', 'gift', 'pension', 'refund'];
+  String? _selectedSubCatKey;
+  String? _selectedPoolId;
+  bool _requiresPayback = false;
+
+  final List<String> _expenseCatKeys = ['groceries', 'event', 'dining', 'transport', 'fuel', 'shopping', 'bills', 'health', 'education'];
+  final List<String> _incomeCatKeys = ['salary', 'loan', 'business', 'gift', 'pension', 'refund'];
   final List<String> _methods = ['UPI', 'Cash', 'Card', 'Bank'];
 
   @override
@@ -278,7 +282,10 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                       ],
                     ),
                     selected: isSelected,
-                    onSelected: (_) => setState(() => _selectedCatKey = catKey),
+                    onSelected: (_) => setState(() {
+                      _selectedCatKey = catKey;
+                      _selectedSubCatKey = null;
+                    }),
                     backgroundColor: AppTheme.surface,
                     selectedColor: AppTheme.accent900,
                     side: BorderSide(color: isSelected ? AppTheme.accent : const Color(0xFF3F424D)),
@@ -290,6 +297,30 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
               }).toList(),
             ),
           ),
+          if (FinanceProvider.categories[_selectedCatKey]?.subCategories.isNotEmpty ?? false) ...[
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: FinanceProvider.categories[_selectedCatKey]!.subCategories.map((sub) {
+                  final isSubSelected = _selectedSubCatKey == sub.key;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6.0),
+                    child: ChoiceChip(
+                      label: Text(sub.name, style: TextStyle(fontSize: 11.5, color: isSubSelected ? AppTheme.accent100 : AppTheme.textMuted)),
+                      selected: isSubSelected,
+                      onSelected: (_) => setState(() => _selectedSubCatKey = sub.key),
+                      backgroundColor: AppTheme.bg,
+                      selectedColor: AppTheme.accent900,
+                      side: BorderSide(color: isSubSelected ? AppTheme.accent : const Color(0xFF3F424D)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,

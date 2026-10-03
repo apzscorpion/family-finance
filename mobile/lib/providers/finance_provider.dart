@@ -12,7 +12,20 @@ class FinanceProvider extends ChangeNotifier {
     'shopping': const CategoryDef(key: 'shopping', name: 'Shopping', icon: Icons.shopping_bag, color: Color(0xFFEC4899)),
     'bills': const CategoryDef(key: 'bills', name: 'Bills', icon: Icons.bolt, color: Color(0xFF3B82F6)),
     'health': const CategoryDef(key: 'health', name: 'Health', icon: Icons.medical_services, color: Color(0xFFEF4444)),
-    'education': const CategoryDef(key: 'education', name: 'Education', icon: Icons.school, color: Color(0xFF06B6D4)),
+    'event': const CategoryDef(
+      key: 'event',
+      name: 'Event & Wedding',
+      icon: Icons.celebration,
+      color: Color(0xFFF43F5E),
+      subCategories: [
+        SubCategoryDef(key: 'venue_booking', parentKey: 'event', name: 'Venue Booking'),
+        SubCategoryDef(key: 'makeup', parentKey: 'event', name: 'Makeup & Beauty'),
+        SubCategoryDef(key: 'hair_setting', parentKey: 'event', name: 'Hair Setting'),
+        SubCategoryDef(key: 'clothing', parentKey: 'event', name: 'Clothing & Outfits'),
+        SubCategoryDef(key: 'cash_withdrawal', parentKey: 'event', name: 'Cash Withdrawal (In Hand)'),
+      ],
+    ),
+    'loan': const CategoryDef(key: 'loan', name: 'Loan & Credit Pool', icon: Icons.account_balance_wallet, color: Color(0xFF8B5CF6), isIncome: true),
     'salary': const CategoryDef(key: 'salary', name: 'Salary', icon: Icons.work, color: Color(0xFF34D399), isIncome: true),
     'business': const CategoryDef(key: 'business', name: 'Business', icon: Icons.store, color: Color(0xFF34D399), isIncome: true),
     'gift': const CategoryDef(key: 'gift', name: 'Gift', icon: Icons.card_giftcard, color: Color(0xFF34D399), isIncome: true),
@@ -160,6 +173,55 @@ class FinanceProvider extends ChangeNotifier {
       ),
     ),
   ];
+
+  final List<SharedNote> _notes = [
+    const SharedNote(
+      id: 'n1',
+      title: 'Wedding & Event Expenses',
+      content: 'Loan amount credited: ₹2,00,000.\n- Venue Booking: ₹75,000 (Paid by Asif)\n- Makeup & Hair Setting: ₹25,000 (Sara)\n- Clothing: ₹30,000 (Family)',
+      lastEditedBy: 'Sara',
+      lastEditedTime: '15m ago',
+    ),
+    const SharedNote(
+      id: 'n2',
+      title: 'Home Renovation Checklist',
+      content: 'Electrician: ₹850 paid by Sara.\nPaint materials: ₹4,200 pending approval.',
+      lastEditedBy: 'Asif',
+      lastEditedTime: '2h ago',
+    ),
+  ];
+
+  final List<FundPool> _fundPools = [
+    const FundPool(
+      id: 'p1',
+      title: 'Wedding Loan Pool',
+      poolType: 'Loan',
+      totalAmount: 200000,
+      spentAmount: 130000,
+      createdDate: '01 Oct 2026',
+    ),
+    const FundPool(
+      id: 'p2',
+      title: 'Home Construction Fund',
+      poolType: 'Savings Pool',
+      totalAmount: 500000,
+      spentAmount: 120000,
+      createdDate: '15 Sep 2026',
+    ),
+  ];
+
+  List<SharedNote> get notes => _notes;
+  List<FundPool> get fundPools => _fundPools;
+
+  void saveNote(SharedNote note) {
+    final index = _notes.indexWhere((n) => n.id == note.id);
+    if (index >= 0) {
+      _notes[index] = note;
+    } else {
+      _notes.insert(0, note);
+    }
+    notifyListeners();
+  }
 
   // Getters
   bool get isLoggedIn => _isLoggedIn;

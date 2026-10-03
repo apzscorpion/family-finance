@@ -57,6 +57,18 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Shared Notes Button
+                IconButton(
+                  onPressed: () => provider.openSubPage('notes'),
+                  icon: const Icon(Icons.note_alt_outlined, size: 20, color: AppTheme.text),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.surface,
+                    side: const BorderSide(color: Color(0xFF3F424D)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    minimumSize: const Size(42, 42),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 // Bell Notification Button with Badge
                 Stack(
                   children: [
