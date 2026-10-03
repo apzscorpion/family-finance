@@ -19,6 +19,7 @@ dependencies:
 
   # Networking
   http: ^1.2.2
+  ota_update: ^6.0.0
 
   # State & preferences
   shared_preferences: ^2.3.3
