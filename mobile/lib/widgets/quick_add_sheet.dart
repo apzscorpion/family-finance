@@ -47,8 +47,6 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
   String _selectedMemberId = 'asif';
 
   String? _selectedSubCatKey;
-  String? _selectedPoolId;
-  bool _requiresPayback = false;
 
   final List<String> _expenseCatKeys = ['groceries', 'event', 'dining', 'transport', 'fuel', 'shopping', 'bills', 'health', 'education'];
   final List<String> _incomeCatKeys = ['salary', 'loan', 'business', 'gift', 'pension', 'refund'];
@@ -100,6 +98,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
           daysAgo: 0,
           title: widget.initialTitle ?? catDef.name,
           catKey: _selectedCatKey,
+          subCatKey: _selectedSubCatKey,
           amount: amt,
           type: _type,
           memberId: 'asif',
@@ -119,6 +118,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
         daysAgo: 0,
         title: widget.initialTitle ?? catDef.name,
         catKey: _selectedCatKey,
+        subCatKey: _selectedSubCatKey,
         amount: amt,
         type: _type,
         memberId: _selectedMemberId,
