@@ -1,6 +1,6 @@
 # 🏦 Family Spend Tracker
 
-[![Download APK](https://img.shields.io/badge/⚡_Download_Android_APK-v1.0.0-9184d9?style=for-the-badge&logo=android&logoColor=white)](https://github.com/apzscorpion/family-finance/releases/latest/download/app-release.apk)
+[![Download APK](https://img.shields.io/badge/⚡_Download_Android_APK-v1.0.0-9184d9?style=for-the-badge&logo=android&logoColor=white)](https://github.com/apzscorpion/family-finance/raw/main/releases/app-release.apk)
 [![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-Cloud_Auth_%26_DB-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
@@ -12,7 +12,8 @@ A collaborative mobile & cloud finance tracker designed for families, couples, a
 ## 📲 Quick Download & Installation (No Play Store Needed)
 
 ### 📥 1-Click Direct Download:
-👉 **[Click Here to Download `app-release.apk`](https://github.com/apzscorpion/family-finance/releases/latest/download/app-release.apk)**
+👉 **[Click Here to Download `app-release.apk`](https://github.com/apzscorpion/family-finance/raw/main/releases/app-release.apk)** *(Direct Repo Download)*  
+👉 **[Alternative Download Link (GitHub Releases)](https://github.com/apzscorpion/family-finance/releases/latest/download/app-release.apk)**
 
 ### 📱 Installation Steps:
 1. Tap the download link above on your Android device.
