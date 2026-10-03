@@ -1,0 +1,372 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import '../models/finance_models.dart';
+
+class FinanceProvider extends ChangeNotifier {
+  // Category Definitions Dictionary
+  static final Map<String, CategoryDef> categories = {
+    'groceries': const CategoryDef(key: 'groceries', name: 'Groceries', icon: Icons.shopping_basket, color: Color(0xFF4ADE80)),
+    'dining': const CategoryDef(key: 'dining', name: 'Dining', icon: Icons.restaurant, color: Color(0xFFF97316)),
+    'transport': const CategoryDef(key: 'transport', name: 'Transport', icon: Icons.directions_car, color: Color(0xFFA855F7)),
+    'fuel': const CategoryDef(key: 'fuel', name: 'Fuel', icon: Icons.local_gas_station, color: Color(0xFFEAB308)),
+    'shopping': const CategoryDef(key: 'shopping', name: 'Shopping', icon: Icons.shopping_bag, color: Color(0xFFEC4899)),
+    'bills': const CategoryDef(key: 'bills', name: 'Bills', icon: Icons.bolt, color: Color(0xFF3B82F6)),
+    'health': const CategoryDef(key: 'health', name: 'Health', icon: Icons.medical_services, color: Color(0xFFEF4444)),
+    'education': const CategoryDef(key: 'education', name: 'Education', icon: Icons.school, color: Color(0xFF06B6D4)),
+    'salary': const CategoryDef(key: 'salary', name: 'Salary', icon: Icons.work, color: Color(0xFF34D399), isIncome: true),
+    'business': const CategoryDef(key: 'business', name: 'Business', icon: Icons.store, color: Color(0xFF34D399), isIncome: true),
+    'gift': const CategoryDef(key: 'gift', name: 'Gift', icon: Icons.card_giftcard, color: Color(0xFF34D399), isIncome: true),
+    'pension': const CategoryDef(key: 'pension', name: 'Pension', icon: Icons.account_balance, color: Color(0xFF34D399), isIncome: true),
+    'refund': const CategoryDef(key: 'refund', name: 'Refund', icon: Icons.replay, color: Color(0xFF34D399), isIncome: true),
+  };
+
+  // Members List
+  static final List<FamilyMemberDef> members = [
+    const FamilyMemberDef(id: 'asif', name: 'Asif', rel: 'You', role: 'Owner', openingBalance: 62000, color: Color(0xFF9184D9)),
+    const FamilyMemberDef(id: 'sara', name: 'Sara', rel: 'Wife', role: 'Admin', openingBalance: 41000, color: Color(0xFFEC4899)),
+    const FamilyMemberDef(id: 'imran', name: 'Imran', rel: 'Brother', role: 'Member', openingBalance: 18500, color: Color(0xFF3B82F6)),
+    const FamilyMemberDef(id: 'yusuf', name: 'Yusuf', rel: 'Father', role: 'Member', openingBalance: 55000, color: Color(0xFFEAB308)),
+    const FamilyMemberDef(id: 'zara', name: 'Zara', rel: 'Daughter', role: 'Member', openingBalance: 6200, color: Color(0xFF34D399)),
+  ];
+
+  // Budgets Definitions
+  static final List<BudgetDef> budgets = [
+    const BudgetDef(catKey: 'groceries', familyLimit: 12000, personalLimit: 5000),
+    const BudgetDef(catKey: 'dining', familyLimit: 4000, personalLimit: 2000),
+    const BudgetDef(catKey: 'shopping', familyLimit: 6000, personalLimit: 3000),
+    const BudgetDef(catKey: 'fuel', familyLimit: 4000, personalLimit: 2500),
+  ];
+
+  // Auth State
+  bool _isLoggedIn = true;
+  String _currentUserName = 'Asif';
+
+  // State Variables
+  int _activeTab = 0; // 0 = Home, 1 = Activity, 2 = Insights, 3 = Family
+  String _ctx = 'family'; // 'family', 'me', 'sara', 'imran', 'yusuf', 'zara'
+  String _period = '30d'; // '7d' or '30d'
+  bool _balanceHidden = false;
+  String? _subPage; // null, 'sms', 'settings', 'notifs'
+  String? _toastMessage;
+  Timer? _toastTimer;
+
+  // Filter State for Activity Screen
+  String _searchQuery = '';
+  String _filterType = 'all'; // 'all', 'expense', 'income'
+  String? _filterCatKey;
+  int _alertThreshold = 80; // 70%, 80%, 90%
+
+  // Settings Toggles
+  bool autoSms = true;
+  bool smartCat = true;
+  bool reviewSms = true;
+  bool skipPromo = true;
+
+  bool notifBudget = true;
+  bool notifFamily = true;
+  bool notifApprovals = true;
+  bool notifDaily = false;
+
+  // Working Data Lists
+  final List<TransactionDef> _transactions = [
+    const TransactionDef(id: 1, daysAgo: 0, title: 'Rapido ride', catKey: 'transport', amount: 186, type: 'expense', memberId: 'asif', method: 'UPI', origin: 'sms', time: '10:45 AM'),
+    const TransactionDef(id: 2, daysAgo: 0, title: 'BigBasket', catKey: 'groceries', amount: 2340, type: 'expense', memberId: 'sara', method: 'UPI', origin: 'sms', time: '9:12 AM'),
+    const TransactionDef(id: 3, daysAgo: 1, title: 'Swiggy · dinner', catKey: 'dining', amount: 864, type: 'expense', memberId: 'asif', method: 'Card', origin: 'sms', time: '8:40 PM'),
+    const TransactionDef(id: 4, daysAgo: 1, title: 'Indian Oil', catKey: 'fuel', amount: 2000, type: 'expense', memberId: 'imran', method: 'Card', origin: 'sms', time: '6:15 PM'),
+    const TransactionDef(id: 5, daysAgo: 1, title: 'Salary · October', catKey: 'salary', amount: 92000, type: 'income', memberId: 'asif', method: 'Bank', origin: 'sms', time: '9:00 AM'),
+    const TransactionDef(id: 6, daysAgo: 2, title: 'Apollo Pharmacy', catKey: 'health', amount: 640, type: 'expense', memberId: 'yusuf', method: 'Cash', origin: 'manual', time: '11:20 AM'),
+    const TransactionDef(id: 7, daysAgo: 2, title: 'Electricity bill', catKey: 'bills', amount: 3180, type: 'expense', memberId: 'asif', method: 'UPI', origin: 'sms', time: '7:05 PM'),
+    const TransactionDef(id: 8, daysAgo: 3, title: 'Myntra', catKey: 'shopping', amount: 2799, type: 'expense', memberId: 'sara', method: 'Card', origin: 'sms', time: '4:30 PM'),
+    const TransactionDef(id: 9, daysAgo: 4, title: 'School fees', catKey: 'education', amount: 12500, type: 'expense', memberId: 'asif', method: 'Bank', origin: 'manual', time: '10:00 AM'),
+    const TransactionDef(id: 10, daysAgo: 5, title: 'DMart', catKey: 'groceries', amount: 3460, type: 'expense', memberId: 'sara', method: 'UPI', origin: 'sms', time: '6:50 PM'),
+    const TransactionDef(id: 11, daysAgo: 6, title: 'Uber', catKey: 'transport', amount: 412, type: 'expense', memberId: 'imran', method: 'UPI', origin: 'sms', time: '11:10 PM'),
+    const TransactionDef(id: 12, daysAgo: 7, title: 'Freelance project', catKey: 'business', amount: 18000, type: 'income', memberId: 'sara', method: 'Bank', origin: 'manual', time: '3:00 PM'),
+    const TransactionDef(id: 13, daysAgo: 8, title: 'Airtel recharge', catKey: 'bills', amount: 699, type: 'expense', memberId: 'zara', method: 'UPI', origin: 'sms', time: '1:15 PM'),
+    const TransactionDef(id: 14, daysAgo: 9, title: 'Café Coffee Day', catKey: 'dining', amount: 420, type: 'expense', memberId: 'zara', method: 'UPI', origin: 'sms', time: '5:40 PM'),
+    const TransactionDef(id: 15, daysAgo: 11, title: 'HP Petrol', catKey: 'fuel', amount: 1800, type: 'expense', memberId: 'asif', method: 'Card', origin: 'sms', time: '8:20 AM'),
+    const TransactionDef(id: 16, daysAgo: 13, title: 'Gift from uncle', catKey: 'gift', amount: 5000, type: 'income', memberId: 'zara', method: 'Cash', origin: 'manual', time: '7:00 PM'),
+    const TransactionDef(id: 17, daysAgo: 15, title: 'Decathlon', catKey: 'shopping', amount: 3250, type: 'expense', memberId: 'imran', method: 'Card', origin: 'sms', time: '2:10 PM'),
+    const TransactionDef(id: 18, daysAgo: 18, title: 'Clinic visit', catKey: 'health', amount: 900, type: 'expense', memberId: 'yusuf', method: 'Cash', origin: 'manual', time: '10:30 AM'),
+    const TransactionDef(id: 19, daysAgo: 21, title: 'Zomato', catKey: 'dining', amount: 1120, type: 'expense', memberId: 'sara', method: 'UPI', origin: 'sms', time: '9:05 PM'),
+    const TransactionDef(id: 20, daysAgo: 24, title: 'Water & gas', catKey: 'bills', amount: 1450, type: 'expense', memberId: 'yusuf', method: 'UPI', origin: 'manual', time: '12:00 PM'),
+    const TransactionDef(id: 21, daysAgo: 27, title: 'Reliance Fresh', catKey: 'groceries', amount: 2210, type: 'expense', memberId: 'asif', method: 'UPI', origin: 'sms', time: '6:30 PM'),
+    const TransactionDef(id: 22, daysAgo: 28, title: 'Pension', catKey: 'pension', amount: 24000, type: 'income', memberId: 'yusuf', method: 'Bank', origin: 'sms', time: '9:00 AM'),
+  ];
+
+  final List<SmsQueueItem> _smsQueue = [
+    const SmsQueueItem(
+      id: 's1',
+      bank: 'HDFC Bank',
+      when: 'Today, 8:02 AM',
+      amount: 400,
+      merchant: 'Rapido',
+      catKey: 'transport',
+      confidence: 'High',
+      snippet: 'A/c XX4821 debited Rs.400.00 · UPI/RAPIDO/…',
+      note: 'Amount, date and merchant read from SMS',
+    ),
+    const SmsQueueItem(
+      id: 's2',
+      bank: 'ICICI Bank',
+      when: 'Today, 7:41 AM',
+      amount: 1249,
+      merchant: 'Amazon',
+      catKey: 'shopping',
+      confidence: 'Check',
+      snippet: 'Card XX9910 spent INR 1,249 at AMZN MKTP…',
+      note: 'Category guessed from merchant — please check',
+    ),
+    const SmsQueueItem(
+      id: 's3',
+      bank: 'SBI',
+      when: 'Today, 10:46 AM',
+      amount: 186,
+      merchant: 'Rapido',
+      catKey: 'transport',
+      confidence: 'Duplicate?',
+      isDuplicate: true,
+      snippet: 'A/c XX2207 debited Rs.186 · UPI/RAPIDO/…',
+      note: 'Matches "Rapido ride" ₹186 already added today',
+    ),
+  ];
+
+  final List<ApprovalItem> _approvals = [
+    const ApprovalItem(
+      id: 'a1',
+      kind: 'Edit',
+      fromMemberId: 'imran',
+      txnId: 4,
+      time: '2h ago',
+      reason: '"Paid ₹200 extra for engine oil"',
+      changes: {'amt': 2200.0},
+    ),
+    const ApprovalItem(
+      id: 'a2',
+      kind: 'New',
+      fromMemberId: 'sara',
+      time: 'Yesterday',
+      reason: '"Electrician for the AC — paid from my UPI on your behalf"',
+      newTxn: TransactionDef(
+        id: 99,
+        daysAgo: 1,
+        title: 'Electrician',
+        catKey: 'bills',
+        amount: 850,
+        type: 'expense',
+        memberId: 'asif',
+        method: 'UPI',
+        origin: 'manual',
+        time: 'Yesterday',
+      ),
+    ),
+  ];
+
+  // Getters
+  bool get isLoggedIn => _isLoggedIn;
+  String get currentUserName => _currentUserName;
+
+  int get activeTab => _activeTab;
+  String get ctx => _ctx;
+  String get period => _period;
+  bool get balanceHidden => _balanceHidden;
+  String? get subPage => _subPage;
+  String? get toastMessage => _toastMessage;
+
+  void setLoggedIn(bool loggedIn, {String? userName}) {
+    _isLoggedIn = loggedIn;
+    if (userName != null && userName.isNotEmpty) {
+      _currentUserName = userName;
+    }
+    notifyListeners();
+  }
+
+  void logout() {
+    _isLoggedIn = false;
+    notifyListeners();
+  }
+
+  String get searchQuery => _searchQuery;
+  String get filterType => _filterType;
+  String? get filterCatKey => _filterCatKey;
+  int get alertThreshold => _alertThreshold;
+
+  List<TransactionDef> get transactions => _transactions;
+  List<SmsQueueItem> get smsQueue => _smsQueue;
+  List<ApprovalItem> get approvals => _approvals;
+
+  // Filtered Scope Getters
+  String? get scopeMemberId => _ctx == 'family' ? null : (_ctx == 'me' ? 'asif' : _ctx);
+
+  bool isTxnInScope(TransactionDef t) {
+    if (scopeMemberId == null) return true;
+    return t.memberId == scopeMemberId;
+  }
+
+  int get maxDays => _period == '7d' ? 7 : 30;
+
+  List<TransactionDef> get scopedTransactions {
+    return _transactions.filterInScope(scopeMemberId, maxDays);
+  }
+
+  double get totalIncome {
+    return scopedTransactions.where((t) => t.type == 'income').fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  double get totalExpense {
+    return scopedTransactions.where((t) => t.type == 'expense').fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  double get trackedBalance {
+    final baseOpening = scopeMemberId == null
+        ? members.fold(0.0, (sum, m) => sum + m.openingBalance)
+        : members.firstWhere((m) => m.id == scopeMemberId).openingBalance;
+
+    final netFlow = _transactions
+        .where((t) => scopeMemberId == null || t.memberId == scopeMemberId)
+        .fold(0.0, (sum, t) => sum + (t.type == 'income' ? t.amount : -t.amount));
+
+    return baseOpening + netFlow;
+  }
+
+  int get notifBadgeCount {
+    int count = 0;
+    if (_approvals.isNotEmpty) count++;
+    if (_smsQueue.isNotEmpty && autoSms) count++;
+    return count;
+  }
+
+  // Setters & Actions
+  void setTab(int index) {
+    _activeTab = index;
+    _subPage = null;
+    notifyListeners();
+  }
+
+  void setContext(String contextId) {
+    _ctx = contextId;
+    notifyListeners();
+  }
+
+  void setPeriod(String periodCode) {
+    _period = periodCode;
+    notifyListeners();
+  }
+
+  void toggleBalanceHidden() {
+    _balanceHidden = !_balanceHidden;
+    notifyListeners();
+  }
+
+  void openSubPage(String pageName) {
+    _subPage = pageName;
+    notifyListeners();
+  }
+
+  void closeSubPage() {
+    _subPage = null;
+    notifyListeners();
+  }
+
+  void setSearchQuery(String q) {
+    _searchQuery = q;
+    notifyListeners();
+  }
+
+  void setFilterType(String type) {
+    _filterType = type;
+    notifyListeners();
+  }
+
+  void setFilterCategory(String? catKey) {
+    _filterCatKey = catKey;
+    notifyListeners();
+  }
+
+  void setAlertThreshold(int threshold) {
+    _alertThreshold = threshold;
+    notifyListeners();
+  }
+
+  void showToast(String message) {
+    _toastTimer?.cancel();
+    _toastMessage = message;
+    notifyListeners();
+    _toastTimer = Timer(const Duration(milliseconds: 2400), () {
+      _toastMessage = null;
+      notifyListeners();
+    });
+  }
+
+  // Transaction Operations
+  void addTransaction(TransactionDef txn) {
+    _transactions.insert(0, txn);
+    notifyListeners();
+  }
+
+  void confirmSmsItem(SmsQueueItem item) {
+    _smsQueue.removeWhere((s) => s.id == item.id);
+    final newTxn = TransactionDef(
+      id: DateTime.now().millisecondsSinceEpoch,
+      daysAgo: 0,
+      title: item.merchant,
+      catKey: item.catKey,
+      amount: item.amount,
+      type: 'expense',
+      memberId: 'asif',
+      method: 'UPI',
+      origin: 'sms',
+      time: 'Now',
+    );
+    _transactions.insert(0, newTxn);
+    showToast('${item.merchant} ₹${item.amount.toInt()} added');
+    notifyListeners();
+  }
+
+  void ignoreSmsItem(SmsQueueItem item) {
+    _smsQueue.removeWhere((s) => s.id == item.id);
+    showToast('Ignored · won\'t be added');
+    notifyListeners();
+  }
+
+  void approveItem(ApprovalItem item) {
+    _approvals.removeWhere((a) => a.id == item.id);
+    final fromMember = members.firstWhere((m) => m.id == item.fromMemberId);
+
+    if (item.kind == 'Edit' && item.txnId != null && item.changes != null) {
+      final index = _transactions.indexWhere((t) => t.id == item.txnId);
+      if (index != -1) {
+        final old = _transactions[index];
+        final newAmt = (item.changes!['amt'] as num).toDouble();
+        _transactions[index] = TransactionDef(
+          id: old.id,
+          daysAgo: old.daysAgo,
+          title: old.title,
+          catKey: old.catKey,
+          amount: newAmt,
+          type: old.type,
+          memberId: old.memberId,
+          method: old.method,
+          origin: old.origin,
+          time: old.time,
+        );
+      }
+    } else if (item.kind == 'New' && item.newTxn != null) {
+      _transactions.insert(0, item.newTxn!);
+    }
+
+    showToast('Approved · ${fromMember.name} will be notified');
+    notifyListeners();
+  }
+
+  void rejectItem(ApprovalItem item) {
+    _approvals.removeWhere((a) => a.id == item.id);
+    showToast('Request rejected');
+    notifyListeners();
+  }
+}
+
+extension TransactionListExtensions on List<TransactionDef> {
+  List<TransactionDef> filterInScope(String? memberId, int maxDays) {
+    return where((t) => (memberId == null || t.memberId == memberId) && t.daysAgo < maxDays).toList();
+  }
+}

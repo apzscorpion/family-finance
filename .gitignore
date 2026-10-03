@@ -1,0 +1,30 @@
+# Flutter / Dart
+.dart_tool/
+.pub-cache/
+.pub/
+build/
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+
+# Python / Virtual Environments
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+family_finance.db
+test_family_finance.db
+
+# IDEs & System
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environment Variables
+.env
+.env.local
