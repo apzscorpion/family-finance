@@ -108,7 +108,7 @@ class ActivityScreen extends StatelessWidget {
                     label: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(FinanceProvider.categories[provider.filterCatKey]!.name, style: const TextStyle(fontSize: 12.5, color: AppTheme.accent100)),
+                        Text((FinanceProvider.categories[provider.filterCatKey]?.name ?? provider.filterCatKey ?? ''), style: const TextStyle(fontSize: 12.5, color: AppTheme.accent100)),
                         const SizedBox(width: 4),
                         const Icon(Icons.close, size: 14, color: AppTheme.accent100),
                       ],
@@ -183,7 +183,7 @@ class ActivityScreen extends StatelessWidget {
             )
           else
             ...sortedDays.map((d) {
-              final dayTxns = groups[d]!;
+              final dayTxns = groups[d] ?? [];
               final dayTitle = d == 0 ? 'Today' : (d == 1 ? 'Yesterday' : '$d days ago');
               final dayTotal = dayTxns.where((t) => t.type == 'expense').fold(0.0, (s, t) => s + t.amount);
 

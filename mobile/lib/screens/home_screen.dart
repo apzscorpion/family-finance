@@ -863,7 +863,7 @@ class HomeScreen extends StatelessWidget {
 
     return Column(
       children: sortedEntries.take(5).map((entry) {
-        final cat = FinanceProvider.categories[entry.key]!;
+        final cat = FinanceProvider.categories[entry.key] ?? FinanceProvider.categories['shopping']!;
         final pct = totExp > 0 ? (entry.value / totExp * 100) : 0.0;
 
         return Padding(
