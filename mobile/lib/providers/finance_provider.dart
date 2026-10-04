@@ -54,6 +54,11 @@ class FinanceProvider extends ChangeNotifier {
   // Auth State
   bool _isLoggedIn = false;
   String _currentUserName = '';
+  String _familyCode = 'K9L2M4X7';
+  String _familyName = 'Khan Family';
+
+  String get familyCode => _familyCode;
+  String get familyName => _familyName;
 
   FinanceProvider() {
     _checkInitialAuth();
@@ -70,9 +75,60 @@ class FinanceProvider extends ChangeNotifier {
       } else {
         _currentUserName = 'User';
       }
+      if (meta != null && meta['family_code'] != null) {
+        _familyCode = meta['family_code'].toString();
+      }
+      if (meta != null && meta['family_name'] != null) {
+        _familyName = meta['family_name'].toString();
+      }
     } else {
       _isLoggedIn = false;
     }
+  }
+
+  static String generateUniqueFamilyCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final rnd = DateTime.now().microsecondsSinceEpoch;
+    final buffer = StringBuffer();
+    for (int i = 0; i < 8; i++) {
+      buffer.write(chars[(rnd + i * 37) % chars.length]);
+    }
+    return buffer.toString();
+  }
+
+  void setFamilyDetails({required String name, required String code}) {
+    _familyName = name;
+    _familyCode = code.toUpperCase();
+    notifyListeners();
+  }
+
+  void joinFamilyWithCode(String code) {
+    if (code.trim().length >= 6) {
+      _familyCode = code.trim().toUpperCase();
+      notifyListeners();
+      showToast('Joined Family Workspace ($familyCode)');
+    }
+  }
+
+  void clearAllData() {
+    _transactions.clear();
+    _smsQueue.clear();
+    _approvals.clear();
+    notifyListeners();
+    showToast('All transaction data cleared');
+  }
+
+  void loadDemoData() {
+    _transactions.clear();
+    _transactions.addAll([
+      const TransactionDef(id: 1, daysAgo: 0, title: 'Rapido ride', catKey: 'transport', amount: 186, type: 'expense', memberId: 'asif', method: 'UPI', origin: 'sms', time: '10:45 AM'),
+      const TransactionDef(id: 2, daysAgo: 0, title: 'BigBasket', catKey: 'groceries', amount: 2340, type: 'expense', memberId: 'sara', method: 'UPI', origin: 'sms', time: '9:12 AM'),
+      const TransactionDef(id: 3, daysAgo: 1, title: 'Swiggy · dinner', catKey: 'dining', amount: 864, type: 'expense', memberId: 'asif', method: 'Card', origin: 'sms', time: '8:40 PM'),
+      const TransactionDef(id: 4, daysAgo: 1, title: 'Indian Oil', catKey: 'fuel', amount: 2000, type: 'expense', memberId: 'imran', method: 'Card', origin: 'sms', time: '6:15 PM'),
+      const TransactionDef(id: 5, daysAgo: 1, title: 'Salary · October', catKey: 'salary', amount: 92000, type: 'income', memberId: 'asif', method: 'Bank', origin: 'sms', time: '9:00 AM'),
+    ]);
+    notifyListeners();
+    showToast('Sample demo data loaded');
   }
 
   // State Variables
@@ -101,99 +157,12 @@ class FinanceProvider extends ChangeNotifier {
   bool notifApprovals = true;
   bool notifDaily = false;
 
-  // Working Data Lists
-  final List<TransactionDef> _transactions = [
-    const TransactionDef(id: 1, daysAgo: 0, title: 'Rapido ride', catKey: 'transport', amount: 186, type: 'expense', memberId: 'asif', method: 'UPI', origin: 'sms', time: '10:45 AM'),
-    const TransactionDef(id: 2, daysAgo: 0, title: 'BigBasket', catKey: 'groceries', amount: 2340, type: 'expense', memberId: 'sara', method: 'UPI', origin: 'sms', time: '9:12 AM'),
-    const TransactionDef(id: 3, daysAgo: 1, title: 'Swiggy · dinner', catKey: 'dining', amount: 864, type: 'expense', memberId: 'asif', method: 'Card', origin: 'sms', time: '8:40 PM'),
-    const TransactionDef(id: 4, daysAgo: 1, title: 'Indian Oil', catKey: 'fuel', amount: 2000, type: 'expense', memberId: 'imran', method: 'Card', origin: 'sms', time: '6:15 PM'),
-    const TransactionDef(id: 5, daysAgo: 1, title: 'Salary · October', catKey: 'salary', amount: 92000, type: 'income', memberId: 'asif', method: 'Bank', origin: 'sms', time: '9:00 AM'),
-    const TransactionDef(id: 6, daysAgo: 2, title: 'Apollo Pharmacy', catKey: 'health', amount: 640, type: 'expense', memberId: 'yusuf', method: 'Cash', origin: 'manual', time: '11:20 AM'),
-    const TransactionDef(id: 7, daysAgo: 2, title: 'Electricity bill', catKey: 'bills', amount: 3180, type: 'expense', memberId: 'asif', method: 'UPI', origin: 'sms', time: '7:05 PM'),
-    const TransactionDef(id: 8, daysAgo: 3, title: 'Myntra', catKey: 'shopping', amount: 2799, type: 'expense', memberId: 'sara', method: 'Card', origin: 'sms', time: '4:30 PM'),
-    const TransactionDef(id: 9, daysAgo: 4, title: 'School fees', catKey: 'education', amount: 12500, type: 'expense', memberId: 'asif', method: 'Bank', origin: 'manual', time: '10:00 AM'),
-    const TransactionDef(id: 10, daysAgo: 5, title: 'DMart', catKey: 'groceries', amount: 3460, type: 'expense', memberId: 'sara', method: 'UPI', origin: 'sms', time: '6:50 PM'),
-    const TransactionDef(id: 11, daysAgo: 6, title: 'Uber', catKey: 'transport', amount: 412, type: 'expense', memberId: 'imran', method: 'UPI', origin: 'sms', time: '11:10 PM'),
-    const TransactionDef(id: 12, daysAgo: 7, title: 'Freelance project', catKey: 'business', amount: 18000, type: 'income', memberId: 'sara', method: 'Bank', origin: 'manual', time: '3:00 PM'),
-    const TransactionDef(id: 13, daysAgo: 8, title: 'Airtel recharge', catKey: 'bills', amount: 699, type: 'expense', memberId: 'zara', method: 'UPI', origin: 'sms', time: '1:15 PM'),
-    const TransactionDef(id: 14, daysAgo: 9, title: 'Café Coffee Day', catKey: 'dining', amount: 420, type: 'expense', memberId: 'zara', method: 'UPI', origin: 'sms', time: '5:40 PM'),
-    const TransactionDef(id: 15, daysAgo: 11, title: 'HP Petrol', catKey: 'fuel', amount: 1800, type: 'expense', memberId: 'asif', method: 'Card', origin: 'sms', time: '8:20 AM'),
-    const TransactionDef(id: 16, daysAgo: 13, title: 'Gift from uncle', catKey: 'gift', amount: 5000, type: 'income', memberId: 'zara', method: 'Cash', origin: 'manual', time: '7:00 PM'),
-    const TransactionDef(id: 17, daysAgo: 15, title: 'Decathlon', catKey: 'shopping', amount: 3250, type: 'expense', memberId: 'imran', method: 'Card', origin: 'sms', time: '2:10 PM'),
-    const TransactionDef(id: 18, daysAgo: 18, title: 'Clinic visit', catKey: 'health', amount: 900, type: 'expense', memberId: 'yusuf', method: 'Cash', origin: 'manual', time: '10:30 AM'),
-    const TransactionDef(id: 19, daysAgo: 21, title: 'Zomato', catKey: 'dining', amount: 1120, type: 'expense', memberId: 'sara', method: 'UPI', origin: 'sms', time: '9:05 PM'),
-    const TransactionDef(id: 20, daysAgo: 24, title: 'Water & gas', catKey: 'bills', amount: 1450, type: 'expense', memberId: 'yusuf', method: 'UPI', origin: 'manual', time: '12:00 PM'),
-    const TransactionDef(id: 21, daysAgo: 27, title: 'Reliance Fresh', catKey: 'groceries', amount: 2210, type: 'expense', memberId: 'asif', method: 'UPI', origin: 'sms', time: '6:30 PM'),
-    const TransactionDef(id: 22, daysAgo: 28, title: 'Pension', catKey: 'pension', amount: 24000, type: 'income', memberId: 'yusuf', method: 'Bank', origin: 'sms', time: '9:00 AM'),
-  ];
+  // Working Data Lists - Clean empty by default for real user data
+  final List<TransactionDef> _transactions = [];
 
-  final List<SmsQueueItem> _smsQueue = [
-    const SmsQueueItem(
-      id: 's1',
-      bank: 'HDFC Bank',
-      when: 'Today, 8:02 AM',
-      amount: 400,
-      merchant: 'Rapido',
-      catKey: 'transport',
-      confidence: 'High',
-      snippet: 'A/c XX4821 debited Rs.400.00 · UPI/RAPIDO/…',
-      note: 'Amount, date and merchant read from SMS',
-    ),
-    const SmsQueueItem(
-      id: 's2',
-      bank: 'ICICI Bank',
-      when: 'Today, 7:41 AM',
-      amount: 1249,
-      merchant: 'Amazon',
-      catKey: 'shopping',
-      confidence: 'Check',
-      snippet: 'Card XX9910 spent INR 1,249 at AMZN MKTP…',
-      note: 'Category guessed from merchant — please check',
-    ),
-    const SmsQueueItem(
-      id: 's3',
-      bank: 'SBI',
-      when: 'Today, 10:46 AM',
-      amount: 186,
-      merchant: 'Rapido',
-      catKey: 'transport',
-      confidence: 'Duplicate?',
-      isDuplicate: true,
-      snippet: 'A/c XX2207 debited Rs.186 · UPI/RAPIDO/…',
-      note: 'Matches "Rapido ride" ₹186 already added today',
-    ),
-  ];
+  final List<SmsQueueItem> _smsQueue = [];
 
-  final List<ApprovalItem> _approvals = [
-    const ApprovalItem(
-      id: 'a1',
-      kind: 'Edit',
-      fromMemberId: 'imran',
-      txnId: 4,
-      time: '2h ago',
-      reason: '"Paid ₹200 extra for engine oil"',
-      changes: {'amt': 2200.0},
-    ),
-    const ApprovalItem(
-      id: 'a2',
-      kind: 'New',
-      fromMemberId: 'sara',
-      time: 'Yesterday',
-      reason: '"Electrician for the AC — paid from my UPI on your behalf"',
-      newTxn: TransactionDef(
-        id: 99,
-        daysAgo: 1,
-        title: 'Electrician',
-        catKey: 'bills',
-        amount: 850,
-        type: 'expense',
-        memberId: 'asif',
-        method: 'UPI',
-        origin: 'manual',
-        time: 'Yesterday',
-      ),
-    ),
-  ];
+  final List<ApprovalItem> _approvals = [];
 
   final List<SharedNote> _notes = [
     const SharedNote(
