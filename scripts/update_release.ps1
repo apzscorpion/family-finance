@@ -75,3 +75,4 @@ git push origin main --force
 git push origin $tagName --force
 
 Write-Host "🎉 Release v$Version successfully built, mapped to latest.apk, and pushed to GitHub!" -ForegroundColor Green
+
