@@ -59,7 +59,7 @@ class TransactionsScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 6.0),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.15),
+          backgroundColor: color.withOpacity(0.15),
           child: Icon(icon, color: color),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),

@@ -205,7 +205,7 @@ class ActivityScreen extends StatelessWidget {
                     decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
                     child: Column(
                       children: dayTxns.map((t) {
-                        final cat = FinanceProvider.categories[t.catKey]!;
+                        final cat = FinanceProvider.categories[t.catKey] ?? FinanceProvider.categories['shopping']!;
                         final member = FinanceProvider.members.firstWhere(
                           (m) => m.id == t.memberId,
                           orElse: () => FamilyMemberDef(id: t.memberId, name: t.memberId, rel: 'Member', role: 'Member', openingBalance: 0, color: AppTheme.accent),
@@ -220,7 +220,7 @@ class ActivityScreen extends StatelessWidget {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: cat.color.withValues(alpha: 0.18),
+                                  color: cat.color.withOpacity(0.18),
                                   borderRadius: BorderRadius.circular(13),
                                 ),
                                 child: Icon(cat.icon, size: 19, color: cat.color),

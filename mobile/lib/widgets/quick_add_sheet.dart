@@ -369,7 +369,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                             height: 32,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: m.color.withValues(alpha: 0.3),
+                              color: m.color.withOpacity(0.3),
                               border: Border.all(
                                 color: isSelected ? AppTheme.accent300 : Colors.transparent,
                                 width: 2,

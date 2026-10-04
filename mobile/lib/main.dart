@@ -163,7 +163,7 @@ class MainNavigationScreen extends StatelessWidget {
       height: 84,
       padding: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: AppTheme.bg.withValues(alpha: 0.88),
+        color: AppTheme.bg.withOpacity(0.88),
         border: const Border(top: BorderSide(color: Color(0xFF292B31), width: 1)),
       ),
       child: Row(
@@ -189,7 +189,7 @@ class MainNavigationScreen extends StatelessWidget {
                 border: Border.all(color: AppTheme.accent400, width: 1),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.accent.withValues(alpha: 0.45),
+                    color: AppTheme.accent.withOpacity(0.45),
                     blurRadius: 26,
                     offset: const Offset(0, 8),
                   ),
