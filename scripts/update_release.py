@@ -22,6 +22,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 MOBILE_DIR = REPO_ROOT / "mobile"
 PUBSPEC_PATH = MOBILE_DIR / "pubspec.yaml"
+UPDATE_SERVICE_PATH = MOBILE_DIR / "lib" / "services" / "update_service.dart"
 README_PATH = REPO_ROOT / "README.md"
 RELEASES_DIR = REPO_ROOT / "releases"
 BUILT_APK_PATH = MOBILE_DIR / "build" / "app" / "outputs" / "flutter-apk" / "app-release.apk"
@@ -43,6 +44,17 @@ def main():
     version = match.group(1)
     build_num = match.group(2)
     print(f"  Current Version: v{version} (Build {build_num})")
+
+    # Sync version into update_service.dart before building
+    if UPDATE_SERVICE_PATH.exists():
+        us_text = UPDATE_SERVICE_PATH.read_text(encoding="utf-8")
+        us_updated = re.sub(
+            r"static const String currentVersion = '[0-9]+\.[0-9]+\.[0-9]+';",
+            f"static const String currentVersion = '{version}';",
+            us_text,
+        )
+        UPDATE_SERVICE_PATH.write_text(us_updated, encoding="utf-8")
+        print(f"  Synced UpdateService.currentVersion to {version}")
 
     # 1. Build Flutter Release APK
     print("[2/5] Building Flutter Release APK...")
@@ -92,4 +104,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
