@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/finance_models.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -76,7 +77,10 @@ class FamilyScreen extends StatelessWidget {
             )
           else
             ...provider.approvals.map((a) {
-              final fromMember = FinanceProvider.members.firstWhere((m) => m.id == a.fromMemberId);
+              final fromMember = FinanceProvider.members.firstWhere(
+                (m) => m.id == a.fromMemberId,
+                orElse: () => FamilyMemberDef(id: a.fromMemberId, name: a.fromMemberId, rel: 'Member', role: 'Member', openingBalance: 0, color: AppTheme.accent),
+              );
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),

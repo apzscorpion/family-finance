@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/finance_models.dart';
+import '../services/supabase_service.dart';
 
 class FinanceProvider extends ChangeNotifier {
   // Category Definitions Dictionary
@@ -51,8 +52,28 @@ class FinanceProvider extends ChangeNotifier {
   ];
 
   // Auth State
-  bool _isLoggedIn = true;
-  String _currentUserName = 'Asif';
+  bool _isLoggedIn = false;
+  String _currentUserName = '';
+
+  FinanceProvider() {
+    _checkInitialAuth();
+  }
+
+  void _checkInitialAuth() {
+    if (SupabaseService.isConfigured && SupabaseService.currentUser != null) {
+      _isLoggedIn = true;
+      final meta = SupabaseService.currentUser?.userMetadata;
+      if (meta != null && meta['full_name'] != null && meta['full_name'].toString().isNotEmpty) {
+        _currentUserName = meta['full_name'].toString();
+      } else if (SupabaseService.currentUser?.email != null) {
+        _currentUserName = SupabaseService.currentUser!.email!.split('@')[0];
+      } else {
+        _currentUserName = 'User';
+      }
+    } else {
+      _isLoggedIn = false;
+    }
+  }
 
   // State Variables
   int _activeTab = 0; // 0 = Home, 1 = Activity, 2 = Insights, 3 = Family
@@ -281,7 +302,7 @@ class FinanceProvider extends ChangeNotifier {
   double get trackedBalance {
     final baseOpening = scopeMemberId == null
         ? members.fold(0.0, (sum, m) => sum + m.openingBalance)
-        : members.firstWhere((m) => m.id == scopeMemberId).openingBalance;
+        : members.firstWhere((m) => m.id == scopeMemberId, orElse: () => members.first).openingBalance;
 
     final netFlow = _transactions
         .where((t) => scopeMemberId == null || t.memberId == scopeMemberId)
@@ -392,7 +413,7 @@ class FinanceProvider extends ChangeNotifier {
 
   void approveItem(ApprovalItem item) {
     _approvals.removeWhere((a) => a.id == item.id);
-    final fromMember = members.firstWhere((m) => m.id == item.fromMemberId);
+    final fromMember = members.firstWhere((m) => m.id == item.fromMemberId, orElse: () => members.first);
 
     if (item.kind == 'Edit' && item.txnId != null && item.changes != null) {
       final index = _transactions.indexWhere((t) => t.id == item.txnId);
