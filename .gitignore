@@ -30,3 +30,5 @@ Thumbs.db
 # Environment Variables
 .env
 .env.local
+
+releases/FamilySpendTracker-debug.apk
