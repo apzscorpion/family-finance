@@ -136,7 +136,7 @@ class TransactionNotificationService : NotificationListenerService() {
         intent.putExtra("upi_ref", upiRef)
         intent.putExtra("snippet", snippet)
         intent.putExtra("timestamp", System.currentTimeMillis())
-        intent.setPackage(packageName)
+        intent.setPackage(this.packageName)
         sendBroadcast(intent)
     }
 
