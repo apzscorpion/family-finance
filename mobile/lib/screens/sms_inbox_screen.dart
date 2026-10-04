@@ -21,7 +21,7 @@ class SmsInboxScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: AppTheme.text),
           onPressed: () => provider.closeSubPage(),
         ),
-        title: const Text('SMS inbox', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: AppTheme.text)),
+        title: const Text('Bank notifications', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: AppTheme.text)),
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -41,7 +41,7 @@ class SmsInboxScreen extends StatelessWidget {
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Only bank transaction SMS are read, on this device. OTPs and personal messages are skipped; account numbers stay masked.',
+                      'Only bank transaction notifications are read, on this device. OTPs and personal messages are skipped; account numbers stay masked.',
                       style: TextStyle(fontSize: 12, color: AppTheme.accent200, height: 1.4),
                     ),
                   ),
@@ -58,7 +58,7 @@ class SmsInboxScreen extends StatelessWidget {
                     Icon(Icons.inbox_outlined, size: 40, color: AppTheme.textSubtle),
                     SizedBox(height: 8),
                     Text('Inbox clear', style: TextStyle(fontSize: 14, color: AppTheme.text)),
-                    Text('New bank SMS will appear here for review', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
+                    Text('New bank notifications will appear here for review', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
                   ],
                 ),
               )
