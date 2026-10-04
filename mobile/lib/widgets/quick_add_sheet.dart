@@ -82,7 +82,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
     final amt = double.tryParse(_amountStr) ?? 0.0;
     if (amt <= 0) return;
 
-    final catDef = FinanceProvider.categories[_selectedCatKey]!;
+    final catDef = FinanceProvider.categories[_selectedCatKey] ?? FinanceProvider.categories['shopping']!;
     final isForOther = _type == 'expense' && _selectedMemberId != 'asif';
     final targetMember = FinanceProvider.members.firstWhere(
       (m) => m.id == _selectedMemberId,
@@ -274,7 +274,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: activeCatList.map((catKey) {
-                final c = FinanceProvider.categories[catKey]!;
+                final c = FinanceProvider.categories[catKey] ?? FinanceProvider.categories['shopping']!;
                 final isSelected = _selectedCatKey == catKey;
                 return Padding(
                   padding: const EdgeInsets.only(right: 6.0),
@@ -308,7 +308,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: FinanceProvider.categories[_selectedCatKey]!.subCategories.map((sub) {
+                children: (FinanceProvider.categories[_selectedCatKey]?.subCategories ?? []).map((sub) {
                   final isSubSelected = _selectedSubCatKey == sub.key;
                   return Padding(
                     padding: const EdgeInsets.only(right: 6.0),
