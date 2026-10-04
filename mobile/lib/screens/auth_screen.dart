@@ -13,13 +13,22 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _isSignUp = false;
+  bool _joinExistingFamily = false;
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
   final _familyCtrl = TextEditingController();
+  final _familyCodeCtrl = TextEditingController();
 
   bool _loading = false;
   String? _errorMsg;
+  late String _generatedCode;
+
+  @override
+  void initState() {
+    super.initState();
+    _generatedCode = FinanceProvider.generateUniqueFamilyCode();
+  }
 
   @override
   void dispose() {
@@ -27,6 +36,7 @@ class _AuthScreenState extends State<AuthScreen> {
     _passCtrl.dispose();
     _nameCtrl.dispose();
     _familyCtrl.dispose();
+    _familyCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -48,30 +58,45 @@ class _AuthScreenState extends State<AuthScreen> {
     }
 
     try {
+      final codeToUse = _joinExistingFamily
+          ? _familyCodeCtrl.text.trim().toUpperCase()
+          : _generatedCode;
+
+      if (_isSignUp && _joinExistingFamily && codeToUse.length < 6) {
+        setState(() {
+          _loading = false;
+          _errorMsg = 'Please enter a valid 6-8 character Family Invite Code.';
+        });
+        return;
+      }
+
+      final famName = _familyCtrl.text.trim().isEmpty ? 'Family Workspace' : _familyCtrl.text.trim();
+
       if (!SupabaseService.isConfigured) {
         // Fallback for demo mode before Supabase credentials are inserted
         await Future.delayed(const Duration(milliseconds: 600));
-        provider.setLoggedIn(true, userName: _nameCtrl.text.isNotEmpty ? _nameCtrl.text.trim() : 'Asif');
+        provider.setFamilyDetails(name: famName, code: codeToUse);
+        provider.setLoggedIn(true, userName: _nameCtrl.text.isNotEmpty ? _nameCtrl.text.trim() : 'User');
         if (mounted) {
-          provider.showToast('Demo Logged in successfully!');
+          provider.showToast(_joinExistingFamily ? 'Joined Family ($codeToUse)!' : 'Created Family (Code: $codeToUse)!');
         }
         return;
       }
 
       if (_isSignUp) {
         final name = _nameCtrl.text.trim().isEmpty ? 'User' : _nameCtrl.text.trim();
-        final fam = _familyCtrl.text.trim().isEmpty ? 'Khan Family' : _familyCtrl.text.trim();
 
         final res = await SupabaseService.signUp(
           email: email,
           password: pass,
           fullName: name,
-          familyName: fam,
+          familyName: famName,
         );
 
         if (res?.user != null) {
+          provider.setFamilyDetails(name: famName, code: codeToUse);
           provider.setLoggedIn(true, userName: name);
-          if (mounted) provider.showToast('Account created! Welcome to Family Spend Tracker');
+          if (mounted) provider.showToast('Account created! Family Code: $codeToUse');
         } else {
           setState(() => _errorMsg = 'Signup failed. Please try again.');
         }
@@ -209,7 +234,67 @@ class _AuthScreenState extends State<AuthScreen> {
                     if (_isSignUp) ...[
                       _buildTextField(_nameCtrl, 'Your Full Name', Icons.person_outline),
                       const SizedBox(height: 12),
-                      _buildTextField(_familyCtrl, 'Family Account Name (e.g. Khan Family)', Icons.people_outline),
+                      
+                      // Choice: Create new family vs Join via code
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bg,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _joinExistingFamily = false),
+                                child: Container(
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: !_joinExistingFamily ? AppTheme.accent800 : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text('New Family', style: TextStyle(fontSize: 11.5, color: !_joinExistingFamily ? Colors.white : AppTheme.textMuted)),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _joinExistingFamily = true),
+                                child: Container(
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: _joinExistingFamily ? AppTheme.accent800 : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text('Join via Code', style: TextStyle(fontSize: 11.5, color: _joinExistingFamily ? Colors.white : AppTheme.textMuted)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (!_joinExistingFamily) ...[
+                        _buildTextField(_familyCtrl, 'Family Name (e.g. Khan Household)', Icons.people_outline),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(color: AppTheme.bg, borderRadius: BorderRadius.circular(10)),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.key, size: 14, color: AppTheme.accent300),
+                              const SizedBox(width: 8),
+                              Text('Generated Family Code: ', style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle)),
+                              Text(_generatedCode, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.accent100, letterSpacing: 1.2)),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        _buildTextField(_familyCodeCtrl, 'Enter 8-digit Family Code (e.g. K9L2M4X7)', Icons.vibration, keyboardType: TextInputType.text),
+                      ],
                       const SizedBox(height: 12),
                     ],
 
@@ -238,7 +323,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                         child: _loading
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.bg))
-                            : Text(_isSignUp ? 'Create Family Account' : 'Sign In to Workspace', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            : Text(_isSignUp ? (_joinExistingFamily ? 'Join Family Household' : 'Create Family Account') : 'Sign In to Workspace', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],

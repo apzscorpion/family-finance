@@ -665,66 +665,87 @@ class HomeScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: const [AppTheme.shadowSm],
               ),
-              child: Column(
-                children: provider.scopedTransactions.take(5).map((t) {
-                  final cat = FinanceProvider.categories[t.catKey] ?? FinanceProvider.categories['shopping']!;
-                  final member = FinanceProvider.members.firstWhere(
-                    (m) => m.id == t.memberId,
-                    orElse: () => FamilyMemberDef(id: t.memberId, name: t.memberId, rel: 'Member', role: 'Member', openingBalance: 0, color: AppTheme.accent),
-                  );
-                  final isIncome = t.type == 'income';
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10.0),
-                    child: Row(
+              child: provider.scopedTransactions.isEmpty
+                  ? Column(
                       children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: cat.color.withOpacity(0.18),
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                          child: Icon(cat.icon, size: 19, color: cat.color),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(t.title, style: const TextStyle(fontSize: 14, color: AppTheme.text)),
-                              Row(
-                                children: [
-                                  Icon(t.origin == 'sms' ? Icons.chat_bubble_outline : Icons.edit_outlined, size: 12, color: AppTheme.textSubtle),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${t.time} · ${member.name} · ${t.method}',
-                                    style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          '${isIncome ? '+' : '-'}${formatInr(t.amount)}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isIncome ? AppTheme.green : AppTheme.text,
+                        const Icon(Icons.account_balance_wallet_outlined, size: 36, color: AppTheme.textSubtle),
+                        const SizedBox(height: 8),
+                        const Text('No transactions recorded yet', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.text)),
+                        const SizedBox(height: 4),
+                        const Text('Tap the + button to log an expense or receive bank notifications automatically.', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle), textAlign: TextAlign.center),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => provider.loadDemoData(),
+                          icon: const Icon(Icons.science_outlined, size: 16),
+                          label: const Text('Try Demo Data', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppTheme.accent),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            foregroundColor: AppTheme.accent200,
                           ),
                         ),
                       ],
+                    )
+                  : Column(
+                      children: provider.scopedTransactions.take(5).map((t) {
+                        final cat = FinanceProvider.categories[t.catKey] ?? FinanceProvider.categories['shopping']!;
+                        final member = FinanceProvider.members.firstWhere(
+                          (m) => m.id == t.memberId,
+                          orElse: () => FamilyMemberDef(id: t.memberId, name: t.memberId, rel: 'Member', role: 'Member', openingBalance: 0, color: AppTheme.accent),
+                        );
+                        final isIncome = t.type == 'income';
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: cat.color.withOpacity(0.18),
+                                  borderRadius: BorderRadius.circular(13),
+                                ),
+                                child: Icon(cat.icon, size: 19, color: cat.color),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(t.title, style: const TextStyle(fontSize: 14, color: AppTheme.text)),
+                                    Row(
+                                      children: [
+                                        Icon(t.origin == 'sms' ? Icons.chat_bubble_outline : Icons.edit_outlined, size: 12, color: AppTheme.textSubtle),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${t.time} · ${member.name} · ${t.method}',
+                                          style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${isIncome ? '+' : '-'}${formatInr(t.amount)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: isIncome ? AppTheme.green : AppTheme.text,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  );
-                }).toList(),
-              ),
             ),
           ),
           const SizedBox(height: 18),

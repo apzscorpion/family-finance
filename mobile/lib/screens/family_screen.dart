@@ -26,22 +26,82 @@ class FamilyScreen extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Khan Family', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500, color: AppTheme.text)),
-                  Text('${FinanceProvider.members.length} of 30 members · you\'re the owner', style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
+                  Text(provider.familyName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500, color: AppTheme.text)),
+                  Text('${FinanceProvider.members.length} members · Household Code: ${provider.familyCode}', style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
                 ],
               ),
               OutlinedButton.icon(
-                onPressed: () => provider.showToast('Invite link copied · valid 7 days'),
-                icon: const Icon(Icons.person_add_alt_1, size: 16, color: AppTheme.accent200),
-                label: const Text('Invite', style: TextStyle(fontSize: 13, color: AppTheme.accent200)),
+                onPressed: () => _showJoinFamilyDialog(context, provider),
+                icon: const Icon(Icons.group_add, size: 16, color: AppTheme.accent200),
+                label: const Text('Join Code', style: TextStyle(fontSize: 13, color: AppTheme.accent200)),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppTheme.accent),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   minimumSize: const Size(0, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+
+          // Family Invite Code Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: AppTheme.balanceGradient,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppTheme.accent.withOpacity(0.4)),
+              boxShadow: const [AppTheme.shadowSm],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.vpn_key_outlined, size: 18, color: AppTheme.accent),
+                    SizedBox(width: 8),
+                    Text('UNIQUE FAMILY INVITE CODE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.accent300, letterSpacing: 0.8)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(color: AppTheme.bg, borderRadius: BorderRadius.circular(10)),
+                      child: Text(
+                        provider.familyCode,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 2.0),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            provider.showToast('Family Code ${provider.familyCode} copied!');
+                          },
+                          icon: const Icon(Icons.copy, size: 14),
+                          label: const Text('Copy Code', style: TextStyle(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accent,
+                            foregroundColor: AppTheme.bg,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Share this 8-digit unique code with family members so they can join your household during sign-up.',
+                  style: TextStyle(fontSize: 11.5, color: AppTheme.textSubtle, height: 1.3),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
@@ -251,6 +311,62 @@ class FamilyScreen extends StatelessWidget {
                 );
               }).toList(),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showJoinFamilyDialog(BuildContext context, FinanceProvider provider) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Join Family Household', style: TextStyle(color: AppTheme.text, fontSize: 18)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Enter the 8-character unique Family Invite Code from the household owner:', style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted)),
+            const SizedBox(height: 14),
+            Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: AppTheme.bg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.accent),
+              ),
+              child: TextField(
+                controller: ctrl,
+                autofocus: true,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5),
+                decoration: const InputDecoration(
+                  hintText: 'e.g. K9L2M4X7',
+                  hintStyle: TextStyle(fontSize: 13, color: AppTheme.textSubtle, letterSpacing: 0),
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSubtle)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final code = ctrl.text.trim();
+              if (code.length >= 6) {
+                provider.joinFamilyWithCode(code);
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
+            child: const Text('Join Workspace'),
           ),
         ],
       ),
