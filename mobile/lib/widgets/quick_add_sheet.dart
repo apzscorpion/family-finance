@@ -84,7 +84,10 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
 
     final catDef = FinanceProvider.categories[_selectedCatKey]!;
     final isForOther = _type == 'expense' && _selectedMemberId != 'asif';
-    final targetMember = FinanceProvider.members.firstWhere((m) => m.id == _selectedMemberId);
+    final targetMember = FinanceProvider.members.firstWhere(
+      (m) => m.id == _selectedMemberId,
+      orElse: () => FinanceProvider.members.first,
+    );
 
     if (isForOther) {
       provider.approvals.add(ApprovalItem(
@@ -141,7 +144,10 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
     final provider = Provider.of<FinanceProvider>(context, listen: false);
     final amtVal = double.tryParse(_amountStr) ?? 0.0;
     final isForOther = _type == 'expense' && _selectedMemberId != 'asif';
-    final targetMember = FinanceProvider.members.firstWhere((m) => m.id == _selectedMemberId);
+    final targetMember = FinanceProvider.members.firstWhere(
+      (m) => m.id == _selectedMemberId,
+      orElse: () => FinanceProvider.members.first,
+    );
     final activeCatList = _type == 'expense' ? _expenseCatKeys : _incomeCatKeys;
 
     return Container(

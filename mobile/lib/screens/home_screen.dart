@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/finance_models.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/quick_add_sheet.dart';
@@ -43,13 +44,13 @@ class HomeScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Good morning, Asif', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
+                      Text('Good morning, ${provider.currentUserName.isNotEmpty ? provider.currentUserName : 'User'}', style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
                       Text(
                         provider.scopeMemberId == null
-                            ? 'Khan Family · all members'
+                            ? 'Family Workspace · all members'
                             : (provider.scopeMemberId == 'asif'
                                 ? 'My finances'
-                                : '${FinanceProvider.members.firstWhere((m) => m.id == provider.scopeMemberId).name}\'s finances'),
+                                : '${FinanceProvider.members.firstWhere((m) => m.id == provider.scopeMemberId, orElse: () => FinanceProvider.members.first).name}\'s finances'),
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.text),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -673,7 +674,10 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 children: provider.scopedTransactions.take(5).map((t) {
                   final cat = FinanceProvider.categories[t.catKey]!;
-                  final member = FinanceProvider.members.firstWhere((m) => m.id == t.memberId);
+                  final member = FinanceProvider.members.firstWhere(
+                    (m) => m.id == t.memberId,
+                    orElse: () => FamilyMemberDef(id: t.memberId, name: t.memberId, rel: 'Member', role: 'Member', openingBalance: 0, color: AppTheme.accent),
+                  );
                   final isIncome = t.type == 'income';
 
                   return Padding(
