@@ -115,7 +115,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.accent.withValues(alpha: 0.4),
+                      color: AppTheme.accent.withOpacity(0.4),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),

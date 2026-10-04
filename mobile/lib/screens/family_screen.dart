@@ -88,7 +88,7 @@ class FamilyScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppTheme.amber.withValues(alpha: 0.35)),
+                  border: Border.all(color: AppTheme.amber.withOpacity(0.35)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,7 +98,7 @@ class FamilyScreen extends StatelessWidget {
                         Container(
                           width: 32,
                           height: 32,
-                          decoration: BoxDecoration(shape: BoxShape.circle, color: fromMember.color.withValues(alpha: 0.4)),
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: fromMember.color.withOpacity(0.4)),
                           alignment: Alignment.center,
                           child: Text(fromMember.initial, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
                         ),
@@ -222,7 +222,7 @@ class FamilyScreen extends StatelessWidget {
                         Container(
                           width: 40,
                           height: 40,
-                          decoration: BoxDecoration(shape: BoxShape.circle, color: m.color.withValues(alpha: 0.4)),
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: m.color.withOpacity(0.4)),
                           alignment: Alignment.center,
                           child: Text(m.initial, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
                         ),

@@ -150,7 +150,7 @@ class HomeScreen extends StatelessWidget {
                       id: m.id,
                       label: m.name,
                       initial: m.initial,
-                      avatarBg: m.color.withValues(alpha: 0.4),
+                      avatarBg: m.color.withOpacity(0.4),
                     ),
                   );
                 }),
@@ -235,7 +235,7 @@ class HomeScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.2),
+                            color: Colors.black.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Column(
@@ -256,7 +256,7 @@ class HomeScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.2),
+                            color: Colors.black.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Column(
@@ -328,7 +328,7 @@ class HomeScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     color: AppTheme.surface,
-                    border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
+                    border: Border.all(color: AppTheme.accent.withOpacity(0.4)),
                   ),
                   child: Row(
                     children: [
@@ -380,7 +380,7 @@ class HomeScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     color: AppTheme.surface,
-                    border: Border.all(color: AppTheme.amber.withValues(alpha: 0.35)),
+                    border: Border.all(color: AppTheme.amber.withOpacity(0.35)),
                   ),
                   child: Row(
                     children: [
@@ -497,7 +497,7 @@ class HomeScreen extends StatelessWidget {
                               Container(
                                 width: 34,
                                 height: 34,
-                                decoration: BoxDecoration(shape: BoxShape.circle, color: m.color.withValues(alpha: 0.4)),
+                                decoration: BoxDecoration(shape: BoxShape.circle, color: m.color.withOpacity(0.4)),
                                 alignment: Alignment.center,
                                 child: Text(m.initial, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
                               ),
@@ -566,7 +566,7 @@ class HomeScreen extends StatelessWidget {
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
                     children: FinanceProvider.budgets.map((b) {
-                      final cat = FinanceProvider.categories[b.catKey]!;
+                      final cat = FinanceProvider.categories[b.catKey] ?? FinanceProvider.categories['shopping']!;
                       final limit = provider.scopeMemberId == null ? b.familyLimit : b.personalLimit;
 
                       final spent = provider.transactions
@@ -583,7 +583,7 @@ class HomeScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppTheme.bg,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: isOver ? AppTheme.red.withValues(alpha: 0.4) : Colors.transparent),
+                          border: Border.all(color: isOver ? AppTheme.red.withOpacity(0.4) : Colors.transparent),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -673,7 +673,7 @@ class HomeScreen extends StatelessWidget {
               ),
               child: Column(
                 children: provider.scopedTransactions.take(5).map((t) {
-                  final cat = FinanceProvider.categories[t.catKey]!;
+                  final cat = FinanceProvider.categories[t.catKey] ?? FinanceProvider.categories['shopping']!;
                   final member = FinanceProvider.members.firstWhere(
                     (m) => m.id == t.memberId,
                     orElse: () => FamilyMemberDef(id: t.memberId, name: t.memberId, rel: 'Member', role: 'Member', openingBalance: 0, color: AppTheme.accent),
@@ -688,7 +688,7 @@ class HomeScreen extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: cat.color.withValues(alpha: 0.18),
+                            color: cat.color.withOpacity(0.18),
                             borderRadius: BorderRadius.circular(13),
                           ),
                           child: Icon(cat.icon, size: 19, color: cat.color),

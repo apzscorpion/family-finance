@@ -64,7 +64,7 @@ class SmsInboxScreen extends StatelessWidget {
               )
             else
               ...provider.smsQueue.map((item) {
-                final cat = FinanceProvider.categories[item.catKey]!;
+                final cat = FinanceProvider.categories[item.catKey] ?? FinanceProvider.categories['shopping']!;
                 final isDup = item.isDuplicate;
 
                 return Container(
@@ -73,7 +73,7 @@ class SmsInboxScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: isDup ? AppTheme.red.withValues(alpha: 0.4) : const Color(0xFF3F424D)),
+                    border: Border.all(color: isDup ? AppTheme.red.withOpacity(0.4) : const Color(0xFF3F424D)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,7 +108,7 @@ class SmsInboxScreen extends StatelessWidget {
                             width: 42,
                             height: 42,
                             decoration: BoxDecoration(
-                              color: cat.color.withValues(alpha: 0.18),
+                              color: cat.color.withOpacity(0.18),
                               borderRadius: BorderRadius.circular(13),
                             ),
                             child: Icon(cat.icon, size: 20, color: cat.color),
