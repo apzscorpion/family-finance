@@ -104,6 +104,41 @@ class FinanceProvider extends ChangeNotifier {
     _checkInitialAuth();
   }
 
+  static const List<String> walletAccounts = [
+    'All',
+    'Cash',
+    'Salary',
+    'Loan',
+    'UPI',
+    'Bank',
+    'Card',
+  ];
+
+  String _selectedAccount = 'All';
+  final Map<String, double> _accountOpeningBalances = {
+    'Cash': 0.0,
+    'Salary': 0.0,
+    'Loan': 0.0,
+    'UPI': 0.0,
+    'Bank': 0.0,
+    'Card': 0.0,
+  };
+
+  String get selectedAccount => _selectedAccount;
+  Map<String, double> get accountOpeningBalances => Map.unmodifiable(_accountOpeningBalances);
+
+  void setSelectedAccount(String account) {
+    _selectedAccount = account;
+    notifyListeners();
+  }
+
+  Future<void> setAccountOpeningBalance(String account, double amount) async {
+    _accountOpeningBalances[account] = amount;
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('$account balance updated to ₹${amount.round()}');
+  }
+
   Future<void> _checkInitialAuth() async {
     if (SupabaseService.isConfigured && SupabaseService.currentUser != null) {
       final user = SupabaseService.currentUser!;
@@ -125,7 +160,6 @@ class FinanceProvider extends ChangeNotifier {
       }
       if (meta != null && meta['family_name'] != null && meta['family_name'].toString().trim().isNotEmpty) {
         final fn = meta['family_name'].toString().trim();
-        // Ignore legacy placeholder if present
         if (fn != 'Khan Family') {
           _familyName = fn;
         }
@@ -133,14 +167,23 @@ class FinanceProvider extends ChangeNotifier {
 
       await _loadUserWorkspace();
     } else {
-      _isLoggedIn = false;
+      final localSession = await SupabaseService.getActiveLocalSession();
+      if (localSession != null && localSession.email.isNotEmpty) {
+        _isLoggedIn = true;
+        _userKey = localSession.email.toLowerCase();
+        _currentUserName = localSession.fullName;
+        _familyName = localSession.familyName;
+        _familyCode = localSession.familyCode;
+        await _loadUserWorkspace();
+      } else {
+        _isLoggedIn = false;
+      }
     }
   }
 
   Future<void> _loadUserWorkspace() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Load saved family name & code for this user if not already set by metadata
     final savedFamName = prefs.getString('ff_${_userKey}_family_name');
     final savedFamCode = prefs.getString('ff_${_userKey}_family_code');
 
@@ -162,6 +205,18 @@ class FinanceProvider extends ChangeNotifier {
         familyName: _familyName,
         familyCode: _familyCode,
       );
+    }
+
+    // Load per-account opening balances (Cash, Salary, Loan, UPI, Bank, Card)
+    final acctBalJson = prefs.getString('ff_${_userKey}_account_balances');
+    _accountOpeningBalances.updateAll((_, __) => 0.0);
+    if (acctBalJson != null && acctBalJson.isNotEmpty) {
+      try {
+        final Map<String, dynamic> decoded = Map<String, dynamic>.from(json.decode(acctBalJson));
+        decoded.forEach((k, v) {
+          _accountOpeningBalances[k] = (v as num?)?.toDouble() ?? 0.0;
+        });
+      } catch (_) {}
     }
 
     // Load real members created by this user
@@ -238,6 +293,7 @@ class FinanceProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('ff_${_userKey}_family_name', _familyName);
     await prefs.setString('ff_${_userKey}_family_code', _familyCode);
+    await prefs.setString('ff_${_userKey}_account_balances', json.encode(_accountOpeningBalances));
     await prefs.setString(
       'ff_${_userKey}_members',
       json.encode(_members.map((m) => m.toJson()).toList()),
@@ -341,6 +397,8 @@ class FinanceProvider extends ChangeNotifier {
     _approvals.clear();
     _notes.clear();
     _fundPools.clear();
+    _accountOpeningBalances.updateAll((_, __) => 0.0);
+    _selectedAccount = 'All';
     if (_members.isNotEmpty) {
       final me = _members.first;
       _members
@@ -508,6 +566,7 @@ class FinanceProvider extends ChangeNotifier {
     String? userKey,
     String? familyName,
     String? familyCode,
+    bool clearWorkspaceOnNewAccount = false,
   }) async {
     _isLoggedIn = loggedIn;
     if (userName != null && userName.trim().isNotEmpty) {
@@ -520,6 +579,20 @@ class FinanceProvider extends ChangeNotifier {
       _userKey = (u.email ?? u.id).toLowerCase();
     } else if (_currentUserName.isNotEmpty) {
       _userKey = _currentUserName.toLowerCase();
+    }
+
+    if (clearWorkspaceOnNewAccount) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('ff_${_userKey}_members');
+      await prefs.remove('ff_${_userKey}_transactions');
+      await prefs.remove('ff_${_userKey}_notes');
+      await prefs.remove('ff_${_userKey}_account_balances');
+      _transactions.clear();
+      _notes.clear();
+      _smsQueue.clear();
+      _approvals.clear();
+      _fundPools.clear();
+      _accountOpeningBalances.updateAll((_, __) => 0.0);
     }
 
     if (familyName != null && familyName.trim().isNotEmpty && familyName.trim() != 'Khan Family') {
@@ -548,6 +621,7 @@ class FinanceProvider extends ChangeNotifier {
     _activeTab = 0;
     _subPage = null;
     _ctx = 'family';
+    _selectedAccount = 'All';
     notifyListeners();
   }
 
@@ -568,10 +642,48 @@ class FinanceProvider extends ChangeNotifier {
     return t.memberId == scopeMemberId;
   }
 
+  bool _matchesAccount(TransactionDef t, String account) {
+    if (account == 'All') return true;
+    final m = t.method.toLowerCase();
+    final c = t.catKey.toLowerCase();
+    final target = account.toLowerCase();
+    if (target == 'salary') {
+      return m == 'salary' || c == 'salary';
+    }
+    if (target == 'loan') {
+      return m == 'loan' || c == 'loan';
+    }
+    return m == target;
+  }
+
+  /// Calculates the live balance for a specific account/method ('Cash', 'Salary', 'Loan', 'UPI', 'Bank', 'Card', or 'All')
+  double accountBalance(String account) {
+    if (account == 'All') {
+      final activeMembers = members;
+      final memberOpening = scopeMemberId == null
+          ? activeMembers.fold(0.0, (sum, m) => sum + m.openingBalance)
+          : activeMembers.firstWhere((m) => m.id == scopeMemberId, orElse: () => activeMembers.first).openingBalance;
+      final walletOpening = _accountOpeningBalances.values.fold(0.0, (sum, v) => sum + v);
+      final netFlow = _transactions
+          .where((t) => scopeMemberId == null || t.memberId == scopeMemberId)
+          .fold(0.0, (sum, t) => sum + (t.type == 'income' ? t.amount : -t.amount));
+      return memberOpening + walletOpening + netFlow;
+    }
+
+    final opening = _accountOpeningBalances[account] ?? 0.0;
+    final netFlow = _transactions
+        .where((t) => (scopeMemberId == null || t.memberId == scopeMemberId) && _matchesAccount(t, account))
+        .fold(0.0, (sum, t) => sum + (t.type == 'income' ? t.amount : -t.amount));
+    return opening + netFlow;
+  }
+
   int get maxDays => _period == '7d' ? 7 : 30;
 
   List<TransactionDef> get scopedTransactions {
-    return _transactions.filterInScope(scopeMemberId, maxDays);
+    return _transactions
+        .filterInScope(scopeMemberId, maxDays)
+        .where((t) => _matchesAccount(t, _selectedAccount))
+        .toList();
   }
 
   double get totalIncome {
@@ -583,16 +695,7 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   double get trackedBalance {
-    final activeMembers = members;
-    final baseOpening = scopeMemberId == null
-        ? activeMembers.fold(0.0, (sum, m) => sum + m.openingBalance)
-        : activeMembers.firstWhere((m) => m.id == scopeMemberId, orElse: () => activeMembers.first).openingBalance;
-
-    final netFlow = _transactions
-        .where((t) => scopeMemberId == null || t.memberId == scopeMemberId)
-        .fold(0.0, (sum, t) => sum + (t.type == 'income' ? t.amount : -t.amount));
-
-    return baseOpening + netFlow;
+    return accountBalance(_selectedAccount);
   }
 
   int get notifBadgeCount {

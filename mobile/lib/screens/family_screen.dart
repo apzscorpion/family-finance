@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/finance_models.dart';
 import '../providers/finance_provider.dart';
+import '../services/note_import_service.dart';
 import '../theme/app_theme.dart';
 
 class FamilyScreen extends StatelessWidget {
@@ -83,7 +84,7 @@ class FamilyScreen extends StatelessWidget {
                   children: [
                     Icon(Icons.vpn_key_outlined, size: 18, color: AppTheme.accent),
                     SizedBox(width: 8),
-                    Text('UNIQUE FAMILY INVITE CODE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.accent300, letterSpacing: 0.8)),
+                    Text('UNIQUE FAMILY INVITE CODE (FREE · NO OTP NEEDED)', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppTheme.accent300, letterSpacing: 0.7)),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -98,25 +99,47 @@ class FamilyScreen extends StatelessWidget {
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 2.0),
                       ),
                     ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: provider.familyCode));
-                        provider.showToast('Family Code ${provider.familyCode} copied to clipboard!');
-                      },
-                      icon: const Icon(Icons.copy, size: 14),
-                      label: const Text('Copy Code', style: TextStyle(fontSize: 12)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accent,
-                        foregroundColor: AppTheme.bg,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
+                    Row(
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: provider.familyCode));
+                            provider.showToast('Family Code ${provider.familyCode} copied!');
+                          },
+                          icon: const Icon(Icons.copy, size: 13, color: AppTheme.accent100),
+                          label: const Text('Copy', style: TextStyle(fontSize: 11.5, color: AppTheme.accent100)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppTheme.accent),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            final msg =
+                                'Join our "${provider.familyName}" workspace on Family Spend Tracker!\n\nFamily Invite Code: ${provider.familyCode}\n\nOpen the app -> Select "Join via Code" -> Enter ${provider.familyCode}';
+                            NoteImportService.shareExternally(
+                              text: msg,
+                              title: 'Join ${provider.familyName} on Family Spend Tracker',
+                            );
+                          },
+                          icon: const Icon(Icons.share_rounded, size: 13),
+                          label: const Text('Share Invite', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accent,
+                            foregroundColor: AppTheme.bg,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Share this unique code with family members so they can join your household during sign-up or login.',
+                  'Share via WhatsApp, SMS, or any app. Family members simply enter this 8-character code on sign-up or login—no paid OTP or email server needed.',
                   style: TextStyle(fontSize: 11.5, color: AppTheme.textSubtle, height: 1.3),
                 ),
               ],

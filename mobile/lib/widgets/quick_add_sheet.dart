@@ -50,7 +50,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
 
   final List<String> _expenseCatKeys = ['groceries', 'event', 'dining', 'transport', 'fuel', 'shopping', 'bills', 'health', 'education'];
   final List<String> _incomeCatKeys = ['salary', 'loan', 'business', 'gift', 'pension', 'refund'];
-  final List<String> _methods = ['UPI', 'Cash', 'Card', 'Bank'];
+  final List<String> _methods = ['Cash', 'Salary', 'Loan', 'UPI', 'Bank', 'Card'];
 
   @override
   void initState() {
@@ -58,6 +58,14 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
     _type = widget.initialType;
     _amountStr = widget.initialAmount ?? '';
     _selectedCatKey = widget.initialCategory ?? (_type == 'expense' ? 'groceries' : 'salary');
+    final prov = Provider.of<FinanceProvider>(context, listen: false);
+    if (prov.selectedAccount != 'All' && _methods.contains(prov.selectedAccount)) {
+      _selectedMethod = prov.selectedAccount;
+    } else if (_type == 'income' && _selectedCatKey == 'salary') {
+      _selectedMethod = 'Salary';
+    } else if (_type == 'income' && _selectedCatKey == 'loan') {
+      _selectedMethod = 'Loan';
+    }
   }
 
   void _onKeyPress(String key) {
@@ -328,26 +336,41 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
             ),
           ],
           const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _methods.map((m) {
-                final isSelected = _selectedMethod == m;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6.0),
-                  child: ChoiceChip(
-                    label: Text(m, style: TextStyle(fontSize: 12, color: isSelected ? AppTheme.accent100 : AppTheme.textMuted)),
-                    selected: isSelected,
-                    onSelected: (_) => setState(() => _selectedMethod = m),
-                    backgroundColor: AppTheme.surface,
-                    selectedColor: AppTheme.accent900,
-                    side: BorderSide(color: isSelected ? AppTheme.accent600 : const Color(0xFF3F424D)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          Row(
+            children: [
+              const Text('Account: ', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppTheme.textMuted)),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _methods.map((m) {
+                      final isSelected = _selectedMethod == m;
+                      final bal = provider.accountBalance(m);
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6.0),
+                        child: ChoiceChip(
+                          label: Text(
+                            '$m · ₹${bal.round()}',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              color: isSelected ? AppTheme.accent100 : AppTheme.textMuted,
+                            ),
+                          ),
+                          selected: isSelected,
+                          onSelected: (_) => setState(() => _selectedMethod = m),
+                          backgroundColor: AppTheme.surface,
+                          selectedColor: AppTheme.accent900,
+                          side: BorderSide(color: isSelected ? AppTheme.accent600 : const Color(0xFF3F424D)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Row(

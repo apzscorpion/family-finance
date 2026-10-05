@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
+import 'dart:io';
 import '../models/finance_models.dart';
-import 'supabase_service.dart';
 
 class LiveNotesWsService {
-  RealtimeChannel? _channel;
+  WebSocket? _ws;
+  StreamSubscription? _wsSub;
   String _activeRoomCode = '';
   String _currentUserName = '';
   bool _isConnected = false;
@@ -41,11 +42,11 @@ class LiveNotesWsService {
     final cleanCode = familyCode.trim().toUpperCase();
     final cleanUser = userName.trim().isNotEmpty ? userName.trim() : 'Member';
 
-    if (!SupabaseService.isConfigured || cleanCode.isEmpty || cleanCode == '--------') {
+    if (cleanCode.isEmpty || cleanCode == '--------') {
       return;
     }
 
-    if (_channel != null && _activeRoomCode == cleanCode && _isConnected) {
+    if (_activeRoomCode == cleanCode && _isConnected) {
       _currentUserName = cleanUser;
       return;
     }
@@ -54,102 +55,123 @@ class LiveNotesWsService {
 
     _activeRoomCode = cleanCode;
     _currentUserName = cleanUser;
+    _isConnected = true;
+    onStateChanged?.call();
 
-    final channelName = 'family_notes_$cleanCode';
-    final channel = SupabaseService.client.channel(
-      channelName,
-      opts: const RealtimeChannelConfig(self: false),
-    );
+    // Try connecting to the FastAPI WebSocket hub (emulator 10.0.2.2 or localhost)
+    final urls = [
+      'ws://10.0.2.2:8000/ws/notes/$cleanCode',
+      'ws://127.0.0.1:8000/ws/notes/$cleanCode',
+    ];
 
-    channel
-        .onBroadcast(
-          event: 'note_live_edit',
-          callback: (Map<String, dynamic> payload) {
-            final sender = payload['sender']?.toString() ?? 'Family Member';
-            if (sender == _currentUserName) return;
-            final noteMap = payload['note'];
-            if (noteMap is Map) {
-              final incoming = SharedNote.fromJson(Map<String, dynamic>.from(noteMap));
-              _markPeerOnline(sender);
-              _setNoteTyping(incoming.id, sender);
-              onRemoteNoteUpdated?.call(incoming, sender);
+    for (final url in urls) {
+      try {
+        final socket = await WebSocket.connect(url).timeout(const Duration(seconds: 2));
+        _ws = socket;
+        _isConnected = true;
+        onStateChanged?.call();
+
+        _wsSub = socket.listen(
+          (dynamic raw) {
+            if (raw is String) {
+              _handleIncomingMessage(raw);
             }
           },
-        )
-        .onBroadcast(
-          event: 'note_typing',
-          callback: (Map<String, dynamic> payload) {
-            final sender = payload['sender']?.toString() ?? 'Family Member';
-            final noteId = payload['noteId']?.toString() ?? '';
-            if (sender == _currentUserName || noteId.isEmpty) return;
+          onDone: () {
+            _ws = null;
+          },
+          onError: (_) {
+            _ws = null;
+          },
+        );
+
+        await _sendEvent('peer_hello', {'sender': _currentUserName});
+        await requestRoomSync();
+        break;
+      } catch (_) {
+        // Keep local room live even if external WS host is unreachable
+      }
+    }
+  }
+
+  void _handleIncomingMessage(String raw) {
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is! Map) return;
+      final event = decoded['event']?.toString() ?? '';
+      final payloadRaw = decoded['payload'];
+      if (payloadRaw is! Map) return;
+      final payload = Map<String, dynamic>.from(payloadRaw);
+      final sender = payload['sender']?.toString() ?? 'Family Member';
+      if (sender == _currentUserName) return;
+
+      switch (event) {
+        case 'note_live_edit':
+          final noteMap = payload['note'];
+          if (noteMap is Map) {
+            final incoming = SharedNote.fromJson(Map<String, dynamic>.from(noteMap));
+            _markPeerOnline(sender);
+            _setNoteTyping(incoming.id, sender);
+            onRemoteNoteUpdated?.call(incoming, sender);
+          }
+          break;
+        case 'note_typing':
+          final noteId = payload['noteId']?.toString() ?? '';
+          if (noteId.isNotEmpty) {
             _markPeerOnline(sender);
             _setNoteTyping(noteId, sender);
-          },
-        )
-        .onBroadcast(
-          event: 'note_delete',
-          callback: (Map<String, dynamic> payload) {
-            final sender = payload['sender']?.toString() ?? 'Family Member';
-            final noteId = payload['noteId']?.toString() ?? '';
-            if (sender == _currentUserName || noteId.isEmpty) return;
+          }
+          break;
+        case 'note_delete':
+          final noteId = payload['noteId']?.toString() ?? '';
+          if (noteId.isNotEmpty) {
             _markPeerOnline(sender);
             onRemoteNoteDeleted?.call(noteId, sender);
-          },
-        )
-        .onBroadcast(
-          event: 'notes_request_sync',
-          callback: (Map<String, dynamic> payload) {
-            final sender = payload['sender']?.toString() ?? '';
-            if (sender == _currentUserName) return;
-            if (sender.isNotEmpty) _markPeerOnline(sender);
-            final currentNotes = getLocalNotes?.call() ?? [];
-            if (currentNotes.isNotEmpty) {
-              broadcastFullSync(currentNotes);
-            } else {
-              _broadcastHello();
-            }
-          },
-        )
-        .onBroadcast(
-          event: 'notes_full_sync',
-          callback: (Map<String, dynamic> payload) {
-            final sender = payload['sender']?.toString() ?? 'Family Member';
-            if (sender == _currentUserName) return;
-            _markPeerOnline(sender);
-            final listRaw = payload['notes'];
-            if (listRaw is List) {
-              final incoming = listRaw
-                  .whereType<Map>()
-                  .map((m) => SharedNote.fromJson(Map<String, dynamic>.from(m)))
-                  .toList();
-              if (incoming.isNotEmpty) {
-                onRemoteFullSync?.call(incoming, sender);
-              }
-            }
-          },
-        )
-        .onBroadcast(
-          event: 'peer_hello',
-          callback: (Map<String, dynamic> payload) {
-            final sender = payload['sender']?.toString() ?? '';
-            if (sender.isNotEmpty && sender != _currentUserName) {
-              _markPeerOnline(sender);
-            }
-          },
-        )
-        .subscribe((RealtimeSubscribeStatus status, Object? error) {
-          _isConnected = status == RealtimeSubscribeStatus.subscribed;
-          onStateChanged?.call();
-          if (_isConnected) {
-            requestRoomSync();
           }
-        });
+          break;
+        case 'notes_request_sync':
+          _markPeerOnline(sender);
+          final currentNotes = getLocalNotes?.call() ?? [];
+          if (currentNotes.isNotEmpty) {
+            broadcastFullSync(currentNotes);
+          }
+          break;
+        case 'notes_full_sync':
+          _markPeerOnline(sender);
+          final listRaw = payload['notes'];
+          if (listRaw is List) {
+            final incoming = listRaw
+                .whereType<Map>()
+                .map((m) => SharedNote.fromJson(Map<String, dynamic>.from(m)))
+                .toList();
+            if (incoming.isNotEmpty) {
+              onRemoteFullSync?.call(incoming, sender);
+            }
+          }
+          break;
+        case 'peer_hello':
+          _markPeerOnline(sender);
+          break;
+      }
+    } catch (_) {}
+  }
 
-    _channel = channel;
+  Future<void> _sendEvent(String event, Map<String, dynamic> payload) async {
+    final socket = _ws;
+    if (socket == null) return;
+    try {
+      socket.add(json.encode({
+        'event': event,
+        'payload': {
+          ...payload,
+          'ts': DateTime.now().millisecondsSinceEpoch,
+        },
+      }));
+    } catch (_) {}
   }
 
   void _markPeerOnline(String peerName) {
-    if (peerName.isEmpty || peerName == _currentUserName) return;
+    if (peerName.isEmpty || peerName == _currentUserName || peerName == 'Server') return;
     if (!_onlinePeers.contains(peerName)) {
       _onlinePeers.add(peerName);
       onStateChanged?.call();
@@ -166,92 +188,36 @@ class LiveNotesWsService {
     });
   }
 
-  Future<void> _broadcastHello() async {
-    final ch = _channel;
-    if (ch == null || !_isConnected) return;
-    try {
-      await ch.sendBroadcastMessage(
-        event: 'peer_hello',
-        payload: {
-          'sender': _currentUserName,
-          'ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      );
-    } catch (_) {}
-  }
-
   Future<void> requestRoomSync() async {
-    final ch = _channel;
-    if (ch == null || !_isConnected) return;
-    try {
-      await ch.sendBroadcastMessage(
-        event: 'notes_request_sync',
-        payload: {
-          'sender': _currentUserName,
-          'ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      );
-    } catch (_) {}
+    await _sendEvent('notes_request_sync', {'sender': _currentUserName});
   }
 
   Future<void> broadcastNoteEdit(SharedNote note) async {
-    final ch = _channel;
-    if (ch == null || !_isConnected) return;
-    try {
-      await ch.sendBroadcastMessage(
-        event: 'note_live_edit',
-        payload: {
-          'sender': _currentUserName,
-          'note': note.toJson(),
-          'ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      );
-    } catch (_) {}
+    await _sendEvent('note_live_edit', {
+      'sender': _currentUserName,
+      'note': note.toJson(),
+    });
   }
 
   Future<void> broadcastTyping(String noteId) async {
-    final ch = _channel;
-    if (ch == null || !_isConnected) return;
-    try {
-      await ch.sendBroadcastMessage(
-        event: 'note_typing',
-        payload: {
-          'sender': _currentUserName,
-          'noteId': noteId,
-          'ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      );
-    } catch (_) {}
+    await _sendEvent('note_typing', {
+      'sender': _currentUserName,
+      'noteId': noteId,
+    });
   }
 
   Future<void> broadcastNoteDelete(String noteId) async {
-    final ch = _channel;
-    if (ch == null || !_isConnected) return;
-    try {
-      await ch.sendBroadcastMessage(
-        event: 'note_delete',
-        payload: {
-          'sender': _currentUserName,
-          'noteId': noteId,
-          'ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      );
-    } catch (_) {}
+    await _sendEvent('note_delete', {
+      'sender': _currentUserName,
+      'noteId': noteId,
+    });
   }
 
   Future<void> broadcastFullSync(List<SharedNote> notes) async {
-    final ch = _channel;
-    if (ch == null || !_isConnected) return;
-    try {
-      await ch.sendBroadcastMessage(
-        event: 'notes_full_sync',
-        payload: {
-          'sender': _currentUserName,
-          'notes': notes.map((n) => n.toJson()).toList(),
-          'ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      );
-    } catch (_) {}
+    await _sendEvent('notes_full_sync', {
+      'sender': _currentUserName,
+      'notes': notes.map((n) => n.toJson()).toList(),
+    });
   }
 
   Future<void> disconnect() async {
@@ -262,13 +228,13 @@ class LiveNotesWsService {
     _activeEditorsByNote.clear();
     _onlinePeers.clear();
     _isConnected = false;
-    final ch = _channel;
-    _channel = null;
-    if (ch != null) {
-      try {
-        await SupabaseService.client.removeChannel(ch);
-      } catch (_) {}
-    }
+    await _wsSub?.cancel();
+    _wsSub = null;
+    try {
+      await _ws?.close();
+    } catch (_) {}
+    _ws = null;
     onStateChanged?.call();
   }
 }
+

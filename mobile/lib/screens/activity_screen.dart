@@ -122,7 +122,38 @@ class ActivityScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
+          // Account / Wallet Filter Chips (All, Cash, Salary, Loan, UPI, Bank, Card)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: FinanceProvider.walletAccounts.map((acct) {
+                final isSel = provider.selectedAccount == acct;
+                final bal = provider.accountBalance(acct);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6.0),
+                  child: ChoiceChip(
+                    label: Text(
+                      '$acct · ${formatInr(bal)}',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: isSel ? FontWeight.w600 : FontWeight.w400,
+                        color: isSel ? AppTheme.accent100 : AppTheme.textMuted,
+                      ),
+                    ),
+                    selected: isSel,
+                    onSelected: (_) => provider.setSelectedAccount(acct),
+                    backgroundColor: AppTheme.surface,
+                    selectedColor: AppTheme.accent900,
+                    side: BorderSide(color: isSel ? AppTheme.accent : const Color(0xFF3F424D)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
 
           // Total Spent & Total Received Summary Cards
           Row(
@@ -134,7 +165,7 @@ class ActivityScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Spent · shown', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                      Text('Spent · ${provider.selectedAccount}', style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                       const SizedBox(height: 2),
                       Text(
                         formatInr(filteredTxns.where((t) => t.type == 'expense').fold(0.0, (s, t) => s + t.amount)),
@@ -152,7 +183,7 @@ class ActivityScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Received · shown', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                      Text('Received · ${provider.selectedAccount}', style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                       const SizedBox(height: 2),
                       Text(
                         formatInr(filteredTxns.where((t) => t.type == 'income').fold(0.0, (s, t) => s + t.amount)),
@@ -231,11 +262,24 @@ class ActivityScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(t.title, style: const TextStyle(fontSize: 14, color: AppTheme.text)),
-                                    Row(
+                                    const SizedBox(height: 3),
+                                    Wrap(
+                                      spacing: 6,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
-                                        Icon(t.origin == 'sms' ? Icons.chat_bubble_outline : Icons.edit_outlined, size: 12, color: AppTheme.textSubtle),
-                                        const SizedBox(width: 4),
-                                        Text('${t.time} · ${member.name} · ${t.method}', style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle)),
+                                        Text('${t.time} · ${member.name}', style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle)),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.accent900,
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: AppTheme.accent700),
+                                          ),
+                                          child: Text(
+                                            '${t.method} · Bal ${formatInr(provider.accountBalance(t.method))}',
+                                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.accent200),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ],

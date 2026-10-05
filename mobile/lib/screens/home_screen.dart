@@ -158,7 +158,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // 3. Tracked Balance Card
+          // 3. Tracked Balance Card + Account/Method Selector (Cash, Salary, Loan, UPI, Bank, Card)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Container(
@@ -176,9 +176,11 @@ class HomeScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        provider.scopeMemberId == null
-                            ? 'FAMILY TRACKED BALANCE'
-                            : (provider.scopeMemberId == 'me' ? 'MY TRACKED BALANCE' : 'MEMBER BALANCE'),
+                        provider.selectedAccount == 'All'
+                            ? (provider.scopeMemberId == null
+                                ? 'ALL ACCOUNTS BALANCE'
+                                : (provider.scopeMemberId == 'me' ? 'MY TOTAL BALANCE' : 'MEMBER BALANCE'))
+                            : '${provider.selectedAccount.toUpperCase()} ACCOUNT BALANCE',
                         style: const TextStyle(
                           fontSize: 11,
                           letterSpacing: 0.8,
@@ -203,30 +205,127 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  // Balance Text & Hide Eye Toggle
+                  // Balance Text, Hide Eye Toggle & Set Balances Button
                   Row(
                     children: [
-                      Text(
-                        provider.balanceHidden ? '₹ ••••••' : formatInr(provider.trackedBalance),
-                        style: const TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                provider.balanceHidden ? '₹ ••••••' : formatInr(provider.trackedBalance),
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              onPressed: () => provider.toggleBalanceHidden(),
+                              icon: Icon(
+                                provider.balanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                size: 18,
+                                color: AppTheme.textMuted,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      IconButton(
-                        onPressed: () => provider.toggleBalanceHidden(),
-                        icon: Icon(
-                          provider.balanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          size: 18,
-                          color: AppTheme.textMuted,
+                      InkWell(
+                        onTap: () => _showEditBalancesModal(context, provider),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black26,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppTheme.accent700),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.account_balance_wallet_outlined, size: 13, color: AppTheme.accent200),
+                              SizedBox(width: 5),
+                              Text(
+                                'Set Balances',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.accent100),
+                              ),
+                            ],
+                          ),
                         ),
-                        visualDensity: VisualDensity.compact,
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+
+                  // Interactive Account / Wallet Selector (All, Cash, Salary, Loan, UPI, Bank, Card)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: FinanceProvider.walletAccounts.map((acct) {
+                        final isSelected = provider.selectedAccount == acct;
+                        final bal = provider.accountBalance(acct);
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: GestureDetector(
+                            onTap: () => provider.setSelectedAccount(acct),
+                            onLongPress: acct == 'All'
+                                ? null
+                                : () => _showEditBalancesModal(context, provider, initialFocusAccount: acct),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 160),
+                              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppTheme.accent : Colors.black.withValues(alpha: 0.28),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected ? Colors.white : Colors.white12,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _accountIcon(acct),
+                                    size: 13,
+                                    color: isSelected ? AppTheme.bg : AppTheme.accent200,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        acct,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isSelected ? AppTheme.bg : Colors.white70,
+                                        ),
+                                      ),
+                                      Text(
+                                        provider.balanceHidden ? '₹•••' : formatInr(bal),
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isSelected ? AppTheme.bg : Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+
                   const SizedBox(height: 14),
                   // Spent vs Received summary pills
                   Row(
@@ -241,7 +340,10 @@ class HomeScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('SPENT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textSubtle)),
+                              Text(
+                                provider.selectedAccount == 'All' ? 'SPENT' : 'SPENT (${provider.selectedAccount.toUpperCase()})',
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textSubtle),
+                              ),
                               const SizedBox(height: 2),
                               Text(
                                 provider.balanceHidden ? '₹ •••' : formatInr(provider.totalExpense),
@@ -262,7 +364,10 @@ class HomeScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('RECEIVED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textSubtle)),
+                              Text(
+                                provider.selectedAccount == 'All' ? 'RECEIVED' : 'RECEIVED (${provider.selectedAccount.toUpperCase()})',
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textSubtle),
+                              ),
                               const SizedBox(height: 2),
                               Text(
                                 provider.balanceHidden ? '₹ •••' : formatInr(provider.totalIncome),
@@ -707,41 +812,168 @@ class HomeScreen extends StatelessWidget {
                                 child: Icon(cat.icon, size: 19, color: cat.color),
                               ),
                               const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(t.title, style: const TextStyle(fontSize: 14, color: AppTheme.text)),
-                                    Row(
-                                      children: [
-                                        Icon(t.origin == 'sms' ? Icons.chat_bubble_outline : Icons.edit_outlined, size: 12, color: AppTheme.textSubtle),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${t.time} · ${member.name} · ${t.method}',
-                                          style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(t.title, style: const TextStyle(fontSize: 14, color: AppTheme.text)),
+                                      const SizedBox(height: 3),
+                                      Wrap(
+                                        spacing: 6,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Text(
+                                            '${t.time} · ${member.name}',
+                                            style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.accent900,
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: AppTheme.accent700),
+                                            ),
+                                            child: Text(
+                                              '${t.method} · Bal ₹${provider.accountBalance(t.method).round()}',
+                                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.accent200),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                '${isIncome ? '+' : '-'}${formatInr(t.amount)}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: isIncome ? AppTheme.green : AppTheme.text,
+                                Text(
+                                  '${isIncome ? '+' : '-'}${formatInr(t.amount)}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isIncome ? AppTheme.green : AppTheme.text,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+              ),
             ),
+            const SizedBox(height: 18),
+          ],
+        ),
+      );
+    }
+
+  IconData _accountIcon(String acct) {
+    switch (acct) {
+      case 'Cash':
+        return Icons.payments_outlined;
+      case 'Salary':
+        return Icons.work_outline_rounded;
+      case 'Loan':
+        return Icons.account_balance_outlined;
+      case 'UPI':
+        return Icons.qr_code_scanner_rounded;
+      case 'Bank':
+        return Icons.savings_outlined;
+      case 'Card':
+        return Icons.credit_card_rounded;
+      default:
+        return Icons.account_balance_wallet_outlined;
+    }
+  }
+
+  void _showEditBalancesModal(BuildContext context, FinanceProvider provider, {String? initialFocusAccount}) {
+    final accounts = ['Cash', 'Salary', 'Loan', 'UPI', 'Bank', 'Card'];
+    final controllers = {
+      for (final a in accounts)
+        a: TextEditingController(
+          text: (provider.accountOpeningBalances[a] ?? 0) > 0
+              ? (provider.accountOpeningBalances[a] ?? 0).round().toString()
+              : '',
+        ),
+    };
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 18, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Set Account & Wallet Balances',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.text),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18, color: AppTheme.textMuted),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const Text(
+                'Enter your opening or current base balance for Cash, Salary, Loan, UPI, Bank, or Card.',
+                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 14),
+              ...accounts.map((acct) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: TextField(
+                    controller: controllers[acct],
+                    autofocus: initialFocusAccount == acct,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: const TextStyle(color: AppTheme.text, fontSize: 14),
+                    decoration: InputDecoration(
+                      prefixIcon: Icon(_accountIcon(acct), size: 18, color: AppTheme.accent300),
+                      labelText: '$acct Balance (₹)',
+                      labelStyle: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                      hintText: '0',
+                      filled: true,
+                      fillColor: AppTheme.bg,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF3F424D)),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accent,
+                    foregroundColor: AppTheme.bg,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: () async {
+                    for (final acct in accounts) {
+                      final raw = controllers[acct]!.text.replaceAll(',', '').trim();
+                      final val = double.tryParse(raw) ?? 0.0;
+                      await provider.setAccountOpeningBalance(acct, val);
+                    }
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  child: const Text('Save Account Balances', style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 18),
-        ],
+        ),
       ),
     );
   }
