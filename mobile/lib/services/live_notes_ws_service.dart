@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/finance_models.dart';
+import 'supabase_service.dart';
 
 class LiveNotesWsService {
   WebSocket? _ws;
   StreamSubscription? _wsSub;
+  RealtimeChannel? _channel;
   String _activeRoomCode = '';
   String _currentUserName = '';
   bool _isConnected = false;
@@ -21,6 +24,7 @@ class LiveNotesWsService {
   final void Function(String requestId, String email, bool approved)? onRemoteFamilyLoginDecision;
   final void Function(String email, String name, bool disabled)? onRemoteMemberDisabledChanged;
   final void Function(Map<String, dynamic> groupPayload)? onRemoteGroupWorkspaceSync;
+  final void Function()? onPeerRequestedWorkspaceSync;
   final List<SharedNote> Function()? getLocalNotes;
   final void Function()? onStateChanged;
 
@@ -32,6 +36,7 @@ class LiveNotesWsService {
     this.onRemoteFamilyLoginDecision,
     this.onRemoteMemberDisabledChanged,
     this.onRemoteGroupWorkspaceSync,
+    this.onPeerRequestedWorkspaceSync,
     this.getLocalNotes,
     this.onStateChanged,
   });
@@ -54,7 +59,7 @@ class LiveNotesWsService {
       return;
     }
 
-    if (_activeRoomCode == cleanCode && _isConnected && _ws != null) {
+    if (_activeRoomCode == cleanCode && _isConnected && (_channel != null || _ws != null)) {
       _currentUserName = cleanUser;
       return;
     }
@@ -66,6 +71,49 @@ class LiveNotesWsService {
     _isConnected = true;
     onStateChanged?.call();
 
+    // 1. Connect via Supabase Realtime Broadcast so real phones on any network sync live
+    if (SupabaseService.isConfigured) {
+      try {
+        final channel = SupabaseService.client.channel(
+          'family_notes_$cleanCode',
+          opts: const RealtimeChannelConfig(self: false),
+        );
+
+        for (final evt in [
+          'note_live_edit',
+          'note_typing',
+          'note_delete',
+          'notes_request_sync',
+          'notes_full_sync',
+          'peer_hello',
+          'family_join_request',
+          'family_join_decision',
+          'family_member_disabled',
+          'group_workspace_sync',
+        ]) {
+          channel.onBroadcast(
+            event: evt,
+            callback: (Map<String, dynamic> payload) {
+              _dispatchEvent(evt, payload);
+            },
+          );
+        }
+
+        channel.subscribe((RealtimeSubscribeStatus status, Object? error) {
+          if (status == RealtimeSubscribeStatus.subscribed) {
+            _isConnected = true;
+            onStateChanged?.call();
+            _sendEvent('peer_hello', {'sender': _currentUserName});
+            requestRoomSync();
+            onPeerRequestedWorkspaceSync?.call();
+          }
+        });
+
+        _channel = channel;
+      } catch (_) {}
+    }
+
+    // 2. Also connect to local WebSocket if running on local emulator/dev server
     final urls = [
       'ws://10.0.2.2:8000/ws/notes/$cleanCode',
       'ws://127.0.0.1:8000/ws/notes/$cleanCode',
@@ -73,7 +121,7 @@ class LiveNotesWsService {
 
     for (final url in urls) {
       try {
-        final socket = await WebSocket.connect(url).timeout(const Duration(seconds: 2));
+        final socket = await WebSocket.connect(url).timeout(const Duration(milliseconds: 1200));
         _ws = socket;
         _isConnected = true;
         onStateChanged?.call();
@@ -96,7 +144,7 @@ class LiveNotesWsService {
         await requestRoomSync();
         break;
       } catch (_) {
-        // Keep local room live even if external WS host is unreachable
+        // Supabase Realtime handles internet sync when local dev server is not running
       }
     }
   }
@@ -109,6 +157,12 @@ class LiveNotesWsService {
       final payloadRaw = decoded['payload'];
       if (payloadRaw is! Map) return;
       final payload = Map<String, dynamic>.from(payloadRaw);
+      _dispatchEvent(event, payload);
+    } catch (_) {}
+  }
+
+  void _dispatchEvent(String event, Map<String, dynamic> payload) {
+    try {
       final sender = payload['sender']?.toString() ?? 'Family Member';
 
       switch (event) {
@@ -135,6 +189,7 @@ class LiveNotesWsService {
           return;
         case 'group_workspace_sync':
           if (sender != _currentUserName) {
+            _markPeerOnline(sender);
             onRemoteGroupWorkspaceSync?.call(payload);
           }
           return;
@@ -172,6 +227,7 @@ class LiveNotesWsService {
           if (currentNotes.isNotEmpty) {
             broadcastFullSync(currentNotes);
           }
+          onPeerRequestedWorkspaceSync?.call();
           break;
         case 'notes_full_sync':
           _markPeerOnline(sender);
@@ -188,23 +244,37 @@ class LiveNotesWsService {
           break;
         case 'peer_hello':
           _markPeerOnline(sender);
+          onPeerRequestedWorkspaceSync?.call();
           break;
       }
     } catch (_) {}
   }
 
   Future<void> _sendEvent(String event, Map<String, dynamic> payload) async {
+    final fullPayload = <String, dynamic>{
+      ...payload,
+      'ts': DateTime.now().millisecondsSinceEpoch,
+    };
+
+    final ch = _channel;
+    if (ch != null) {
+      try {
+        await ch.sendBroadcastMessage(
+          event: event,
+          payload: fullPayload,
+        );
+      } catch (_) {}
+    }
+
     final socket = _ws;
-    if (socket == null) return;
-    try {
-      socket.add(json.encode({
-        'event': event,
-        'payload': {
-          ...payload,
-          'ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      }));
-    } catch (_) {}
+    if (socket != null) {
+      try {
+        socket.add(json.encode({
+          'event': event,
+          'payload': fullPayload,
+        }));
+      } catch (_) {}
+    }
   }
 
   void _markPeerOnline(String peerName) {
@@ -302,6 +372,7 @@ class LiveNotesWsService {
   }) async {
     await _sendEvent('group_workspace_sync', {
       'sender': _currentUserName,
+      'familyCode': _activeRoomCode,
       'familyName': familyName,
       'groupKind': groupKind,
       'ownerEmail': ownerEmail,
@@ -318,6 +389,13 @@ class LiveNotesWsService {
     _activeEditorsByNote.clear();
     _onlinePeers.clear();
     _isConnected = false;
+    final ch = _channel;
+    _channel = null;
+    if (ch != null && SupabaseService.isConfigured) {
+      try {
+        await SupabaseService.client.removeChannel(ch);
+      } catch (_) {}
+    }
     await _wsSub?.cancel();
     _wsSub = null;
     try {

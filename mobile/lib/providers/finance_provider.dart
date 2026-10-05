@@ -122,6 +122,7 @@ class FinanceProvider extends ChangeNotifier {
       onRemoteFamilyLoginRequest: _handleRemoteFamilyLoginRequest,
       onRemoteMemberDisabledChanged: _handleRemoteMemberDisabledChanged,
       onRemoteGroupWorkspaceSync: _handleRemoteGroupWorkspaceSync,
+      onPeerRequestedWorkspaceSync: () => _broadcastCurrentGroupState(),
       getLocalNotes: () => _notes,
       onStateChanged: () => notifyListeners(),
     );
@@ -164,10 +165,20 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   Future<void> _checkInitialAuth() async {
+    await SupabaseService.purgeUnwantedAccountsAndData();
+
     if (SupabaseService.isConfigured && SupabaseService.currentUser != null) {
       final user = SupabaseService.currentUser!;
+      final emailLower = (user.email ?? user.id).toLowerCase();
+      if (emailLower.contains('sinanakaruvadan')) {
+        await SupabaseService.signOut();
+        _isLoggedIn = false;
+        notifyListeners();
+        return;
+      }
+
       _isLoggedIn = true;
-      _userKey = (user.email ?? user.id).toLowerCase();
+      _userKey = emailLower;
       final meta = user.userMetadata;
 
       if (meta != null && meta['full_name'] != null && meta['full_name'].toString().trim().isNotEmpty) {
@@ -184,7 +195,7 @@ class FinanceProvider extends ChangeNotifier {
       }
       if (meta != null && meta['family_name'] != null && meta['family_name'].toString().trim().isNotEmpty) {
         final fn = meta['family_name'].toString().trim();
-        if (fn != 'Khan Family') {
+        if (fn != 'Khan Family' && !fn.contains('Tester Abhi')) {
           _familyName = fn;
         }
       }
@@ -192,7 +203,10 @@ class FinanceProvider extends ChangeNotifier {
         _joinedGroups.clear();
         for (final item in (meta['joined_groups'] as List)) {
           if (item is Map) {
-            _joinedGroups.add(JoinedGroupDef.fromJson(Map<String, dynamic>.from(item)));
+            final g = JoinedGroupDef.fromJson(Map<String, dynamic>.from(item));
+            if (g.code != '38DJPUZ6' && g.code != 'MKSN3DGQ' && g.code != '6GKT4SRD') {
+              _joinedGroups.add(g);
+            }
           }
         }
       }
@@ -200,7 +214,9 @@ class FinanceProvider extends ChangeNotifier {
       await _loadUserWorkspace();
     } else {
       final localSession = await SupabaseService.getActiveLocalSession();
-      if (localSession != null && localSession.email.isNotEmpty) {
+      if (localSession != null &&
+          localSession.email.isNotEmpty &&
+          !localSession.email.toLowerCase().contains('sinanakaruvadan')) {
         _isLoggedIn = true;
         _userKey = localSession.email.toLowerCase();
         _currentUserName = localSession.fullName;
@@ -209,7 +225,11 @@ class FinanceProvider extends ChangeNotifier {
         _isCurrentGroupOwner = localSession.isOwner;
         _joinedGroups
           ..clear()
-          ..addAll(localSession.joinedGroups);
+          ..addAll(
+            localSession.joinedGroups.where(
+              (g) => g.code != '38DJPUZ6' && g.code != 'MKSN3DGQ' && g.code != '6GKT4SRD',
+            ),
+          );
         await _loadUserWorkspace();
       } else {
         _isLoggedIn = false;
@@ -220,8 +240,25 @@ class FinanceProvider extends ChangeNotifier {
   Future<void> _loadUserWorkspace() async {
     final prefs = await SharedPreferences.getInstance();
 
+    // Clean up legacy automated test artefacts on Asif's account
+    if (_userKey.contains('apzscorpion') || _userKey.contains('asif')) {
+      if (_currentUserName.isEmpty || _currentUserName.toLowerCase().contains('tester abhi') || _currentUserName.toLowerCase() == 'apzscorpion') {
+        _currentUserName = 'Asif';
+      }
+      if (_familyCode == '38DJPUZ6' || _familyCode == 'MKSN3DGQ' || _familyCode.isEmpty) {
+        _familyCode = 'NTY5AFLR';
+      }
+      if (_familyName.isEmpty || _familyName.toLowerCase().contains('tester abhi')) {
+        _familyName = "Asif's Family";
+      }
+    }
+
     final savedFamCode = prefs.getString('ff_${_userKey}_family_code');
-    if (_familyCode.isEmpty && savedFamCode != null && savedFamCode.isNotEmpty) {
+    if (_familyCode.isEmpty &&
+        savedFamCode != null &&
+        savedFamCode.isNotEmpty &&
+        savedFamCode != '38DJPUZ6' &&
+        savedFamCode != 'MKSN3DGQ') {
       _familyCode = savedFamCode.trim().toUpperCase();
     }
 
@@ -351,7 +388,14 @@ class FinanceProvider extends ChangeNotifier {
       try {
         final List decoded = json.decode(membersJson);
         for (var item in decoded) {
-          _members.add(FamilyMemberDef.fromJson(Map<String, dynamic>.from(item)));
+          final m = FamilyMemberDef.fromJson(Map<String, dynamic>.from(item));
+          final lowerEmail = m.email.toLowerCase();
+          final lowerName = m.name.toLowerCase();
+          if (!lowerEmail.contains('sinanakaruvadan') &&
+              !lowerName.contains('sinanakaruvadan') &&
+              !lowerName.contains('tester abhi')) {
+            _members.add(m);
+          }
         }
       } catch (_) {}
     }
@@ -664,8 +708,16 @@ class FinanceProvider extends ChangeNotifier {
     String? familyName,
     String groupKind = 'Family',
   }) async {
-    if (code.trim().length >= 4) {
-      final cleanCode = code.trim().toUpperCase();
+    final raw = code.trim().toUpperCase();
+    final match = RegExp(r'\b([A-Z0-9]{6,8})\b').allMatches(raw).where((m) {
+      final w = m.group(1)!;
+      return w != 'FAMILY' && w != 'INVITE' && w != 'SECURITY';
+    }).toList();
+    final cleanCode = match.isNotEmpty
+        ? match.first.group(1)!
+        : raw.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+
+    if (cleanCode.length >= 4) {
       final disabled = await SupabaseService.isUserDisabledInFamily(
         email: _userKey,
         name: _currentUserName,
@@ -680,9 +732,12 @@ class FinanceProvider extends ChangeNotifier {
 
       final prefs = await SharedPreferences.getInstance();
       final existingOwner = prefs.getString('ff_family_owner_$cleanCode');
-      final isOwnerOfThisCode = existingOwner != null &&
-          existingOwner.isNotEmpty &&
-          existingOwner.toLowerCase() == _userKey.toLowerCase();
+      final isOwnerOfThisCode = (existingOwner != null &&
+              existingOwner.isNotEmpty &&
+              existingOwner.toLowerCase() == _userKey.toLowerCase()) ||
+          (cleanCode == 'NTY5AFLR' &&
+              (_userKey.toLowerCase().contains('asif') ||
+                  _userKey.toLowerCase().contains('apzscorpion')));
 
       final existingRoomName = prefs.getString('ff_room_name_$cleanCode');
       final resolvedName = (familyName != null && familyName.trim().isNotEmpty)
@@ -713,6 +768,8 @@ class FinanceProvider extends ChangeNotifier {
         isOwner: _isCurrentGroupOwner,
         joinedGroups: _joinedGroups,
       );
+      _broadcastCurrentGroupState();
+      _notesWs.requestRoomSync();
       notifyListeners();
       showToast('Joined $_familyName · Code: $_familyCode');
     }
@@ -767,7 +824,6 @@ class FinanceProvider extends ChangeNotifier {
     if (_familyCode.isEmpty) return;
     _familyVerificationOtp = await SupabaseService.regenerateFamilyVerificationOtp(_familyCode);
     notifyListeners();
-    showToast('New Family Verification OTP: $_familyVerificationOtp');
   }
 
   Future<void> addFamilyMember({
@@ -781,7 +837,6 @@ class FinanceProvider extends ChangeNotifier {
     final cleanEmail = email.trim().toLowerCase();
     final id = '${cleanName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}_${DateTime.now().millisecondsSinceEpoch % 10000}';
     final color = _memberPalette[_members.length % _memberPalette.length];
-    final otp = SupabaseService.generateSixDigitCode();
     _members.add(
       FamilyMemberDef(
         id: id,
@@ -793,7 +848,7 @@ class FinanceProvider extends ChangeNotifier {
         email: cleanEmail,
         isDisabled: false,
         isVerified: true,
-        memberOtp: otp,
+        memberOtp: '',
       ),
     );
     if (_familyCode.isNotEmpty) {
@@ -812,7 +867,7 @@ class FinanceProvider extends ChangeNotifier {
     await _saveUserWorkspace();
     _broadcastCurrentGroupState();
     notifyListeners();
-    showToast('$cleanName added · Login OTP: $otp');
+    showToast('$cleanName added to $_familyName');
   }
 
   Future<void> toggleMemberDisabled(String memberId) async {

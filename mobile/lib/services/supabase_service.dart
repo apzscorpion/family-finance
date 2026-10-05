@@ -79,6 +79,82 @@ class SupabaseService {
         _initialized = false;
       }
     }
+    await purgeUnwantedAccountsAndData();
+  }
+
+  /// Purges unwanted test/blocked user data (sinanakaruvadan@gmail.com, Tester Abhi, 38DJPUZ6, MKSN3DGQ)
+  /// and restores Asif's account (apzscorpion@gmail.com) to NTY5AFLR.
+  static Future<void> purgeUnwantedAccountsAndData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final allKeys = prefs.getKeys().toList();
+
+      const purgedTokens = [
+        'sinanakaruvadan@gmail.com',
+        'sinanakaruvadan',
+        '6gkt4srd',
+        '38djpuz6',
+        'mksn3dgq',
+      ];
+
+      for (final k in allKeys) {
+        final lowerKey = k.toLowerCase();
+        if (purgedTokens.any((t) => lowerKey.contains(t))) {
+          await prefs.remove(k);
+          continue;
+        }
+        final val = prefs.get(k);
+        if (val is String) {
+          final lowerVal = val.toLowerCase();
+          if (lowerVal.contains('sinanakaruvadan')) {
+            await prefs.remove(k);
+          }
+        }
+      }
+
+      // If active session was sinanakaruvadan@gmail.com, sign out immediately
+      final activeEmail = (prefs.getString('ff_active_session_email') ?? '').trim().toLowerCase();
+      if (activeEmail.contains('sinanakaruvadan')) {
+        await prefs.remove('ff_active_session_email');
+        if (_initialized) {
+          try {
+            await client.auth.signOut();
+          } catch (_) {}
+        }
+      }
+
+      // Fix apzscorpion@gmail.com if it had automated test data ("Tester Abhi" / "38DJPUZ6")
+      for (final asifKey in ['apzscorpion@gmail.com', 'asif']) {
+        final rawAcct = prefs.getString('ff_acct_$asifKey');
+        if (rawAcct != null &&
+            (rawAcct.contains('38DJPUZ6') ||
+                rawAcct.contains('MKSN3DGQ') ||
+                rawAcct.contains('Tester Abhi'))) {
+          final fixed = LocalAccountRecord(
+            email: asifKey,
+            password: '',
+            fullName: 'Asif',
+            familyName: "Asif's Family",
+            familyCode: 'NTY5AFLR',
+            isOwner: true,
+            joinedGroups: const [
+              JoinedGroupDef(
+                code: 'NTY5AFLR',
+                name: "Asif's Family",
+                kind: 'Family',
+                role: 'Owner',
+                ownerEmail: 'apzscorpion@gmail.com',
+              ),
+            ],
+          );
+          await prefs.setString('ff_acct_$asifKey', json.encode(fixed.toJson()));
+          await prefs.setString('ff_${asifKey}_family_code', 'NTY5AFLR');
+          await prefs.setString('ff_${asifKey}_family_name', "Asif's Family");
+          await prefs.remove('ff_${asifKey}_joined_groups');
+          await prefs.remove('ff_${asifKey}_members');
+        }
+      }
+    } catch (_) {}
   }
 
   /// Deterministically derives an Owner's 8-character Family Code from their account identifier
@@ -86,7 +162,10 @@ class SupabaseService {
   static String deriveDeterministicOwnerCode(String identifier, {String? fullName}) {
     final clean = identifier.trim().toLowerCase();
     final cleanName = (fullName ?? '').trim().toLowerCase();
-    if (clean.contains('asif') || cleanName.contains('asif')) {
+    if (clean.contains('asif') ||
+        clean.contains('apzscorpion') ||
+        cleanName.contains('asif') ||
+        cleanName.contains('apzscorpion')) {
       return 'NTY5AFLR';
     }
     if (clean.isEmpty) return 'NTY5AFLR';
@@ -107,7 +186,7 @@ class SupabaseService {
   }
 
   // ===========================================================================
-  // 1. FREE 6-DIGIT LOGIN OTP ENGINE (Zero Paid SMS / Zero SMTP Server Required)
+  // 1. EMAIL VERIFICATION OTP ENGINE
   // ===========================================================================
 
   static const String testUniversalOtp = '111111';
@@ -128,12 +207,12 @@ class SupabaseService {
     return match?.group(1);
   }
 
-  /// Generates a 6-digit Login OTP valid for 5 minutes for `email` or phone identifier
+  /// Generates a 6-digit OTP valid for 10 minutes and triggers Supabase email OTP if configured
   static Future<String> generateLoginOtp(String identifier) async {
     final prefs = await SharedPreferences.getInstance();
     final key = identifier.trim().toLowerCase();
     final otp = _random6Digits();
-    final expiryMs = DateTime.now().add(const Duration(minutes: 5)).millisecondsSinceEpoch;
+    final expiryMs = DateTime.now().add(const Duration(minutes: 10)).millisecondsSinceEpoch;
     await prefs.setString(
       'ff_login_otp_$key',
       json.encode({'otp': otp, 'expiryMs': expiryMs}),
@@ -141,14 +220,33 @@ class SupabaseService {
     return otp;
   }
 
-  /// Verifies the 6-digit Login OTP entered by the user (also accepts universal test OTP 111111)
+  /// Verifies the 6-digit Email OTP entered by the user (supports Supabase Email OTP & silent test OTP 111111)
   static Future<bool> verifyLoginOtp(String identifier, String enteredOtp) async {
     final extracted = extractOtpFromText(enteredOtp) ?? enteredOtp.trim();
+    final key = identifier.trim().toLowerCase();
+
+    // Try verifying against Supabase Email OTP if the user entered the code from their email
+    if (isConfigured && _initialized && extracted.length == 6 && key.contains('@')) {
+      for (final otpType in [OtpType.signup, OtpType.email, OtpType.magiclink]) {
+        try {
+          final res = await client.auth
+              .verifyOTP(
+                type: otpType,
+                email: key,
+                token: extracted,
+              )
+              .timeout(const Duration(seconds: 4));
+          if (res.user != null || res.session != null) {
+            return true;
+          }
+        } catch (_) {}
+      }
+    }
+
     if (extracted == testUniversalOtp) {
       return true;
     }
     final prefs = await SharedPreferences.getInstance();
-    final key = identifier.trim().toLowerCase();
     final raw = prefs.getString('ff_login_otp_$key');
     if (raw == null || raw.isEmpty) return false;
     try {

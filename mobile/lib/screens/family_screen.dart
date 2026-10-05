@@ -13,7 +13,6 @@ class FamilyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = Provider.of<FinanceProvider>(context);
     String formatInr(double n) => '₹${n.round()}';
-    final pendingLoginReqs = provider.pendingFamilyLoginRequests;
     final disabledCount = provider.members.where((m) => m.isDisabled).length;
 
     return SingleChildScrollView(
@@ -212,7 +211,7 @@ class FamilyScreen extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          // Family Invite Code + 6-Digit Family Security OTP Card
+          // Family Invite Code Card
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -226,7 +225,7 @@ class FamilyScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.verified_user_outlined, size: 17, color: AppTheme.accent200),
+                    const Icon(Icons.group_outlined, size: 17, color: AppTheme.accent200),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -239,266 +238,78 @@ class FamilyScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-
-                // Row 1: Family Invite Code
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.spaceBetween,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('Family Invite Code', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
                         const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(color: AppTheme.bg, borderRadius: BorderRadius.circular(10)),
-                          child: Text(
-                            provider.familyCode,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 2.0),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          children: [
-                            const Text('Owner Verification OTP', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
-                            const SizedBox(width: 4),
-                            InkWell(
-                              onTap: () => provider.rotateFamilyVerificationOtp(),
-                              child: const Icon(Icons.refresh, size: 14, color: AppTheme.accent200),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
                         GestureDetector(
                           onTap: () {
-                            Clipboard.setData(ClipboardData(text: provider.familyVerificationOtp));
-                            provider.showToast('Family Security OTP ${provider.familyVerificationOtp} copied!');
+                            Clipboard.setData(ClipboardData(text: provider.familyCode));
+                            provider.showToast('Invite Code ${provider.familyCode} copied!');
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.bg,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppTheme.green.withOpacity(0.5)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.lock_outline, size: 14, color: AppTheme.green),
-                                const SizedBox(width: 6),
-                                Text(
-                                  provider.familyVerificationOtp,
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.green, letterSpacing: 2.5),
-                                ),
-                              ],
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(color: AppTheme.bg, borderRadius: BorderRadius.circular(10)),
+                            child: Text(
+                              provider.familyCode,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 2.2),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Clipboard.setData(
-                            ClipboardData(
-                              text: 'Family Code: ${provider.familyCode} | Security OTP: ${provider.familyVerificationOtp}',
-                            ),
-                          );
-                          provider.showToast('Family Code & Security OTP copied!');
-                        },
-                        icon: const Icon(Icons.copy, size: 13, color: AppTheme.accent100),
-                        label: const Text('Copy invite', style: TextStyle(fontSize: 11.5, color: AppTheme.accent100)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppTheme.accent),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    Row(
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: provider.familyCode));
+                            provider.showToast('Invite Code ${provider.familyCode} copied!');
+                          },
+                          icon: const Icon(Icons.copy, size: 13, color: AppTheme.accent100),
+                          label: const Text('Copy code', style: TextStyle(fontSize: 11.5, color: AppTheme.accent100)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppTheme.accent),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          final msg =
-                              'Join our "${provider.familyName}" workspace on Family Spend Tracker!\n\n'
-                              '1. Family Invite Code: ${provider.familyCode}\n'
-                              '2. Family Security Verification OTP: ${provider.familyVerificationOtp}\n\n'
-                              'Open the app -> Select "Join via Code" -> Enter Code & Verification OTP.';
-                          NoteImportService.shareExternally(
-                            text: msg,
-                            title: 'Join ${provider.familyName} on Family Spend Tracker',
-                          );
-                        },
-                        icon: const Icon(Icons.share_rounded, size: 13),
-                        label: const Text('Share invite', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accent,
-                          foregroundColor: AppTheme.bg,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            final msg =
+                                'Join our "${provider.familyName}" workspace on Family Spend Tracker!\n\n'
+                                'Family Invite Code: ${provider.familyCode}\n\n'
+                                'Open the app -> Select "Join via Code" -> Enter ${provider.familyCode}.';
+                            NoteImportService.shareExternally(
+                              text: msg,
+                              title: 'Join ${provider.familyName} on Family Spend Tracker',
+                            );
+                          },
+                          icon: const Icon(Icons.share_rounded, size: 13),
+                          label: const Text('Share', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accent,
+                            foregroundColor: AppTheme.bg,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Anyone trying to use your Family Code must enter your 6-digit Owner Verification OTP above (or be approved by you below).',
+                  'Share this code with family members or friends so they can join your shared workspace.',
                   style: TextStyle(fontSize: 11, color: AppTheme.textSubtle, height: 1.3),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-
-          // Family Login Verification Requests Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.security_outlined, size: 16, color: AppTheme.accent200),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'Family Login Verification',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.text),
-                  ),
-                  const SizedBox(width: 8),
-                  if (pendingLoginReqs.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.amberBg,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${pendingLoginReqs.length} pending',
-                        style: const TextStyle(fontSize: 11, color: AppTheme.amber, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                ],
-              ),
-              TextButton.icon(
-                onPressed: () => provider.rotateFamilyVerificationOtp(),
-                icon: const Icon(Icons.autorenew, size: 14, color: AppTheme.accent200),
-                label: const Text('Rotate OTP', style: TextStyle(fontSize: 11.5, color: AppTheme.accent200)),
-                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          if (pendingLoginReqs.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.verified_user, size: 20, color: AppTheme.green),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'No unverified login attempts on your Family Code. If someone tries to use your family login, their request will appear here.',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.3),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            ...pendingLoginReqs.map((req) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppTheme.amber.withOpacity(0.5)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppTheme.amberBg,
-                          ),
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.lock_person_outlined, size: 18, color: AppTheme.amber),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${req.name} is trying to use your Family Login',
-                                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.text),
-                              ),
-                              Text(
-                                '${req.email} · Request OTP: ${req.verificationOtp}',
-                                style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => provider.rejectAndBlockFamilyLoginRequest(req),
-                            icon: const Icon(Icons.block, size: 15, color: AppTheme.red),
-                            label: const Text('Block & Disable', style: TextStyle(fontSize: 12.5, color: AppTheme.red)),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: AppTheme.red.withOpacity(0.5)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              minimumSize: const Size(0, 38),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => provider.approveFamilyLoginRequest(req),
-                            icon: const Icon(Icons.check_circle_outline, size: 15),
-                            label: const Text('Verify & Approve', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.green,
-                              foregroundColor: AppTheme.bg,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              minimumSize: const Size(0, 38),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }),
-
           const SizedBox(height: 20),
 
           // Expense Approval Requests Section
@@ -765,73 +576,42 @@ class FamilyScreen extends StatelessWidget {
                         ),
                       ),
 
-                      // Member Login Access Controls (Disable / Enable Login + OTP)
+                      // Member Login Access Controls (Disable / Enable Login)
                       if (!isOwner) ...[
                         const SizedBox(height: 10),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            if (m.memberOtp.isNotEmpty)
-                              GestureDetector(
-                                onTap: () {
-                                  Clipboard.setData(ClipboardData(text: m.memberOtp));
-                                  provider.showToast('Member OTP ${m.memberOtp} copied');
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.bg,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.pin_outlined, size: 13, color: AppTheme.accent200),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Member OTP: ${m.memberOtp}',
-                                        style: const TextStyle(fontSize: 11, color: AppTheme.accent100, fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
-                                  ),
+                            OutlinedButton.icon(
+                              onPressed: () => provider.toggleMemberDisabled(m.id),
+                              icon: Icon(
+                                m.isDisabled ? Icons.check_circle_outline : Icons.person_off_outlined,
+                                size: 14,
+                                color: m.isDisabled ? AppTheme.green : AppTheme.red,
+                              ),
+                              label: Text(
+                                m.isDisabled ? 'Enable Login' : 'Disable Login',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: m.isDisabled ? AppTheme.green : AppTheme.red,
                                 ),
-                              )
-                            else
-                              const SizedBox.shrink(),
-                            Row(
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: () => provider.toggleMemberDisabled(m.id),
-                                  icon: Icon(
-                                    m.isDisabled ? Icons.check_circle_outline : Icons.person_off_outlined,
-                                    size: 14,
-                                    color: m.isDisabled ? AppTheme.green : AppTheme.red,
-                                  ),
-                                  label: Text(
-                                    m.isDisabled ? 'Enable Login' : 'Disable Login',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: m.isDisabled ? AppTheme.green : AppTheme.red,
-                                    ),
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(
-                                      color: (m.isDisabled ? AppTheme.green : AppTheme.red).withOpacity(0.5),
-                                    ),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    minimumSize: const Size(0, 30),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: (m.isDisabled ? AppTheme.green : AppTheme.red).withOpacity(0.5),
                                 ),
-                                const SizedBox(width: 4),
-                                IconButton(
-                                  onPressed: () => provider.removeFamilyMember(m.id),
-                                  icon: const Icon(Icons.delete_outline, size: 16, color: AppTheme.textSubtle),
-                                  visualDensity: VisualDensity.compact,
-                                  tooltip: 'Remove member',
-                                ),
-                              ],
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                minimumSize: const Size(0, 30),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              onPressed: () => provider.removeFamilyMember(m.id),
+                              icon: const Icon(Icons.delete_outline, size: 16, color: AppTheme.textSubtle),
+                              visualDensity: VisualDensity.compact,
+                              tooltip: 'Remove member',
                             ),
                           ],
                         ),
@@ -856,7 +636,7 @@ class FamilyScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Add & Verify Family Member', style: TextStyle(color: AppTheme.text, fontSize: 18)),
+        title: const Text('Add Family Member', style: TextStyle(color: AppTheme.text, fontSize: 18)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -884,7 +664,7 @@ class FamilyScreen extends StatelessWidget {
               keyboardType: TextInputType.emailAddress,
               style: const TextStyle(fontSize: 14, color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Member Phone or Email (Optional)',
+                hintText: 'Member Email (Optional)',
                 hintStyle: const TextStyle(color: AppTheme.textSubtle),
                 filled: true,
                 fillColor: AppTheme.bg,
@@ -923,7 +703,7 @@ class FamilyScreen extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
-            child: const Text('Add & Generate OTP'),
+            child: const Text('Add Member'),
           ),
         ],
       ),
@@ -988,7 +768,7 @@ class FamilyScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Enter the 6–8 character shared Invite Code (e.g. NTY5AFLR). You will join that exact code as a Member:',
+                'Enter the shared Invite Code (e.g. NTY5AFLR) to join that workspace:',
                 style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
               const SizedBox(height: 12),
@@ -1039,8 +819,15 @@ class FamilyScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                final code = ctrl.text.trim().toUpperCase();
-                if (code.length >= 6) {
+                final raw = ctrl.text.trim().toUpperCase();
+                final match = RegExp(r'\b([A-Z0-9]{6,8})\b').allMatches(raw).where((m) {
+                  final w = m.group(1)!;
+                  return w != 'FAMILY' && w != 'INVITE' && w != 'SECURITY';
+                }).toList();
+                final code = match.isNotEmpty
+                    ? match.first.group(1)!
+                    : raw.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+                if (code.length >= 4) {
                   final fallbackName = code == 'NTY5AFLR' && nameCtrl.text.trim().isEmpty
                       ? 'Asif\'s Family'
                       : nameCtrl.text.trim();
