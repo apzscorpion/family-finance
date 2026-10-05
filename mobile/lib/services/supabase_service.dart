@@ -82,11 +82,16 @@ class SupabaseService {
     await purgeUnwantedAccountsAndData();
   }
 
-  /// Purges unwanted test/blocked user data (sinanakaruvadan@gmail.com, Tester Abhi, 38DJPUZ6, MKSN3DGQ)
-  /// and restores Asif's account (apzscorpion@gmail.com) to NTY5AFLR.
+  /// Purges all old data on v1.6.0 upgrade (ff_global_wipe_v16_done) and blocks unwanted test accounts.
   static Future<void> purgeUnwantedAccountsAndData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final wipedV16 = prefs.getBool('ff_global_wipe_v16_done') ?? false;
+      if (!wipedV16) {
+        await prefs.clear();
+        await prefs.setBool('ff_global_wipe_v16_done', true);
+      }
+
       final allKeys = prefs.getKeys().toList();
 
       const purgedTokens = [
