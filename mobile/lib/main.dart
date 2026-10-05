@@ -19,7 +19,11 @@ import 'widgets/quick_add_sheet.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseService.init();
+  // Deliberately not awaited: Supabase.initialize() performs network I/O, and
+  // blocking runApp() on it delayed the first frame by ~14s on a cold start
+  // (and produced an ANR when the network was slow). Anything that needs the
+  // client awaits SupabaseService.ready instead.
+  SupabaseService.ready;
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,

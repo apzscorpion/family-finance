@@ -1,6 +1,9 @@
 package com.familyfinance.family_finance
 
 import android.app.Activity
+import android.content.ComponentName
+import android.content.Context
+import android.provider.Settings
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -17,6 +20,7 @@ import java.util.zip.Inflater
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.familyfinance/file_import"
+    private val NOTIF_CHANNEL = "com.familyfinance/notifications"
     private val PICK_FILE_REQ = 4091
     private var pendingResult: MethodChannel.Result? = null
     private var sharedTextFromIntent: String? = null
@@ -24,6 +28,34 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         handleIncomingShareIntent(intent)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NOTIF_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isNotificationAccessGranted" -> result.success(isNotificationAccessGranted())
+                    "openNotificationSettings" -> {
+                        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                        result.success(true)
+                    }
+                    // Hands over everything captured since the last drain and
+                    // clears the queue, so a notification is surfaced once.
+                    "drainQueue" -> {
+                        val prefs = getSharedPreferences(
+                            TxnNotificationListenerService.PREFS, Context.MODE_PRIVATE)
+                        val raw = prefs.getString(TxnNotificationListenerService.KEY, "[]")
+                        prefs.edit().putString(TxnNotificationListenerService.KEY, "[]").apply()
+                        result.success(raw)
+                    }
+                    "peekQueueSize" -> {
+                        val prefs = getSharedPreferences(
+                            TxnNotificationListenerService.PREFS, Context.MODE_PRIVATE)
+                        val raw = prefs.getString(TxnNotificationListenerService.KEY, "[]") ?: "[]"
+                        result.success(
+                            try { org.json.JSONArray(raw).length() } catch (_: Exception) { 0 })
+                    }
+                    else -> result.notImplemented()
+                }
+            }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -65,6 +97,25 @@ class MainActivity : FlutterActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    /**
+     * Notification access is granted in system settings rather than through a
+     * runtime prompt, so it is read back from the enabled-listeners list.
+     */
+    private fun isNotificationAccessGranted(): Boolean {
+        return try {
+            val flat = Settings.Secure.getString(
+                contentResolver, "enabled_notification_listeners") ?: return false
+            val me = ComponentName(this, TxnNotificationListenerService::class.java)
+            flat.split(":").any {
+                val c = ComponentName.unflattenFromString(it)
+                c != null && c.packageName == me.packageName &&
+                    c.className == me.className
+            }
+        } catch (_: Exception) {
+            false
         }
     }
 

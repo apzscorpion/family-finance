@@ -157,6 +157,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
         newTxn: TransactionDef(
           id: DateTime.now().millisecondsSinceEpoch,
           daysAgo: 0,
+          createdAtMs: DateTime.now().millisecondsSinceEpoch,
           title: widget.initialTitle ?? catDef.name,
           catKey: _selectedCatKey,
           subCatKey: _selectedSubCatKey,
@@ -182,6 +183,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
       final txn = TransactionDef(
         id: DateTime.now().millisecondsSinceEpoch,
         daysAgo: 0,
+        createdAtMs: DateTime.now().millisecondsSinceEpoch,
         title: widget.initialTitle ?? catDef.name,
         catKey: _selectedCatKey,
         subCatKey: _selectedSubCatKey,
@@ -852,3 +854,4 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
     );
   }
 }
+

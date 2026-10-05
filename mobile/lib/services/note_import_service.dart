@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'app_log.dart';
 
 class ImportedDocumentResult {
   final String kind; // 'csv', 'pdf', 'md', 'txt'
@@ -79,7 +80,8 @@ class NoteImportService {
         pageCount: pageCount,
         pdfPagesPng: pagesPng,
       );
-    } catch (_) {
+    } catch (err, errStack) {
+      AppLog.error('NoteImportService.pickDocument', err, errStack);
       return null;
     }
   }
@@ -92,7 +94,8 @@ class NoteImportService {
         return formatSmartPasteOrMarkdown(res);
       }
       return null;
-    } catch (_) {
+    } catch (err, errStack) {
+      AppLog.error('NoteImportService.consumeSharedText', err, errStack);
       return null;
     }
   }
@@ -104,7 +107,8 @@ class NoteImportService {
         'text': text,
         'title': title,
       });
-    } catch (_) {
+    } catch (err, errStack) {
+      AppLog.error('NoteImportService.shareExternally', err, errStack);
       await Clipboard.setData(ClipboardData(text: text));
     }
   }

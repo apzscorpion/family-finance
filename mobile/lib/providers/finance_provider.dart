@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/finance_models.dart';
 import '../services/live_notes_ws_service.dart';
 import '../services/supabase_service.dart';
+import '../services/app_log.dart';
 
 class FinanceProvider extends ChangeNotifier {
   // Default + Custom Category Definitions Dictionary
@@ -137,6 +138,16 @@ class FinanceProvider extends ChangeNotifier {
       onStateChanged: () => notifyListeners(),
     );
     _checkInitialAuth();
+  }
+
+  @override
+  void dispose() {
+    // The provider previously had no dispose(), so the toast timer kept firing
+    // and the realtime channel stayed open after teardown.
+    _toastTimer?.cancel();
+    _toastTimer = null;
+    _notesWs.disconnect();
+    super.dispose();
   }
 
   static const List<String> defaultSavingsWays = [
@@ -375,18 +386,14 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   Future<void> _checkInitialAuth() async {
+    // Startup no longer blocks on this, so wait for it here before reading
+    // anything off the cloud client.
+    await SupabaseService.ready;
     await SupabaseService.purgeUnwantedAccountsAndData();
 
     if (SupabaseService.isConfigured && SupabaseService.currentUser != null) {
       final user = SupabaseService.currentUser!;
       final emailLower = (user.email ?? user.id).toLowerCase();
-      if (emailLower.contains('sinanakaruvadan')) {
-        await SupabaseService.signOut();
-        _isLoggedIn = false;
-        notifyListeners();
-        return;
-      }
-
       _isLoggedIn = true;
       _userKey = emailLower;
       final meta = user.userMetadata;
@@ -424,9 +431,7 @@ class FinanceProvider extends ChangeNotifier {
       await _loadUserWorkspace();
     } else {
       final localSession = await SupabaseService.getActiveLocalSession();
-      if (localSession != null &&
-          localSession.email.isNotEmpty &&
-          !localSession.email.toLowerCase().contains('sinanakaruvadan')) {
+      if (localSession != null && localSession.email.isNotEmpty) {
         _isLoggedIn = true;
         _userKey = localSession.email.toLowerCase();
         _currentUserName = localSession.fullName;
@@ -451,7 +456,7 @@ class FinanceProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
 
     // Clean up legacy automated test artefacts on Asif's account
-    if (_userKey.contains('apzscorpion') || _userKey.contains('asif')) {
+    if (SupabaseService.ownerLegacyCodes.containsKey(_userKey.trim().toLowerCase())) {
       if (_currentUserName.isEmpty || _currentUserName.toLowerCase().contains('tester abhi') || _currentUserName.toLowerCase() == 'apzscorpion') {
         _currentUserName = 'Asif';
       }
@@ -494,7 +499,9 @@ class FinanceProvider extends ChangeNotifier {
             }
           }
         }
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace', err, errStack);
+      }
     }
 
     // Determine whether this user is the Owner or a joined Member of _familyCode
@@ -587,7 +594,9 @@ class FinanceProvider extends ChangeNotifier {
             ..clear()
             ..addAll(list);
         }
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace:savingsWays', err, errStack);
+      }
     }
 
     final savedLoansJson = prefs.getString('ff_group_${_familyCode}_loan_types');
@@ -603,7 +612,9 @@ class FinanceProvider extends ChangeNotifier {
             ..clear()
             ..addAll(list);
         }
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace:loanTypes', err, errStack);
+      }
     }
 
     // Load custom categories
@@ -622,7 +633,9 @@ class FinanceProvider extends ChangeNotifier {
             }
           }
         }
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace:categories', err, errStack);
+      }
     }
 
     // Load per-account opening balances (group-scoped first, fallback to owner's legacy key)
@@ -642,7 +655,9 @@ class FinanceProvider extends ChangeNotifier {
         decoded.forEach((k, v) {
           _accountOpeningBalances[k] = (v as num?)?.toDouble() ?? 0.0;
         });
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace:accountBalances', err, errStack);
+      }
     }
 
     // Load group members (group-scoped first, fallback to owner's legacy key)
@@ -657,15 +672,11 @@ class FinanceProvider extends ChangeNotifier {
         final List decoded = json.decode(membersJson);
         for (var item in decoded) {
           final m = FamilyMemberDef.fromJson(Map<String, dynamic>.from(item));
-          final lowerEmail = m.email.toLowerCase();
-          final lowerName = m.name.toLowerCase();
-          if (!lowerEmail.contains('sinanakaruvadan') &&
-              !lowerName.contains('sinanakaruvadan') &&
-              !lowerName.contains('tester abhi')) {
-            _members.add(m);
-          }
+          _members.add(m);
         }
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace:members', err, errStack);
+      }
     }
 
     // Reconcile the logged-in user inside _members according to whether they are Owner or Member
@@ -774,7 +785,9 @@ class FinanceProvider extends ChangeNotifier {
         for (var item in decoded) {
           _transactions.add(TransactionDef.fromJson(Map<String, dynamic>.from(item)));
         }
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace:transactions', err, errStack);
+      }
     }
 
     // Load group credit/debit cards
@@ -788,7 +801,9 @@ class FinanceProvider extends ChangeNotifier {
         for (var item in decoded) {
           _cards.add(CreditCardDef.fromJson(Map<String, dynamic>.from(item)));
         }
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace:cards', err, errStack);
+      }
     }
 
     // Load recurring automatic credit card charges
@@ -802,7 +817,9 @@ class FinanceProvider extends ChangeNotifier {
         for (var item in decoded) {
           _autoCharges.add(AutoCardCharge.fromJson(Map<String, dynamic>.from(item)));
         }
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace:autoCharges', err, errStack);
+      }
     }
 
     // Load shared notes for this group code
@@ -816,7 +833,9 @@ class FinanceProvider extends ChangeNotifier {
         for (var item in decoded) {
           _notes.add(SharedNote.fromJson(Map<String, dynamic>.from(item)));
         }
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('FinanceProvider._loadUserWorkspace:notes', err, errStack);
+      }
     }
 
     await _saveUserWorkspace();
@@ -1009,9 +1028,7 @@ class FinanceProvider extends ChangeNotifier {
       final isOwnerOfThisCode = (existingOwner != null &&
               existingOwner.isNotEmpty &&
               existingOwner.toLowerCase() == _userKey.toLowerCase()) ||
-          (cleanCode == 'NTY5AFLR' &&
-              (_userKey.toLowerCase().contains('asif') ||
-                  _userKey.toLowerCase().contains('apzscorpion')));
+          (SupabaseService.ownerLegacyCodes[_userKey.trim().toLowerCase()] == cleanCode);
 
       final existingRoomName = prefs.getString('ff_room_name_$cleanCode');
       final resolvedName = (familyName != null && familyName.trim().isNotEmpty)
@@ -1350,7 +1367,8 @@ class FinanceProvider extends ChangeNotifier {
     if (id == null || id.isEmpty) return null;
     try {
       return _cards.firstWhere((c) => c.id == id);
-    } catch (_) {
+    } catch (err, errStack) {
+      AppLog.error('FinanceProvider.clearAllData', err, errStack);
       return null;
     }
   }
@@ -1487,6 +1505,7 @@ class FinanceProvider extends ChangeNotifier {
       TransactionDef(
         id: nowMs,
         daysAgo: 0,
+        createdAtMs: DateTime.now().millisecondsSinceEpoch,
         title: '${card.shortLabel} Bill Paid',
         catKey: 'refund',
         amount: amount,
@@ -1506,6 +1525,7 @@ class FinanceProvider extends ChangeNotifier {
         TransactionDef(
           id: nowMs + 1,
           daysAgo: 0,
+          createdAtMs: DateTime.now().millisecondsSinceEpoch,
           title: 'CC Bill · ${card.shortLabel}',
           catKey: 'bills',
           amount: amount,
@@ -1568,6 +1588,7 @@ class FinanceProvider extends ChangeNotifier {
           TransactionDef(
             id: DateTime.now().millisecondsSinceEpoch + appliedCount,
             daysAgo: 0,
+            createdAtMs: DateTime.now().millisecondsSinceEpoch,
             title: '${ac.title}$cardLabel',
             catKey: ac.catKey,
             amount: ac.amount,
@@ -1601,6 +1622,7 @@ class FinanceProvider extends ChangeNotifier {
       TransactionDef(
         id: now.millisecondsSinceEpoch,
         daysAgo: 0,
+        createdAtMs: DateTime.now().millisecondsSinceEpoch,
         title: ac.title,
         catKey: ac.catKey,
         amount: ac.amount,
@@ -1655,12 +1677,16 @@ class FinanceProvider extends ChangeNotifier {
       if (last4.isNotEmpty) {
         try {
           targetCard = _cards.firstWhere((c) => c.last4 == last4);
-        } catch (_) {}
+        } catch (err, errStack) {
+          AppLog.error('FinanceProvider.autoParseBankOrCardAlert', err, errStack);
+        }
       }
       if (targetCard == null && _cards.isNotEmpty) {
         try {
           targetCard = _cards.firstWhere((c) => c.bankName.toLowerCase() == bank.toLowerCase());
-        } catch (_) {}
+        } catch (err, errStack) {
+          AppLog.error('FinanceProvider.autoParseBankOrCardAlert', err, errStack);
+        }
       }
 
       if (targetCard == null) {
@@ -1694,6 +1720,7 @@ class FinanceProvider extends ChangeNotifier {
         TransactionDef(
           id: DateTime.now().millisecondsSinceEpoch + count,
           daysAgo: 0,
+          createdAtMs: DateTime.now().millisecondsSinceEpoch,
           title: merchant,
           catKey: catKey,
           amount: amount,
@@ -2366,6 +2393,7 @@ class FinanceProvider extends ChangeNotifier {
     final newTxn = TransactionDef(
       id: DateTime.now().millisecondsSinceEpoch,
       daysAgo: 0,
+      createdAtMs: DateTime.now().millisecondsSinceEpoch,
       title: item.merchant,
       catKey: item.catKey,
       amount: item.amount,
@@ -2405,6 +2433,7 @@ class FinanceProvider extends ChangeNotifier {
         _transactions[index] = TransactionDef(
           id: old.id,
           daysAgo: old.daysAgo,
+          createdAtMs: old.createdAt.millisecondsSinceEpoch,
           title: old.title,
           catKey: old.catKey,
           amount: newAmt,
@@ -2435,6 +2464,6 @@ class FinanceProvider extends ChangeNotifier {
 
 extension TransactionListExtensions on List<TransactionDef> {
   List<TransactionDef> filterInScope(String? memberId, int maxDays) {
-    return where((t) => (memberId == null || t.memberId == memberId) && t.daysAgo < maxDays).toList();
+    return where((t) => (memberId == null || t.memberId == memberId) && t.ageInDays < maxDays).toList();
   }
 }

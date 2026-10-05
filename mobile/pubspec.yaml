@@ -28,6 +28,7 @@ dependencies:
 
   # Utilities
   intl: ^0.20.2
+  crypto: ^3.0.6
   uuid: ^4.5.1
 
   # Charts
@@ -40,3 +41,31 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  fonts:
+    # The Nocturne design system specifies Inter at 400/500/600/700. Without
+    # these bundled, `fontFamily: 'Inter'` silently fell back to Roboto and no
+    # screen matched the design's type metrics.
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-400.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-500.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-600.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-700.ttf
+          weight: 700
+
+    # The same Phosphor web font the design loads, so glyphs match exactly.
+    # Used via lib/v3/phosphor_icons.dart rather than the phosphor_flutter
+    # package, which no longer compiles (it extends the now-final IconData).
+    - family: Phosphor
+      fonts:
+        - asset: assets/fonts/Phosphor.ttf
+    - family: PhosphorBold
+      fonts:
+        - asset: assets/fonts/Phosphor-Bold.ttf
+    - family: PhosphorFill
+      fonts:
+        - asset: assets/fonts/Phosphor-Fill.ttf
