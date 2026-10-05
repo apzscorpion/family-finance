@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/finance_models.dart';
 import '../providers/finance_provider.dart';
 import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  String _formatINR(double val) {
+    final prefix = val < 0 ? '-₹' : '₹';
+    return '$prefix${val.abs().round()}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +95,7 @@ class SettingsScreen extends StatelessWidget {
                           icon: const Icon(Icons.logout, size: 16, color: AppTheme.red),
                           label: const Text('Sign Out', style: TextStyle(fontSize: 12.5, color: AppTheme.red)),
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: AppTheme.red.withOpacity(0.5)),
+                            side: BorderSide(color: AppTheme.red.withValues(alpha: 0.5)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             minimumSize: const Size(0, 38),
                           ),
@@ -97,6 +103,246 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            // Section 0A: Savings & Income Ways Configuration
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('SAVINGS & INCOME WAYS', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
+                GestureDetector(
+                  onTap: () => _showAddFundDialog(context, provider, isLoan: false),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.add_circle_outline, size: 14, color: AppTheme.accent200),
+                      SizedBox(width: 4),
+                      Text('Add Income Way', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accent200)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Configure your savings & income sources (Salary, Business, Pocket Money, Cash, etc.). Each source tracks its own live balance.',
+                    style: TextStyle(fontSize: 11.5, color: AppTheme.textSubtle, height: 1.3),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: provider.savingsWays.map((way) {
+                      final bal = provider.accountBalance(way);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF2E313B)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.savings_outlined, size: 14, color: AppTheme.green),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$way · ${_formatINR(bal)}',
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.text),
+                            ),
+                            if (provider.savingsWays.length > 1) ...[
+                              const SizedBox(width: 6),
+                              GestureDetector(
+                                onTap: () => provider.removeSavingsWay(way),
+                                child: const Icon(Icons.close, size: 14, color: AppTheme.textSubtle),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            // Section 0B: Loan Types & Funds Configuration
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('LOAN TYPES & LOAN FUNDS', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
+                GestureDetector(
+                  onTap: () => _showAddFundDialog(context, provider, isLoan: true),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.add_circle_outline, size: 14, color: AppTheme.amber),
+                      SizedBox(width: 4),
+                      Text('Add Loan Fund', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.amber)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Configure your loan funds & credit types (Personal Loan, Home Loan, Card, Gold Loan, etc.).',
+                    style: TextStyle(fontSize: 11.5, color: AppTheme.textSubtle, height: 1.3),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: provider.loanTypes.map((loan) {
+                      final bal = provider.accountBalance(loan);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF2E313B)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.account_balance_outlined, size: 14, color: AppTheme.amber),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$loan · ${_formatINR(bal)}',
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.text),
+                            ),
+                            if (provider.loanTypes.length > 1) ...[
+                              const SizedBox(width: 6),
+                              GestureDetector(
+                                onTap: () => provider.removeLoanType(loan),
+                                child: const Icon(Icons.close, size: 14, color: AppTheme.textSubtle),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            // Section 0C: Custom Categories & Sub-Categories
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('CUSTOM CATEGORIES', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
+                GestureDetector(
+                  onTap: () => _showAddCategoryDialog(context, provider),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.add_circle_outline, size: 14, color: AppTheme.accent200),
+                      SizedBox(width: 4),
+                      Text('New Category', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accent200)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Customize expense & income categories or tap + Sub to add sub-categories.',
+                    style: TextStyle(fontSize: 11.5, color: AppTheme.textSubtle),
+                  ),
+                  const SizedBox(height: 12),
+                  ...FinanceProvider.categories.values.map((cat) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF2E313B)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: cat.color.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Icon(cat.icon, size: 15, color: cat.color),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '${cat.name} (${cat.isIncome ? 'Income' : 'Expense'})',
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.text),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => _showAddSubCategoryDialog(context, provider, cat),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.surface,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text('+ Sub', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.accent200)),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () => provider.deleteCategory(cat.key),
+                                  child: const Icon(Icons.delete_outline, size: 16, color: AppTheme.textSubtle),
+                                ),
+                              ],
+                            ),
+                            if (cat.subCategories.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: cat.subCategories.map((sub) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.surface,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(sub.name, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
@@ -233,6 +479,217 @@ class SettingsScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showAddFundDialog(BuildContext context, FinanceProvider provider, {required bool isLoan}) {
+    final nameCtrl = TextEditingController();
+    final balCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(
+          isLoan ? 'Add Loan Fund / Type' : 'Add Savings / Income Way',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.text),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              style: const TextStyle(color: AppTheme.text, fontSize: 14),
+              decoration: InputDecoration(
+                labelText: isLoan ? 'Loan Name (e.g. Car Loan, Education Loan)' : 'Income / Savings Name (e.g. Freelance, Bonus)',
+                labelStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                filled: true,
+                fillColor: AppTheme.bg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: balCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(color: AppTheme.text, fontSize: 14),
+              decoration: InputDecoration(
+                labelText: 'Opening Balance (₹)',
+                labelStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                prefixText: '₹ ',
+                filled: true,
+                fillColor: AppTheme.bg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              final openBal = double.tryParse(balCtrl.text.replaceAll(',', '').trim()) ?? 0.0;
+              if (isLoan) {
+                await provider.addLoanType(name, openingBalance: openBal);
+              } else {
+                await provider.addSavingsWay(name, openingBalance: openBal);
+              }
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
+            child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddCategoryDialog(BuildContext context, FinanceProvider provider) {
+    final nameCtrl = TextEditingController();
+    final subCtrl = TextEditingController();
+    String selectedType = 'expense';
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppTheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: const Text('Create Custom Category', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.text)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setDialogState(() => selectedType = 'expense'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selectedType == 'expense' ? AppTheme.accent : AppTheme.bg,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text('Expense', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: selectedType == 'expense' ? AppTheme.bg : AppTheme.textMuted)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setDialogState(() => selectedType = 'income'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selectedType == 'income' ? AppTheme.green : AppTheme.bg,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text('Income', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: selectedType == 'income' ? AppTheme.bg : AppTheme.textMuted)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                style: const TextStyle(color: AppTheme.text, fontSize: 14),
+                decoration: InputDecoration(
+                  labelText: 'Category Name',
+                  labelStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                  filled: true,
+                  fillColor: AppTheme.bg,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: subCtrl,
+                style: const TextStyle(color: AppTheme.text, fontSize: 14),
+                decoration: InputDecoration(
+                  labelText: 'Sub-categories (comma separated)',
+                  labelStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                  filled: true,
+                  fillColor: AppTheme.bg,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                if (name.isEmpty) return;
+                final subs = subCtrl.text
+                    .split(',')
+                    .map((s) => s.trim())
+                    .where((s) => s.isNotEmpty)
+                    .toList();
+                await provider.addOrUpdateCategory(
+                  name: name,
+                  isIncome: selectedType == 'income',
+                  iconName: selectedType == 'income' ? 'savings' : 'category',
+                  colorHex: selectedType == 'income' ? 0xFF7FD19E : 0xFFD6A8FF,
+                  subCategoryNames: subs,
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
+              child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddSubCategoryDialog(BuildContext context, FinanceProvider provider, CategoryDef cat) {
+    final subCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Add Sub-Category to ${cat.name}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.text)),
+        content: TextField(
+          controller: subCtrl,
+          style: const TextStyle(color: AppTheme.text, fontSize: 14),
+          decoration: InputDecoration(
+            labelText: 'Sub-Category Name',
+            labelStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+            filled: true,
+            fillColor: AppTheme.bg,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = subCtrl.text.trim();
+              if (name.isEmpty) return;
+              await provider.addSubCategoryToCategory(cat.key, name);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
+            child: const Text('Add', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

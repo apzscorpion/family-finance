@@ -8,20 +8,21 @@ import '../services/live_notes_ws_service.dart';
 import '../services/supabase_service.dart';
 
 class FinanceProvider extends ChangeNotifier {
-  // Category Definitions Dictionary
-  static final Map<String, CategoryDef> categories = {
-    'groceries': const CategoryDef(key: 'groceries', name: 'Groceries', icon: Icons.shopping_basket, color: Color(0xFF4ADE80)),
-    'dining': const CategoryDef(key: 'dining', name: 'Dining', icon: Icons.restaurant, color: Color(0xFFF97316)),
-    'transport': const CategoryDef(key: 'transport', name: 'Transport', icon: Icons.directions_car, color: Color(0xFFA855F7)),
-    'fuel': const CategoryDef(key: 'fuel', name: 'Fuel', icon: Icons.local_gas_station, color: Color(0xFFEAB308)),
-    'shopping': const CategoryDef(key: 'shopping', name: 'Shopping', icon: Icons.shopping_bag, color: Color(0xFFEC4899)),
-    'bills': const CategoryDef(key: 'bills', name: 'Bills', icon: Icons.bolt, color: Color(0xFF3B82F6)),
-    'health': const CategoryDef(key: 'health', name: 'Health', icon: Icons.medical_services, color: Color(0xFFEF4444)),
-    'education': const CategoryDef(key: 'education', name: 'Education', icon: Icons.school, color: Color(0xFF06B6D4)),
+  // Default + Custom Category Definitions Dictionary
+  static final Map<String, CategoryDef> defaultCategories = {
+    'groceries': const CategoryDef(key: 'groceries', name: 'Groceries', icon: Icons.shopping_basket, iconName: 'groceries', color: Color(0xFF4ADE80)),
+    'dining': const CategoryDef(key: 'dining', name: 'Dining', icon: Icons.restaurant, iconName: 'dining', color: Color(0xFFF97316)),
+    'transport': const CategoryDef(key: 'transport', name: 'Transport', icon: Icons.directions_car, iconName: 'transport', color: Color(0xFFA855F7)),
+    'fuel': const CategoryDef(key: 'fuel', name: 'Fuel', icon: Icons.local_gas_station, iconName: 'fuel', color: Color(0xFFEAB308)),
+    'shopping': const CategoryDef(key: 'shopping', name: 'Shopping', icon: Icons.shopping_bag, iconName: 'shopping', color: Color(0xFFEC4899)),
+    'bills': const CategoryDef(key: 'bills', name: 'Bills', icon: Icons.bolt, iconName: 'bills', color: Color(0xFF3B82F6)),
+    'health': const CategoryDef(key: 'health', name: 'Health', icon: Icons.medical_services, iconName: 'health', color: Color(0xFFEF4444)),
+    'education': const CategoryDef(key: 'education', name: 'Education', icon: Icons.school, iconName: 'education', color: Color(0xFF06B6D4)),
     'event': const CategoryDef(
       key: 'event',
       name: 'Event & Wedding',
       icon: Icons.celebration,
+      iconName: 'event',
       color: Color(0xFFF43F5E),
       subCategories: [
         SubCategoryDef(key: 'venue_booking', parentKey: 'event', name: 'Venue Booking'),
@@ -31,13 +32,22 @@ class FinanceProvider extends ChangeNotifier {
         SubCategoryDef(key: 'cash_withdrawal', parentKey: 'event', name: 'Cash Withdrawal (In Hand)'),
       ],
     ),
-    'loan': const CategoryDef(key: 'loan', name: 'Loan & Credit Pool', icon: Icons.account_balance_wallet, color: Color(0xFF8B5CF6), isIncome: true),
-    'salary': const CategoryDef(key: 'salary', name: 'Salary', icon: Icons.work, color: Color(0xFF34D399), isIncome: true),
-    'business': const CategoryDef(key: 'business', name: 'Business', icon: Icons.store, color: Color(0xFF34D399), isIncome: true),
-    'gift': const CategoryDef(key: 'gift', name: 'Gift', icon: Icons.card_giftcard, color: Color(0xFF34D399), isIncome: true),
-    'pension': const CategoryDef(key: 'pension', name: 'Pension', icon: Icons.account_balance, color: Color(0xFF34D399), isIncome: true),
-    'refund': const CategoryDef(key: 'refund', name: 'Refund', icon: Icons.replay, color: Color(0xFF34D399), isIncome: true),
+    'loan': const CategoryDef(key: 'loan', name: 'Loan & Credit Pool', icon: Icons.account_balance_wallet, iconName: 'loan', color: Color(0xFF8B5CF6), isIncome: true),
+    'salary': const CategoryDef(key: 'salary', name: 'Salary', icon: Icons.work, iconName: 'salary', color: Color(0xFF34D399), isIncome: true),
+    'business': const CategoryDef(key: 'business', name: 'Business', icon: Icons.store, iconName: 'business', color: Color(0xFF34D399), isIncome: true),
+    'pocket_money': const CategoryDef(key: 'pocket_money', name: 'Pocket Money', icon: Icons.savings_outlined, iconName: 'savings', color: Color(0xFF34D399), isIncome: true),
+    'gift': const CategoryDef(key: 'gift', name: 'Gift', icon: Icons.card_giftcard, iconName: 'gift', color: Color(0xFF34D399), isIncome: true),
+    'pension': const CategoryDef(key: 'pension', name: 'Pension', icon: Icons.account_balance, iconName: 'pension', color: Color(0xFF34D399), isIncome: true),
+    'refund': const CategoryDef(key: 'refund', name: 'Refund', icon: Icons.replay, iconName: 'refund', color: Color(0xFF34D399), isIncome: true),
   };
+
+  static final Map<String, CategoryDef> categories = Map<String, CategoryDef>.from(defaultCategories);
+
+  List<CategoryDef> get expenseCategories =>
+      categories.values.where((c) => !c.isIncome).toList();
+
+  List<CategoryDef> get incomeCategories =>
+      categories.values.where((c) => c.isIncome).toList();
 
   static const List<Color> _memberPalette = [
     Color(0xFF9184D9),
@@ -129,31 +139,89 @@ class FinanceProvider extends ChangeNotifier {
     _checkInitialAuth();
   }
 
+  static const List<String> defaultSavingsWays = [
+    'Salary',
+    'Business',
+    'Pocket Money',
+    'Cash',
+    'Bank',
+    'UPI',
+  ];
+
+  static const List<String> defaultLoanTypes = [
+    'Personal Loan',
+    'Home Loan',
+    'Card',
+    'Gold Loan',
+  ];
+
   static const List<String> walletAccounts = [
     'All',
     'Cash',
     'Salary',
-    'Loan',
-    'UPI',
+    'Business',
+    'Pocket Money',
     'Bank',
+    'UPI',
+    'Personal Loan',
+    'Home Loan',
     'Card',
+    'Gold Loan',
   ];
 
+  final List<String> _savingsWays = List<String>.from(defaultSavingsWays);
+  final List<String> _loanTypes = List<String>.from(defaultLoanTypes);
+
+  /// Top-level balance view mode on Home: 'all' | 'savings' | 'loans'
+  String _balanceViewMode = 'all';
   String _selectedAccount = 'All';
+
   final Map<String, double> _accountOpeningBalances = {
-    'Cash': 0.0,
     'Salary': 0.0,
-    'Loan': 0.0,
-    'UPI': 0.0,
+    'Business': 0.0,
+    'Pocket Money': 0.0,
+    'Cash': 0.0,
     'Bank': 0.0,
+    'UPI': 0.0,
+    'Personal Loan': 0.0,
+    'Home Loan': 0.0,
     'Card': 0.0,
+    'Gold Loan': 0.0,
+    'Loan': 0.0,
   };
 
+  String get balanceViewMode => _balanceViewMode;
   String get selectedAccount => _selectedAccount;
+  List<String> get savingsWays => List.unmodifiable(_savingsWays);
+  List<String> get loanTypes => List.unmodifiable(_loanTypes);
+  List<String> get allConfiguredAccounts => <String>{..._savingsWays, ..._loanTypes}.toList();
   Map<String, double> get accountOpeningBalances => Map.unmodifiable(_accountOpeningBalances);
+
+  void setBalanceViewMode(String mode) {
+    _balanceViewMode = mode;
+    if (mode == 'all') {
+      _selectedAccount = 'All';
+    } else if (mode == 'savings') {
+      if (_selectedAccount != 'All Savings' && !_savingsWays.contains(_selectedAccount)) {
+        _selectedAccount = 'All Savings';
+      }
+    } else if (mode == 'loans') {
+      if (_selectedAccount != 'All Loans' && !_loanTypes.contains(_selectedAccount)) {
+        _selectedAccount = 'All Loans';
+      }
+    }
+    notifyListeners();
+  }
 
   void setSelectedAccount(String account) {
     _selectedAccount = account;
+    if (account == 'All') {
+      _balanceViewMode = 'all';
+    } else if (account == 'All Savings' || _savingsWays.contains(account)) {
+      _balanceViewMode = 'savings';
+    } else if (account == 'All Loans' || _loanTypes.contains(account)) {
+      _balanceViewMode = 'loans';
+    }
     notifyListeners();
   }
 
@@ -162,6 +230,148 @@ class FinanceProvider extends ChangeNotifier {
     await _saveUserWorkspace();
     notifyListeners();
     showToast('$account balance updated to ₹${amount.round()}');
+  }
+
+  Future<void> addSavingsWay(String name, {double openingBalance = 0.0}) async {
+    final clean = name.trim();
+    if (clean.isEmpty) return;
+    if (!_savingsWays.any((s) => s.toLowerCase() == clean.toLowerCase())) {
+      _savingsWays.add(clean);
+    }
+    _accountOpeningBalances[clean] = openingBalance;
+    // Also register as an income category so user can pick it in Income too
+    final catKey = clean.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+    if (!categories.containsKey(catKey)) {
+      categories[catKey] = CategoryDef(
+        key: catKey,
+        name: clean,
+        icon: Icons.savings_outlined,
+        iconName: 'savings',
+        color: const Color(0xFF34D399),
+        isIncome: true,
+      );
+    }
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Added "$clean" to Savings & Income ways');
+  }
+
+  Future<void> removeSavingsWay(String name) async {
+    if (_savingsWays.length <= 1) {
+      showToast('Keep at least one Savings / Income source');
+      return;
+    }
+    _savingsWays.removeWhere((s) => s.toLowerCase() == name.toLowerCase());
+    if (_selectedAccount == name) {
+      _selectedAccount = 'All Savings';
+    }
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Removed "$name"');
+  }
+
+  Future<void> addLoanType(String name, {double openingBalance = 0.0}) async {
+    final clean = name.trim();
+    if (clean.isEmpty) return;
+    if (!_loanTypes.any((l) => l.toLowerCase() == clean.toLowerCase())) {
+      _loanTypes.add(clean);
+    }
+    _accountOpeningBalances[clean] = openingBalance;
+    final catKey = clean.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+    if (!categories.containsKey(catKey)) {
+      categories[catKey] = CategoryDef(
+        key: catKey,
+        name: clean,
+        icon: Icons.account_balance_wallet,
+        iconName: 'loan',
+        color: const Color(0xFF8B5CF6),
+        isIncome: true,
+      );
+    }
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Added "$clean" to Loan funds');
+  }
+
+  Future<void> removeLoanType(String name) async {
+    if (_loanTypes.length <= 1) {
+      showToast('Keep at least one Loan fund type');
+      return;
+    }
+    _loanTypes.removeWhere((l) => l.toLowerCase() == name.toLowerCase());
+    if (_selectedAccount == name) {
+      _selectedAccount = 'All Loans';
+    }
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Removed "$name"');
+  }
+
+  Future<String> addOrUpdateCategory({
+    String? existingKey,
+    required String name,
+    required bool isIncome,
+    String iconName = 'category',
+    int colorHex = 0xFF9184D9,
+    List<String> subCategoryNames = const [],
+  }) async {
+    final cleanName = name.trim();
+    if (cleanName.isEmpty) return '';
+    final key = (existingKey != null && existingKey.trim().isNotEmpty)
+        ? existingKey.trim()
+        : cleanName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+
+    final existingSubs = categories[key]?.subCategories ?? [];
+    final mergedSubs = <SubCategoryDef>[...existingSubs];
+    for (final sName in subCategoryNames) {
+      final cleanSub = sName.trim();
+      if (cleanSub.isEmpty) continue;
+      final subKey = cleanSub.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+      if (!mergedSubs.any((s) => s.key == subKey)) {
+        mergedSubs.add(SubCategoryDef(key: subKey, parentKey: key, name: cleanSub));
+      }
+    }
+
+    categories[key] = CategoryDef(
+      key: key,
+      name: cleanName,
+      icon: CategoryDef.iconRegistry[iconName] ?? Icons.category_outlined,
+      iconName: iconName,
+      color: Color(colorHex),
+      isIncome: isIncome,
+      subCategories: mergedSubs,
+    );
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Category "$cleanName" saved');
+    return key;
+  }
+
+  Future<void> addSubCategoryToCategory(String parentKey, String subName) async {
+    final cat = categories[parentKey];
+    final cleanSub = subName.trim();
+    if (cat == null || cleanSub.isEmpty) return;
+    final subKey = cleanSub.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+    if (cat.subCategories.any((s) => s.key == subKey)) return;
+    final updatedSubs = <SubCategoryDef>[
+      ...cat.subCategories,
+      SubCategoryDef(key: subKey, parentKey: parentKey, name: cleanSub),
+    ];
+    categories[parentKey] = cat.copyWith(subCategories: updatedSubs);
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Added "$cleanSub" under ${cat.name}');
+  }
+
+  Future<void> deleteCategory(String key) async {
+    if (key == 'shopping' || key == 'groceries' || key == 'salary') {
+      showToast('Default core category cannot be deleted');
+      return;
+    }
+    categories.remove(key);
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Category removed');
   }
 
   Future<void> _checkInitialAuth() async {
@@ -363,11 +573,69 @@ class FinanceProvider extends ChangeNotifier {
       );
     }
 
+    // Load user-configured Savings/Income ways & Loan types
+    final savedSavingsJson = prefs.getString('ff_group_${_familyCode}_savings_ways');
+    _savingsWays
+      ..clear()
+      ..addAll(defaultSavingsWays);
+    if (savedSavingsJson != null && savedSavingsJson.isNotEmpty) {
+      try {
+        final List decoded = json.decode(savedSavingsJson);
+        final list = decoded.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+        if (list.isNotEmpty) {
+          _savingsWays
+            ..clear()
+            ..addAll(list);
+        }
+      } catch (_) {}
+    }
+
+    final savedLoansJson = prefs.getString('ff_group_${_familyCode}_loan_types');
+    _loanTypes
+      ..clear()
+      ..addAll(defaultLoanTypes);
+    if (savedLoansJson != null && savedLoansJson.isNotEmpty) {
+      try {
+        final List decoded = json.decode(savedLoansJson);
+        final list = decoded.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+        if (list.isNotEmpty) {
+          _loanTypes
+            ..clear()
+            ..addAll(list);
+        }
+      } catch (_) {}
+    }
+
+    // Load custom categories
+    categories
+      ..clear()
+      ..addAll(defaultCategories);
+    final savedCatsJson = prefs.getString('ff_group_${_familyCode}_custom_categories');
+    if (savedCatsJson != null && savedCatsJson.isNotEmpty) {
+      try {
+        final List decoded = json.decode(savedCatsJson);
+        for (final item in decoded) {
+          if (item is Map) {
+            final c = CategoryDef.fromJson(Map<String, dynamic>.from(item));
+            if (c.key.isNotEmpty) {
+              categories[c.key] = c;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     // Load per-account opening balances (group-scoped first, fallback to owner's legacy key)
     final groupBalJson = prefs.getString('ff_group_${_familyCode}_account_balances');
     final legacyBalJson = _isCurrentGroupOwner ? prefs.getString('ff_${_userKey}_account_balances') : null;
     final acctBalJson = (groupBalJson != null && groupBalJson.isNotEmpty) ? groupBalJson : legacyBalJson;
     _accountOpeningBalances.updateAll((_, _) => 0.0);
+    for (final s in _savingsWays) {
+      _accountOpeningBalances.putIfAbsent(s, () => 0.0);
+    }
+    for (final l in _loanTypes) {
+      _accountOpeningBalances.putIfAbsent(l, () => 0.0);
+    }
     if (acctBalJson != null && acctBalJson.isNotEmpty) {
       try {
         final Map<String, dynamic> decoded = Map<String, dynamic>.from(json.decode(acctBalJson));
@@ -602,6 +870,12 @@ class FinanceProvider extends ChangeNotifier {
     if (_familyCode.isNotEmpty) {
       await prefs.setString('ff_room_name_$_familyCode', _familyName);
       await prefs.setString('ff_group_${_familyCode}_kind', _groupKind);
+      await prefs.setString('ff_group_${_familyCode}_savings_ways', json.encode(_savingsWays));
+      await prefs.setString('ff_group_${_familyCode}_loan_types', json.encode(_loanTypes));
+      await prefs.setString(
+        'ff_group_${_familyCode}_custom_categories',
+        json.encode(categories.values.map((c) => c.toJson()).toList()),
+      );
       await prefs.setString('ff_group_${_familyCode}_account_balances', json.encode(_accountOpeningBalances));
       await prefs.setString(
         'ff_group_${_familyCode}_members',
@@ -1903,40 +2177,77 @@ class FinanceProvider extends ChangeNotifier {
     return t.memberId == scopeMemberId;
   }
 
-  bool _matchesAccount(TransactionDef t, String account) {
-    if (account == 'All') return true;
-    final m = t.method.toLowerCase();
-    final c = t.catKey.toLowerCase();
-    final target = account.toLowerCase();
-    if (target == 'salary') {
-      return m == 'salary' || c == 'salary';
-    }
-    if (target == 'loan') {
-      return m == 'loan' || c == 'loan';
-    }
-    return m == target;
+  bool _isLoanTransaction(TransactionDef t) {
+    final m = t.method.trim().toLowerCase();
+    final c = t.catKey.trim().toLowerCase();
+    if (c == 'loan' || m == 'loan') return true;
+    return _loanTypes.any((l) => l.toLowerCase() == m || l.toLowerCase().replaceAll(' ', '_') == c);
   }
 
-  /// Calculates the live balance for a specific account/method ('Cash', 'Salary', 'Loan', 'UPI', 'Bank', 'Card', or 'All')
-  double accountBalance(String account) {
-    if (account == 'Card' && _cards.isNotEmpty) {
-      // For 'Card', return total available credit across all cards in Total Card List
-      return totalAvailableCredit;
+  bool _matchesAccount(TransactionDef t, String account) {
+    if (account == 'All') return true;
+    if (account == 'All Loans') {
+      return _isLoanTransaction(t);
     }
+    if (account == 'All Savings') {
+      return !_isLoanTransaction(t);
+    }
+    final m = t.method.trim().toLowerCase();
+    final c = t.catKey.trim().toLowerCase().replaceAll('_', ' ');
+    final target = account.trim().toLowerCase();
+    if (m == target) return true;
+    if (t.type == 'income' && c == target) return true;
+    if (target == 'personal loan' && (m == 'loan' || c == 'loan')) return true;
+    return false;
+  }
 
+  /// Calculates the live balance for 'All', 'All Savings', 'All Loans', or any specific source ('Cash', 'Salary', 'Card', etc.)
+  double accountBalance(String account) {
     if (account == 'All') {
       final activeMembers = members;
       final memberOpening = scopeMemberId == null
           ? activeMembers.fold(0.0, (sum, m) => sum + m.openingBalance)
           : activeMembers.firstWhere((m) => m.id == scopeMemberId, orElse: () => activeMembers.first).openingBalance;
       final walletOpening = _accountOpeningBalances.values.fold(0.0, (sum, v) => sum + v);
+      final cardOpeningExtra = (_cards.isNotEmpty && (_accountOpeningBalances['Card'] ?? 0.0) == 0.0)
+          ? _cards.fold(0.0, (sum, c) => sum + (c.creditLimit - c.openingUsed))
+          : 0.0;
       final netFlow = _transactions
           .where((t) => scopeMemberId == null || t.memberId == scopeMemberId)
           .fold(0.0, (sum, t) => sum + (t.type == 'income' ? t.amount : -t.amount));
-      return memberOpening + walletOpening + netFlow;
+      return memberOpening + walletOpening + cardOpeningExtra + netFlow;
     }
 
-    final opening = _accountOpeningBalances[account] ?? 0.0;
+    if (account == 'All Savings') {
+      final savingsOpening = _savingsWays.fold(
+        0.0,
+        (sum, s) => sum + (_accountOpeningBalances[s] ?? 0.0),
+      );
+      final netFlow = _transactions
+          .where((t) => (scopeMemberId == null || t.memberId == scopeMemberId) && _matchesAccount(t, 'All Savings'))
+          .fold(0.0, (sum, t) => sum + (t.type == 'income' ? t.amount : -t.amount));
+      return savingsOpening + netFlow;
+    }
+
+    if (account == 'All Loans') {
+      final loansOpening = _loanTypes.fold(
+            0.0,
+            (sum, l) => sum + (_accountOpeningBalances[l] ?? 0.0),
+          ) +
+          (_loanTypes.any((l) => l.toLowerCase() == 'loan') ? 0.0 : (_accountOpeningBalances['Loan'] ?? 0.0));
+      final cardOpeningExtra = (_cards.isNotEmpty && (_accountOpeningBalances['Card'] ?? 0.0) == 0.0)
+          ? _cards.fold(0.0, (sum, c) => sum + (c.creditLimit - c.openingUsed))
+          : 0.0;
+      final netFlow = _transactions
+          .where((t) => (scopeMemberId == null || t.memberId == scopeMemberId) && _matchesAccount(t, 'All Loans'))
+          .fold(0.0, (sum, t) => sum + (t.type == 'income' ? t.amount : -t.amount));
+      return loansOpening + cardOpeningExtra + netFlow;
+    }
+
+    double opening = _accountOpeningBalances[account] ?? 0.0;
+    if (account == 'Card' && _cards.isNotEmpty && opening == 0.0) {
+      opening = _cards.fold(0.0, (sum, c) => sum + (c.creditLimit - c.openingUsed));
+    }
     final netFlow = _transactions
         .where((t) => (scopeMemberId == null || t.memberId == scopeMemberId) && _matchesAccount(t, account))
         .fold(0.0, (sum, t) => sum + (t.type == 'income' ? t.amount : -t.amount));

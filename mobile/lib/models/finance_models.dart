@@ -10,12 +10,25 @@ class SubCategoryDef {
     required this.parentKey,
     required this.name,
   });
+
+  Map<String, dynamic> toJson() => {
+        'key': key,
+        'parentKey': parentKey,
+        'name': name,
+      };
+
+  factory SubCategoryDef.fromJson(Map<String, dynamic> json) => SubCategoryDef(
+        key: json['key']?.toString() ?? '',
+        parentKey: json['parentKey']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+      );
 }
 
 class CategoryDef {
   final String key;
   final String name;
   final IconData icon;
+  final String iconName;
   final Color color;
   final bool isIncome;
   final List<SubCategoryDef> subCategories;
@@ -24,10 +37,87 @@ class CategoryDef {
     required this.key,
     required this.name,
     required this.icon,
+    this.iconName = 'category',
     required this.color,
     this.isIncome = false,
     this.subCategories = const [],
   });
+
+  static const Map<String, IconData> iconRegistry = {
+    'groceries': Icons.shopping_basket,
+    'dining': Icons.restaurant,
+    'transport': Icons.directions_car,
+    'fuel': Icons.local_gas_station,
+    'shopping': Icons.shopping_bag,
+    'bills': Icons.bolt,
+    'health': Icons.medical_services,
+    'education': Icons.school,
+    'event': Icons.celebration,
+    'loan': Icons.account_balance_wallet,
+    'salary': Icons.work,
+    'business': Icons.store,
+    'gift': Icons.card_giftcard,
+    'pension': Icons.account_balance,
+    'refund': Icons.replay,
+    'home': Icons.home_outlined,
+    'flight': Icons.flight_takeoff,
+    'coffee': Icons.coffee_outlined,
+    'fitness': Icons.fitness_center,
+    'pets': Icons.pets,
+    'kids': Icons.child_care,
+    'savings': Icons.savings_outlined,
+    'category': Icons.category_outlined,
+  };
+
+  CategoryDef copyWith({
+    String? key,
+    String? name,
+    IconData? icon,
+    String? iconName,
+    Color? color,
+    bool? isIncome,
+    List<SubCategoryDef>? subCategories,
+  }) {
+    return CategoryDef(
+      key: key ?? this.key,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      iconName: iconName ?? this.iconName,
+      color: color ?? this.color,
+      isIncome: isIncome ?? this.isIncome,
+      subCategories: subCategories ?? this.subCategories,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'key': key,
+        'name': name,
+        'iconName': iconName,
+        'colorHex': color.toARGB32(),
+        'isIncome': isIncome,
+        'subCategories': subCategories.map((s) => s.toJson()).toList(),
+      };
+
+  factory CategoryDef.fromJson(Map<String, dynamic> json) {
+    final iName = json['iconName']?.toString() ?? 'category';
+    final cHex = (json['colorHex'] as int?) ?? 0xFF9184D9;
+    final rawSubs = json['subCategories'];
+    final subs = rawSubs is List
+        ? rawSubs
+            .whereType<Map>()
+            .map((m) => SubCategoryDef.fromJson(Map<String, dynamic>.from(m)))
+            .toList()
+        : <SubCategoryDef>[];
+    return CategoryDef(
+      key: json['key']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Custom',
+      icon: iconRegistry[iName] ?? Icons.category_outlined,
+      iconName: iName,
+      color: Color(cHex),
+      isIncome: (json['isIncome'] as bool?) ?? false,
+      subCategories: subs,
+    );
+  }
 }
 
 class ExpenseSplit {
