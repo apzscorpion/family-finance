@@ -184,6 +184,10 @@ class FamilyMemberDef {
   final double openingBalance;
   final Color color;
   final MemberAuthority authority;
+  final String email;
+  final bool isDisabled;
+  final bool isVerified;
+  final String memberOtp;
 
   const FamilyMemberDef({
     required this.id,
@@ -193,9 +197,41 @@ class FamilyMemberDef {
     required this.openingBalance,
     required this.color,
     this.authority = MemberAuthority.member,
+    this.email = '',
+    this.isDisabled = false,
+    this.isVerified = true,
+    this.memberOtp = '',
   });
 
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : 'U';
+
+  FamilyMemberDef copyWith({
+    String? id,
+    String? name,
+    String? rel,
+    String? role,
+    double? openingBalance,
+    Color? color,
+    MemberAuthority? authority,
+    String? email,
+    bool? isDisabled,
+    bool? isVerified,
+    String? memberOtp,
+  }) {
+    return FamilyMemberDef(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      rel: rel ?? this.rel,
+      role: role ?? this.role,
+      openingBalance: openingBalance ?? this.openingBalance,
+      color: color ?? this.color,
+      authority: authority ?? this.authority,
+      email: email ?? this.email,
+      isDisabled: isDisabled ?? this.isDisabled,
+      isVerified: isVerified ?? this.isVerified,
+      memberOtp: memberOtp ?? this.memberOtp,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -204,6 +240,10 @@ class FamilyMemberDef {
         'role': role,
         'openingBalance': openingBalance,
         'colorValue': color.toARGB32(),
+        'email': email,
+        'isDisabled': isDisabled,
+        'isVerified': isVerified,
+        'memberOtp': memberOtp,
       };
 
   factory FamilyMemberDef.fromJson(Map<String, dynamic> json) => FamilyMemberDef(
@@ -213,6 +253,70 @@ class FamilyMemberDef {
         role: json['role']?.toString() ?? 'Member',
         openingBalance: (json['openingBalance'] as num?)?.toDouble() ?? 0.0,
         color: Color((json['colorValue'] as int?) ?? 0xFF9184D9),
+        email: json['email']?.toString() ?? '',
+        isDisabled: (json['isDisabled'] as bool?) ?? false,
+        isVerified: (json['isVerified'] as bool?) ?? true,
+        memberOtp: json['memberOtp']?.toString() ?? '',
+      );
+}
+
+class FamilyLoginRequest {
+  final String id;
+  final String name;
+  final String email;
+  final String familyCode;
+  final String verificationOtp;
+  final String requestedAt;
+  final String status; // 'pending', 'approved', 'rejected'
+
+  const FamilyLoginRequest({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.familyCode,
+    required this.verificationOtp,
+    required this.requestedAt,
+    this.status = 'pending',
+  });
+
+  FamilyLoginRequest copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? familyCode,
+    String? verificationOtp,
+    String? requestedAt,
+    String? status,
+  }) {
+    return FamilyLoginRequest(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      familyCode: familyCode ?? this.familyCode,
+      verificationOtp: verificationOtp ?? this.verificationOtp,
+      requestedAt: requestedAt ?? this.requestedAt,
+      status: status ?? this.status,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'email': email,
+        'familyCode': familyCode,
+        'verificationOtp': verificationOtp,
+        'requestedAt': requestedAt,
+        'status': status,
+      };
+
+  factory FamilyLoginRequest.fromJson(Map<String, dynamic> json) => FamilyLoginRequest(
+        id: json['id']?.toString() ?? 'req_${DateTime.now().millisecondsSinceEpoch}',
+        name: json['name']?.toString() ?? 'Family User',
+        email: json['email']?.toString() ?? '',
+        familyCode: json['familyCode']?.toString() ?? '',
+        verificationOtp: json['verificationOtp']?.toString() ?? '000000',
+        requestedAt: json['requestedAt']?.toString() ?? 'Just now',
+        status: json['status']?.toString() ?? 'pending',
       );
 }
 

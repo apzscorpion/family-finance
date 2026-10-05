@@ -17,6 +17,9 @@ class LiveNotesWsService {
   final void Function(SharedNote note, String sender)? onRemoteNoteUpdated;
   final void Function(String noteId, String sender)? onRemoteNoteDeleted;
   final void Function(List<SharedNote> notes, String sender)? onRemoteFullSync;
+  final void Function(FamilyLoginRequest req)? onRemoteFamilyLoginRequest;
+  final void Function(String requestId, String email, bool approved)? onRemoteFamilyLoginDecision;
+  final void Function(String email, String name, bool disabled)? onRemoteMemberDisabledChanged;
   final List<SharedNote> Function()? getLocalNotes;
   final void Function()? onStateChanged;
 
@@ -24,6 +27,9 @@ class LiveNotesWsService {
     this.onRemoteNoteUpdated,
     this.onRemoteNoteDeleted,
     this.onRemoteFullSync,
+    this.onRemoteFamilyLoginRequest,
+    this.onRemoteFamilyLoginDecision,
+    this.onRemoteMemberDisabledChanged,
     this.getLocalNotes,
     this.onStateChanged,
   });
@@ -46,7 +52,7 @@ class LiveNotesWsService {
       return;
     }
 
-    if (_activeRoomCode == cleanCode && _isConnected) {
+    if (_activeRoomCode == cleanCode && _isConnected && _ws != null) {
       _currentUserName = cleanUser;
       return;
     }
@@ -58,7 +64,6 @@ class LiveNotesWsService {
     _isConnected = true;
     onStateChanged?.call();
 
-    // Try connecting to the FastAPI WebSocket hub (emulator 10.0.2.2 or localhost)
     final urls = [
       'ws://10.0.2.2:8000/ws/notes/$cleanCode',
       'ws://127.0.0.1:8000/ws/notes/$cleanCode',
@@ -103,6 +108,31 @@ class LiveNotesWsService {
       if (payloadRaw is! Map) return;
       final payload = Map<String, dynamic>.from(payloadRaw);
       final sender = payload['sender']?.toString() ?? 'Family Member';
+
+      switch (event) {
+        case 'family_join_request':
+          final reqMap = payload['request'];
+          if (reqMap is Map) {
+            final req = FamilyLoginRequest.fromJson(Map<String, dynamic>.from(reqMap));
+            onRemoteFamilyLoginRequest?.call(req);
+          }
+          return;
+        case 'family_join_decision':
+          final requestId = payload['requestId']?.toString() ?? '';
+          final email = payload['email']?.toString() ?? '';
+          final approved = (payload['approved'] as bool?) ?? (payload['status'] == 'approved');
+          if (email.isNotEmpty || requestId.isNotEmpty) {
+            onRemoteFamilyLoginDecision?.call(requestId, email, approved);
+          }
+          return;
+        case 'family_member_disabled':
+          final email = payload['email']?.toString() ?? '';
+          final name = payload['name']?.toString() ?? '';
+          final disabled = (payload['disabled'] as bool?) ?? true;
+          onRemoteMemberDisabledChanged?.call(email, name, disabled);
+          return;
+      }
+
       if (sender == _currentUserName) return;
 
       switch (event) {
@@ -220,6 +250,42 @@ class LiveNotesWsService {
     });
   }
 
+  Future<void> broadcastFamilyJoinRequest(FamilyLoginRequest req) async {
+    await _sendEvent('family_join_request', {
+      'sender': req.name,
+      'request': req.toJson(),
+    });
+  }
+
+  Future<void> broadcastFamilyJoinDecision({
+    String requestId = '',
+    required String email,
+    String name = '',
+    bool approved = true,
+  }) async {
+    await _sendEvent('family_join_decision', {
+      'sender': _currentUserName,
+      'requestId': requestId,
+      'email': email,
+      'name': name,
+      'approved': approved,
+      'status': approved ? 'approved' : 'rejected',
+    });
+  }
+
+  Future<void> broadcastMemberDisabledChanged({
+    String email = '',
+    String name = '',
+    required bool disabled,
+  }) async {
+    await _sendEvent('family_member_disabled', {
+      'sender': _currentUserName,
+      'email': email,
+      'name': name,
+      'disabled': disabled,
+    });
+  }
+
   Future<void> disconnect() async {
     for (final timer in _typingExpiryTimers.values) {
       timer.cancel();
@@ -237,4 +303,3 @@ class LiveNotesWsService {
     onStateChanged?.call();
   }
 }
-
