@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/finance_models.dart';
+import '../services/live_notes_ws_service.dart';
 import '../services/supabase_service.dart';
 
 class FinanceProvider extends ChangeNotifier {
@@ -61,6 +62,7 @@ class FinanceProvider extends ChangeNotifier {
   String _userKey = 'default';
   String _familyCode = '';
   String _familyName = '';
+  late final LiveNotesWsService _notesWs;
 
   // Real Family Members (Starts with ONLY the logged-in user, 0 opening balance)
   final List<FamilyMemberDef> _members = [];
@@ -86,7 +88,19 @@ class FinanceProvider extends ChangeNotifier {
   String get currentUserInitial =>
       _currentUserName.isNotEmpty ? _currentUserName[0].toUpperCase() : 'U';
 
+  bool get isNotesWsConnected => _notesWs.isConnected;
+  List<String> get onlineNotePeers => _notesWs.onlinePeers;
+  Map<String, String> get activeNoteEditors => _notesWs.activeEditorsByNote;
+  String? activeEditorForNote(String noteId) => _notesWs.activeEditorForNote(noteId);
+
   FinanceProvider() {
+    _notesWs = LiveNotesWsService(
+      onRemoteNoteUpdated: _handleRemoteNoteUpdated,
+      onRemoteNoteDeleted: _handleRemoteNoteDeleted,
+      onRemoteFullSync: _handleRemoteFullSync,
+      getLocalNotes: () => _notes,
+      onStateChanged: () => notifyListeners(),
+    );
     _checkInitialAuth();
   }
 
@@ -197,8 +211,10 @@ class FinanceProvider extends ChangeNotifier {
       } catch (_) {}
     }
 
-    // Load real shared notes created by this user
-    final notesJson = prefs.getString('ff_${_userKey}_notes');
+    // Load real shared notes (scoped to family room code first, fallback to user key)
+    final roomNotesJson = prefs.getString('ff_family_${_familyCode}_notes');
+    final userNotesJson = prefs.getString('ff_${_userKey}_notes');
+    final notesJson = (roomNotesJson != null && roomNotesJson.isNotEmpty) ? roomNotesJson : userNotesJson;
     _notes.clear();
     if (notesJson != null && notesJson.isNotEmpty) {
       try {
@@ -208,6 +224,12 @@ class FinanceProvider extends ChangeNotifier {
         }
       } catch (_) {}
     }
+
+    // Connect to live WebSocket channel for this family's shared notes
+    await _notesWs.connect(
+      familyCode: _familyCode,
+      userName: _currentUserName.isNotEmpty ? _currentUserName : 'Member',
+    );
 
     notifyListeners();
   }
@@ -224,10 +246,11 @@ class FinanceProvider extends ChangeNotifier {
       'ff_${_userKey}_transactions',
       json.encode(_transactions.map((t) => t.toJson()).toList()),
     );
-    await prefs.setString(
-      'ff_${_userKey}_notes',
-      json.encode(_notes.map((n) => n.toJson()).toList()),
-    );
+    final encodedNotes = json.encode(_notes.map((n) => n.toJson()).toList());
+    await prefs.setString('ff_${_userKey}_notes', encodedNotes);
+    if (_familyCode.isNotEmpty) {
+      await prefs.setString('ff_family_${_familyCode}_notes', encodedNotes);
+    }
   }
 
   static String generateUniqueFamilyCode() {
@@ -252,6 +275,10 @@ class FinanceProvider extends ChangeNotifier {
       familyName: _familyName,
       familyCode: _familyCode,
     );
+    await _notesWs.connect(
+      familyCode: _familyCode,
+      userName: _currentUserName.isNotEmpty ? _currentUserName : 'Member',
+    );
     notifyListeners();
   }
 
@@ -265,6 +292,10 @@ class FinanceProvider extends ChangeNotifier {
       await SupabaseService.updateMetadata(
         familyName: _familyName,
         familyCode: _familyCode,
+      );
+      await _notesWs.connect(
+        familyCode: _familyCode,
+        userName: _currentUserName.isNotEmpty ? _currentUserName : 'Member',
       );
       notifyListeners();
       showToast('Joined Family Workspace ($_familyCode)');
@@ -361,17 +392,102 @@ class FinanceProvider extends ChangeNotifier {
   final List<SharedNote> _notes = [];
   final List<FundPool> _fundPools = [];
 
-  List<SharedNote> get notes => _notes;
+  List<SharedNote> get notes {
+    final sorted = List<SharedNote>.from(_notes);
+    sorted.sort((a, b) {
+      if (a.isPinned != b.isPinned) {
+        return a.isPinned ? -1 : 1;
+      }
+      return b.updatedAtMs.compareTo(a.updatedAtMs);
+    });
+    return sorted;
+  }
+
   List<FundPool> get fundPools => _fundPools;
 
-  Future<void> saveNote(SharedNote note) async {
-    final index = _notes.indexWhere((n) => n.id == note.id);
+  void _handleRemoteNoteUpdated(SharedNote remoteNote, String editorName) {
+    final index = _notes.indexWhere((n) => n.id == remoteNote.id);
     if (index >= 0) {
-      _notes[index] = note;
+      if (remoteNote.updatedAtMs >= _notes[index].updatedAtMs) {
+        _notes[index] = remoteNote;
+      }
     } else {
-      _notes.insert(0, note);
+      _notes.insert(0, remoteNote);
+    }
+    _saveUserWorkspace();
+    notifyListeners();
+  }
+
+  void _handleRemoteNoteDeleted(String noteId, String sender) {
+    _notes.removeWhere((n) => n.id == noteId);
+    _saveUserWorkspace();
+    notifyListeners();
+  }
+
+  void _handleRemoteFullSync(List<SharedNote> remoteNotes, String sender) {
+    bool changed = false;
+    for (final remote in remoteNotes) {
+      final idx = _notes.indexWhere((n) => n.id == remote.id);
+      if (idx < 0) {
+        _notes.add(remote);
+        changed = true;
+      } else if (remote.updatedAtMs > _notes[idx].updatedAtMs) {
+        _notes[idx] = remote;
+        changed = true;
+      }
+    }
+    if (changed) {
+      _saveUserWorkspace();
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveNote(SharedNote note, {bool broadcast = true}) async {
+    final updated = note.copyWith(
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+    );
+    final index = _notes.indexWhere((n) => n.id == updated.id);
+    if (index >= 0) {
+      _notes[index] = updated;
+    } else {
+      _notes.insert(0, updated);
+    }
+    if (broadcast) {
+      _notesWs.broadcastNoteEdit(updated);
     }
     await _saveUserWorkspace();
+    notifyListeners();
+  }
+
+  Future<void> deleteNote(String noteId) async {
+    _notes.removeWhere((n) => n.id == noteId);
+    _notesWs.broadcastNoteDelete(noteId);
+    await _saveUserWorkspace();
+    notifyListeners();
+  }
+
+  Future<void> togglePinNote(String noteId) async {
+    final index = _notes.indexWhere((n) => n.id == noteId);
+    if (index < 0) return;
+    final toggled = _notes[index].copyWith(
+      isPinned: !_notes[index].isPinned,
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+    );
+    _notes[index] = toggled;
+    _notesWs.broadcastNoteEdit(toggled);
+    await _saveUserWorkspace();
+    notifyListeners();
+  }
+
+  void notifyNoteTyping(String noteId) {
+    _notesWs.broadcastTyping(noteId);
+  }
+
+  Future<void> reconnectNotesWs() async {
+    await _notesWs.connect(
+      familyCode: _familyCode,
+      userName: _currentUserName.isNotEmpty ? _currentUserName : 'Member',
+    );
     notifyListeners();
   }
 
@@ -426,6 +542,7 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await _notesWs.disconnect();
     await SupabaseService.signOut();
     _isLoggedIn = false;
     _activeTab = 0;
@@ -508,6 +625,11 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   void openSubPage(String pageName) {
+    _subPage = pageName;
+    notifyListeners();
+  }
+
+  void setSubPage(String? pageName) {
     _subPage = pageName;
     notifyListeners();
   }

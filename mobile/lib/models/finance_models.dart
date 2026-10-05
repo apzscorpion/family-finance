@@ -73,6 +73,9 @@ class SharedNote {
   final String lastEditedBy;
   final String lastEditedTime;
   final String? categoryTag;
+  final int colorHex;
+  final bool isPinned;
+  final int updatedAtMs;
 
   const SharedNote({
     required this.id,
@@ -81,7 +84,37 @@ class SharedNote {
     required this.lastEditedBy,
     required this.lastEditedTime,
     this.categoryTag,
+    this.colorHex = 0xFF1E2028,
+    this.isPinned = false,
+    this.updatedAtMs = 0,
   });
+
+  String get updatedAt => lastEditedTime;
+  String get category => categoryTag ?? 'General';
+
+  SharedNote copyWith({
+    String? id,
+    String? title,
+    String? content,
+    String? lastEditedBy,
+    String? lastEditedTime,
+    String? categoryTag,
+    int? colorHex,
+    bool? isPinned,
+    int? updatedAtMs,
+  }) {
+    return SharedNote(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      lastEditedBy: lastEditedBy ?? this.lastEditedBy,
+      lastEditedTime: lastEditedTime ?? this.lastEditedTime,
+      categoryTag: categoryTag ?? this.categoryTag,
+      colorHex: colorHex ?? this.colorHex,
+      isPinned: isPinned ?? this.isPinned,
+      updatedAtMs: updatedAtMs ?? this.updatedAtMs,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -90,6 +123,9 @@ class SharedNote {
         'lastEditedBy': lastEditedBy,
         'lastEditedTime': lastEditedTime,
         'categoryTag': categoryTag,
+        'colorHex': colorHex,
+        'isPinned': isPinned,
+        'updatedAtMs': updatedAtMs,
       };
 
   factory SharedNote.fromJson(Map<String, dynamic> json) => SharedNote(
@@ -99,6 +135,9 @@ class SharedNote {
         lastEditedBy: json['lastEditedBy']?.toString() ?? '',
         lastEditedTime: json['lastEditedTime']?.toString() ?? '',
         categoryTag: json['categoryTag']?.toString(),
+        colorHex: (json['colorHex'] as int?) ?? 0xFF1E2028,
+        isPinned: (json['isPinned'] as bool?) ?? false,
+        updatedAtMs: (json['updatedAtMs'] as int?) ?? 0,
       );
 }
 
