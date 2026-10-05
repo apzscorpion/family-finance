@@ -266,6 +266,30 @@ class FinanceProvider extends ChangeNotifier {
       } catch (_) {}
     }
 
+    // Load real credit/debit cards created by this user
+    final cardsJson = prefs.getString('ff_${_userKey}_cards');
+    _cards.clear();
+    if (cardsJson != null && cardsJson.isNotEmpty) {
+      try {
+        final List decoded = json.decode(cardsJson);
+        for (var item in decoded) {
+          _cards.add(CreditCardDef.fromJson(Map<String, dynamic>.from(item)));
+        }
+      } catch (_) {}
+    }
+
+    // Load recurring automatic credit card charges
+    final autoChargesJson = prefs.getString('ff_${_userKey}_auto_charges');
+    _autoCharges.clear();
+    if (autoChargesJson != null && autoChargesJson.isNotEmpty) {
+      try {
+        final List decoded = json.decode(autoChargesJson);
+        for (var item in decoded) {
+          _autoCharges.add(AutoCardCharge.fromJson(Map<String, dynamic>.from(item)));
+        }
+      } catch (_) {}
+    }
+
     // Load real shared notes (scoped to family room code first, fallback to user key)
     final roomNotesJson = prefs.getString('ff_family_${_familyCode}_notes');
     final userNotesJson = prefs.getString('ff_${_userKey}_notes');
@@ -279,6 +303,9 @@ class FinanceProvider extends ChangeNotifier {
         }
       } catch (_) {}
     }
+
+    // Automatically apply any due monthly auto-charges on cards
+    await _checkAndApplyDueAutoCharges(silent: true);
 
     // Connect to live WebSocket channel for this family's shared notes
     await _notesWs.connect(
@@ -301,6 +328,14 @@ class FinanceProvider extends ChangeNotifier {
     await prefs.setString(
       'ff_${_userKey}_transactions',
       json.encode(_transactions.map((t) => t.toJson()).toList()),
+    );
+    await prefs.setString(
+      'ff_${_userKey}_cards',
+      json.encode(_cards.map((c) => c.toJson()).toList()),
+    );
+    await prefs.setString(
+      'ff_${_userKey}_auto_charges',
+      json.encode(_autoCharges.map((a) => a.toJson()).toList()),
     );
     final encodedNotes = json.encode(_notes.map((n) => n.toJson()).toList());
     await prefs.setString('ff_${_userKey}_notes', encodedNotes);
@@ -397,6 +432,8 @@ class FinanceProvider extends ChangeNotifier {
     _approvals.clear();
     _notes.clear();
     _fundPools.clear();
+    _cards.clear();
+    _autoCharges.clear();
     _accountOpeningBalances.updateAll((_, __) => 0.0);
     _selectedAccount = 'All';
     if (_members.isNotEmpty) {
@@ -449,6 +486,541 @@ class FinanceProvider extends ChangeNotifier {
   final List<ApprovalItem> _approvals = [];
   final List<SharedNote> _notes = [];
   final List<FundPool> _fundPools = [];
+  final List<CreditCardDef> _cards = [];
+  final List<AutoCardCharge> _autoCharges = [];
+
+  List<CreditCardDef> get cards => List.unmodifiable(_cards);
+  List<AutoCardCharge> get autoCharges => List.unmodifiable(_autoCharges);
+
+  CreditCardDef? cardById(String? id) {
+    if (id == null || id.isEmpty) return null;
+    try {
+      return _cards.firstWhere((c) => c.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Calculates live credit used for a specific card:
+  /// openingUsed + card expenses - card refunds/bill payments
+  double cardUsedAmount(String cardId) {
+    final card = cardById(cardId);
+    if (card == null) return 0.0;
+    final isPrimaryCard = _cards.isNotEmpty && _cards.first.id == cardId;
+
+    double txnDelta = 0.0;
+    for (final t in _transactions) {
+      final matchesExplicitCard = t.cardId == cardId;
+      final matchesByTitleLast4 = t.cardId == null &&
+          t.method.toLowerCase() == 'card' &&
+          card.last4.isNotEmpty &&
+          t.title.contains(card.last4);
+      final matchesFallbackPrimary = t.cardId == null &&
+          t.method.toLowerCase() == 'card' &&
+          _cards.length == 1 &&
+          isPrimaryCard;
+
+      if (matchesExplicitCard || matchesByTitleLast4 || matchesFallbackPrimary) {
+        if (t.type == 'expense') {
+          txnDelta += t.amount;
+        } else {
+          txnDelta -= t.amount;
+        }
+      }
+    }
+    return (card.openingUsed + txnDelta).clamp(0.0, double.infinity);
+  }
+
+  double cardAvailableCredit(String cardId) {
+    final card = cardById(cardId);
+    if (card == null) return 0.0;
+    return (card.creditLimit - cardUsedAmount(cardId)).clamp(0.0, card.creditLimit);
+  }
+
+  double cardUtilizationPct(String cardId) {
+    final card = cardById(cardId);
+    if (card == null || card.creditLimit <= 0) return 0.0;
+    return (cardUsedAmount(cardId) / card.creditLimit * 100.0).clamp(0.0, 999.0);
+  }
+
+  List<TransactionDef> transactionsForCard(String cardId) {
+    final card = cardById(cardId);
+    final isPrimaryCard = _cards.isNotEmpty && _cards.first.id == cardId;
+    return _transactions.where((t) {
+      if (t.cardId == cardId) return true;
+      if (t.cardId == null && t.method.toLowerCase() == 'card') {
+        if (card != null && card.last4.isNotEmpty && t.title.contains(card.last4)) return true;
+        if (_cards.length == 1 && isPrimaryCard) return true;
+      }
+      return false;
+    }).toList();
+  }
+
+  double get totalCreditLimit {
+    if (_cards.isEmpty) {
+      return _accountOpeningBalances['Card'] ?? 0.0;
+    }
+    return _cards.fold(0.0, (sum, c) => sum + c.creditLimit);
+  }
+
+  double get totalCreditUsed {
+    if (_cards.isEmpty) {
+      return _transactions
+          .where((t) => (scopeMemberId == null || t.memberId == scopeMemberId) && t.method.toLowerCase() == 'card')
+          .fold(0.0, (sum, t) => sum + (t.type == 'expense' ? t.amount : -t.amount))
+          .clamp(0.0, double.infinity);
+    }
+    final cardSum = _cards.fold(0.0, (sum, c) => sum + cardUsedAmount(c.id));
+    // Also include any unlinked 'Card' transactions when multiple cards exist
+    final unlinkedCardSpend = _cards.length > 1
+        ? _transactions
+            .where((t) =>
+                t.cardId == null &&
+                t.method.toLowerCase() == 'card' &&
+                !_cards.any((c) => c.last4.isNotEmpty && t.title.contains(c.last4)))
+            .fold(0.0, (sum, t) => sum + (t.type == 'expense' ? t.amount : -t.amount))
+        : 0.0;
+    return (cardSum + unlinkedCardSpend).clamp(0.0, double.infinity);
+  }
+
+  double get totalAvailableCredit {
+    if (_cards.isEmpty) {
+      final limit = _accountOpeningBalances['Card'] ?? 0.0;
+      return (limit - totalCreditUsed).clamp(0.0, double.infinity);
+    }
+    return (totalCreditLimit - totalCreditUsed).clamp(0.0, totalCreditLimit);
+  }
+
+  double get totalCreditUtilizationPct {
+    final limit = totalCreditLimit;
+    if (limit <= 0) return 0.0;
+    return (totalCreditUsed / limit * 100.0).clamp(0.0, 999.0);
+  }
+
+  Future<void> addOrUpdateCard(CreditCardDef card) async {
+    final idx = _cards.indexWhere((c) => c.id == card.id);
+    if (idx >= 0) {
+      _cards[idx] = card;
+    } else {
+      _cards.add(card);
+    }
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('${card.shortLabel} saved');
+  }
+
+  Future<void> deleteCard(String cardId) async {
+    _cards.removeWhere((c) => c.id == cardId);
+    _autoCharges.removeWhere((a) => a.cardId == cardId);
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Card removed');
+  }
+
+  /// Pay off part or all of a credit card's used balance
+  Future<void> payCardBill({
+    required String cardId,
+    required double amount,
+    String payFromAccount = 'Bank',
+  }) async {
+    final card = cardById(cardId);
+    if (card == null || amount <= 0) return;
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    // 1. Record a credit card bill payment (income/credit on the card so cardUsedAmount decreases)
+    _transactions.insert(
+      0,
+      TransactionDef(
+        id: nowMs,
+        daysAgo: 0,
+        title: '${card.shortLabel} Bill Paid',
+        catKey: 'refund',
+        amount: amount,
+        type: 'income',
+        memberId: 'me',
+        method: 'Card',
+        origin: 'manual',
+        time: 'Now',
+        cardId: cardId,
+      ),
+    );
+
+    // 2. If paid from Bank/UPI/Cash, record the outflow from that account
+    if (payFromAccount != 'None' && payFromAccount != 'Card') {
+      _transactions.insert(
+        0,
+        TransactionDef(
+          id: nowMs + 1,
+          daysAgo: 0,
+          title: 'CC Bill · ${card.shortLabel}',
+          catKey: 'bills',
+          amount: amount,
+          type: 'expense',
+          memberId: 'me',
+          method: payFromAccount,
+          origin: 'manual',
+          time: 'Now',
+        ),
+      );
+    }
+
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Paid ₹${amount.round()} towards ${card.shortLabel}');
+  }
+
+  Future<void> addAutoCardCharge(AutoCardCharge charge) async {
+    final idx = _autoCharges.indexWhere((a) => a.id == charge.id);
+    if (idx >= 0) {
+      _autoCharges[idx] = charge;
+    } else {
+      _autoCharges.add(charge);
+    }
+    await _checkAndApplyDueAutoCharges(silent: true);
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Auto-charge "${charge.title}" saved');
+  }
+
+  Future<void> toggleAutoCardCharge(String id) async {
+    final idx = _autoCharges.indexWhere((a) => a.id == id);
+    if (idx < 0) return;
+    _autoCharges[idx] = _autoCharges[idx].copyWith(isActive: !_autoCharges[idx].isActive);
+    await _saveUserWorkspace();
+    notifyListeners();
+  }
+
+  Future<void> deleteAutoCardCharge(String id) async {
+    _autoCharges.removeWhere((a) => a.id == id);
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Auto-charge removed');
+  }
+
+  Future<int> _checkAndApplyDueAutoCharges({bool silent = false}) async {
+    final now = DateTime.now();
+    final currentMonthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    int appliedCount = 0;
+
+    for (int i = 0; i < _autoCharges.length; i++) {
+      final ac = _autoCharges[i];
+      if (!ac.isActive) continue;
+      if (ac.lastAppliedMonth == currentMonthKey) continue;
+      if (now.day >= ac.dayOfMonth) {
+        final card = cardById(ac.cardId);
+        final cardLabel = card != null ? ' (${card.shortLabel})' : '';
+        _transactions.insert(
+          0,
+          TransactionDef(
+            id: DateTime.now().millisecondsSinceEpoch + appliedCount,
+            daysAgo: 0,
+            title: '${ac.title}$cardLabel',
+            catKey: ac.catKey,
+            amount: ac.amount,
+            type: 'expense',
+            memberId: card?.holderMemberId ?? 'me',
+            method: 'Card',
+            origin: 'auto_card',
+            time: 'Auto · Day ${ac.dayOfMonth}',
+            cardId: ac.cardId,
+          ),
+        );
+        _autoCharges[i] = ac.copyWith(lastAppliedMonth: currentMonthKey);
+        appliedCount++;
+      }
+    }
+    if (appliedCount > 0) {
+      await _saveUserWorkspace();
+      if (!silent) {
+        showToast('$appliedCount automatic card charge(s) applied');
+      }
+    }
+    return appliedCount;
+  }
+
+  Future<void> triggerAutoChargeNow(AutoCardCharge ac) async {
+    final now = DateTime.now();
+    final currentMonthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final card = cardById(ac.cardId);
+    _transactions.insert(
+      0,
+      TransactionDef(
+        id: now.millisecondsSinceEpoch,
+        daysAgo: 0,
+        title: ac.title,
+        catKey: ac.catKey,
+        amount: ac.amount,
+        type: 'expense',
+        memberId: card?.holderMemberId ?? 'me',
+        method: 'Card',
+        origin: 'auto_card',
+        time: 'Auto Charge',
+        cardId: ac.cardId,
+      ),
+    );
+    final idx = _autoCharges.indexWhere((a) => a.id == ac.id);
+    if (idx >= 0) {
+      _autoCharges[idx] = ac.copyWith(lastAppliedMonth: currentMonthKey);
+    }
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('${ac.title} (₹${ac.amount.round()}) charged to ${card?.shortLabel ?? 'Card'}');
+  }
+
+  /// Automatically parses 1 or more bank/credit-card SMS alerts, emails, or statement lines.
+  /// Matches or auto-creates the card in Total Card List, updates credit limit/available limit if present,
+  /// and automatically logs the credit card usage!
+  Future<int> autoParseBankOrCardAlert(String rawText) async {
+    final text = rawText.trim();
+    if (text.isEmpty) return 0;
+
+    // Split into blocks if multiple SMS/lines were pasted or imported
+    final blocks = text
+        .split(RegExp(r'\n\s*\n|\r?\n(?=.*(?:Rs\.?|INR|₹)\s*[\d,]+)'))
+        .map((b) => b.trim())
+        .where((b) => b.isNotEmpty)
+        .toList();
+
+    int count = 0;
+    for (final block in (blocks.isEmpty ? [text] : blocks)) {
+      final parsed = _parseSingleCardAlertBlock(block);
+      if (parsed == null) continue;
+
+      final String bank = parsed['bank'] as String;
+      final String last4 = parsed['last4'] as String;
+      final double amount = parsed['amount'] as double;
+      final String merchant = parsed['merchant'] as String;
+      final String catKey = parsed['catKey'] as String;
+      final String txnType = parsed['type'] as String; // 'expense' or 'income'
+      final double? availLimit = parsed['availLimit'] as double?;
+      final double? totalLimit = parsed['totalLimit'] as double?;
+      final String network = parsed['network'] as String;
+
+      // Find or auto-create the CreditCardDef
+      CreditCardDef? targetCard;
+      if (last4.isNotEmpty) {
+        try {
+          targetCard = _cards.firstWhere((c) => c.last4 == last4);
+        } catch (_) {}
+      }
+      if (targetCard == null && _cards.isNotEmpty) {
+        try {
+          targetCard = _cards.firstWhere((c) => c.bankName.toLowerCase() == bank.toLowerCase());
+        } catch (_) {}
+      }
+
+      if (targetCard == null) {
+        // Auto-create this card in the user's Total Card List!
+        final inferredLimit = totalLimit ??
+            (availLimit != null ? (availLimit + amount) : 100000.0);
+        final palette = [0xFF312E81, 0xFF0F766E, 0xFF7C2D12, 0xFF1E3A8A, 0xFF4C1D95, 0xFF831843];
+        targetCard = CreditCardDef(
+          id: 'card_${DateTime.now().millisecondsSinceEpoch}_$count',
+          bankName: bank,
+          cardName: 'Credit Card',
+          last4: last4.isNotEmpty ? last4 : '${1000 + (_cards.length * 137) % 8999}',
+          network: network,
+          cardType: 'Credit',
+          creditLimit: inferredLimit,
+          openingUsed: 0.0,
+          colorHex: palette[_cards.length % palette.length],
+        );
+        _cards.add(targetCard);
+      } else if (totalLimit != null || availLimit != null) {
+        final idx = _cards.indexWhere((c) => c.id == targetCard!.id);
+        if (idx >= 0) {
+          final newLimit = totalLimit ?? _cards[idx].creditLimit;
+          _cards[idx] = _cards[idx].copyWith(creditLimit: newLimit);
+          targetCard = _cards[idx];
+        }
+      }
+
+      _transactions.insert(
+        0,
+        TransactionDef(
+          id: DateTime.now().millisecondsSinceEpoch + count,
+          daysAgo: 0,
+          title: merchant,
+          catKey: catKey,
+          amount: amount,
+          type: txnType,
+          memberId: targetCard.holderMemberId,
+          method: 'Card',
+          origin: 'auto_card',
+          time: 'Auto SMS',
+          cardId: targetCard.id,
+        ),
+      );
+      count++;
+    }
+
+    if (count > 0) {
+      await _saveUserWorkspace();
+      notifyListeners();
+      showToast('Auto-recorded $count card transaction(s) & updated credit usage');
+    }
+    return count;
+  }
+
+  Map<String, dynamic>? _parseSingleCardAlertBlock(String block) {
+    final lower = block.toLowerCase();
+
+    // Extract amount (supports Rs. 1,250.00 / INR 1250 / ₹1,250)
+    final amtMatch = RegExp(
+      r'(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)',
+      caseSensitive: false,
+    ).firstMatch(block);
+
+    double? amount;
+    if (amtMatch != null) {
+      amount = double.tryParse(amtMatch.group(1)!.replaceAll(',', ''));
+    } else {
+      // Fallback for CSV/table row: look for standalone number
+      final numMatch = RegExp(r'\b(\d{2,7}(?:\.\d{1,2})?)\b').firstMatch(block);
+      if (numMatch != null) {
+        amount = double.tryParse(numMatch.group(1)!);
+      }
+    }
+    if (amount == null || amount <= 0) return null;
+
+    // Extract available / total credit limit if mentioned
+    double? availLimit;
+    final availMatch = RegExp(
+      r'(?:avl|avail|available)\s*(?:cr|credit)?\s*(?:lmt|limit)[:\s-]*(?:rs\.?|inr|₹)?\s*([\d,]+(?:\.\d{1,2})?)',
+      caseSensitive: false,
+    ).firstMatch(block);
+    if (availMatch != null) {
+      availLimit = double.tryParse(availMatch.group(1)!.replaceAll(',', ''));
+    }
+
+    double? totalLimit;
+    final totMatch = RegExp(
+      r'(?:total|credit)\s*(?:lmt|limit)[:\s-]*(?:rs\.?|inr|₹)?\s*([\d,]+(?:\.\d{1,2})?)',
+      caseSensitive: false,
+    ).firstMatch(block);
+    if (totMatch != null) {
+      totalLimit = double.tryParse(totMatch.group(1)!.replaceAll(',', ''));
+    }
+
+    // Extract last 4 digits of card
+    String last4 = '';
+    final last4Match = RegExp(
+      r'(?:ending(?:\s+in|\s+with)?|xx+|\*{2,}|••+|card\s*no\.?\s*)\s*(\d{4})\b',
+      caseSensitive: false,
+    ).firstMatch(block);
+    if (last4Match != null) {
+      last4 = last4Match.group(1)!;
+    }
+
+    // Detect bank name
+    String bank = 'Bank';
+    if (lower.contains('hdfc')) {
+      bank = 'HDFC Bank';
+    } else if (lower.contains('sbi')) {
+      bank = 'SBI Card';
+    } else if (lower.contains('icici')) {
+      bank = 'ICICI Bank';
+    } else if (lower.contains('axis')) {
+      bank = 'Axis Bank';
+    } else if (lower.contains('kotak')) {
+      bank = 'Kotak Bank';
+    } else if (lower.contains('amex') || lower.contains('american express')) {
+      bank = 'Amex';
+    } else if (lower.contains('onecard') || lower.contains('one card')) {
+      bank = 'OneCard';
+    } else if (lower.contains('idfc')) {
+      bank = 'IDFC First';
+    } else if (lower.contains('indus')) {
+      bank = 'IndusInd';
+    } else if (lower.contains('rbl')) {
+      bank = 'RBL Bank';
+    } else if (lower.contains('yes')) {
+      bank = 'Yes Bank';
+    } else if (lower.contains('au ')) {
+      bank = 'AU Bank';
+    } else if (lower.contains('bob') || lower.contains('baroda')) {
+      bank = 'BOB Card';
+    }
+
+    String network = 'Visa';
+    if (lower.contains('rupay')) {
+      network = 'RuPay';
+    } else if (lower.contains('master')) {
+      network = 'Mastercard';
+    } else if (lower.contains('amex')) {
+      network = 'Amex';
+    }
+
+    // Detect merchant
+    String merchant = 'Card Purchase';
+    final merchMatch = RegExp(
+      r'(?:at|to|in\s+favor\s+of|merchant)\s+([A-Za-z0-9&\s._-]{2,28}?)(?:\s+on\b|\s+for\b|\s+avl\b|\.|$)',
+      caseSensitive: false,
+    ).firstMatch(block);
+    if (merchMatch != null) {
+      merchant = merchMatch.group(1)!.trim();
+    } else {
+      final knownMerchants = {
+        'swiggy': 'Swiggy',
+        'zomato': 'Zomato',
+        'amazon': 'Amazon',
+        'flipkart': 'Flipkart',
+        'myntra': 'Myntra',
+        'uber': 'Uber',
+        'ola': 'Ola',
+        'bigbasket': 'BigBasket',
+        'blinkit': 'Blinkit',
+        'zepto': 'Zepto',
+        'dmart': 'DMart',
+        'netflix': 'Netflix',
+        'jio': 'Jio',
+        'airtel': 'Airtel',
+        'irctc': 'IRCTC',
+        'shell': 'Shell Fuel',
+        'hpcl': 'HPCL Fuel',
+        'iocl': 'IndianOil',
+      };
+      for (final e in knownMerchants.entries) {
+        if (lower.contains(e.key)) {
+          merchant = e.value;
+          break;
+        }
+      }
+    }
+
+    // Detect category
+    String catKey = 'shopping';
+    if (lower.contains('swiggy') || lower.contains('zomato') || lower.contains('restaurant') || lower.contains('food') || lower.contains('cafe')) {
+      catKey = 'dining';
+    } else if (lower.contains('uber') || lower.contains('ola') || lower.contains('irctc') || lower.contains('flight')) {
+      catKey = 'transport';
+    } else if (lower.contains('fuel') || lower.contains('petrol') || lower.contains('shell') || lower.contains('hpcl') || lower.contains('iocl')) {
+      catKey = 'fuel';
+    } else if (lower.contains('bigbasket') || lower.contains('blinkit') || lower.contains('zepto') || lower.contains('dmart') || lower.contains('grocer')) {
+      catKey = 'groceries';
+    } else if (lower.contains('netflix') || lower.contains('airtel') || lower.contains('jio') || lower.contains('bill') || lower.contains('electricity')) {
+      catKey = 'bills';
+    } else if (lower.contains('hospital') || lower.contains('apollo') || lower.contains('pharmacy')) {
+      catKey = 'health';
+    }
+
+    final isCreditOrRefund = lower.contains('refund') ||
+        lower.contains('reversed') ||
+        lower.contains('cashback') ||
+        (lower.contains('credited') && !lower.contains('debited'));
+
+    return {
+      'bank': bank,
+      'last4': last4,
+      'amount': amount,
+      'merchant': merchant,
+      'catKey': catKey,
+      'type': isCreditOrRefund ? 'income' : 'expense',
+      'availLimit': availLimit,
+      'totalLimit': totalLimit,
+      'network': network,
+    };
+  }
 
   List<SharedNote> get notes {
     final sorted = List<SharedNote>.from(_notes);
@@ -587,11 +1159,15 @@ class FinanceProvider extends ChangeNotifier {
       await prefs.remove('ff_${_userKey}_transactions');
       await prefs.remove('ff_${_userKey}_notes');
       await prefs.remove('ff_${_userKey}_account_balances');
+      await prefs.remove('ff_${_userKey}_cards');
+      await prefs.remove('ff_${_userKey}_auto_charges');
       _transactions.clear();
       _notes.clear();
       _smsQueue.clear();
       _approvals.clear();
       _fundPools.clear();
+      _cards.clear();
+      _autoCharges.clear();
       _accountOpeningBalances.updateAll((_, __) => 0.0);
     }
 
@@ -658,6 +1234,11 @@ class FinanceProvider extends ChangeNotifier {
 
   /// Calculates the live balance for a specific account/method ('Cash', 'Salary', 'Loan', 'UPI', 'Bank', 'Card', or 'All')
   double accountBalance(String account) {
+    if (account == 'Card' && _cards.isNotEmpty) {
+      // For 'Card', return total available credit across all cards in Total Card List
+      return totalAvailableCredit;
+    }
+
     if (account == 'All') {
       final activeMembers = members;
       final memberOpening = scopeMemberId == null
@@ -781,6 +1362,9 @@ class FinanceProvider extends ChangeNotifier {
 
   Future<void> confirmSmsItem(SmsQueueItem item) async {
     _smsQueue.removeWhere((s) => s.id == item.id);
+    final isCardItem = item.cardId != null ||
+        (item.cardLast4 != null && item.cardLast4!.isNotEmpty) ||
+        item.snippet.toLowerCase().contains('card');
     final newTxn = TransactionDef(
       id: DateTime.now().millisecondsSinceEpoch,
       daysAgo: 0,
@@ -789,9 +1373,10 @@ class FinanceProvider extends ChangeNotifier {
       amount: item.amount,
       type: 'expense',
       memberId: 'me',
-      method: 'UPI',
+      method: isCardItem ? 'Card' : 'UPI',
       origin: 'sms',
       time: 'Now',
+      cardId: item.cardId ?? (_cards.isNotEmpty && isCardItem ? _cards.first.id : null),
     );
     _transactions.insert(0, newTxn);
     await _saveUserWorkspace();
@@ -829,6 +1414,7 @@ class FinanceProvider extends ChangeNotifier {
           method: old.method,
           origin: old.origin,
           time: old.time,
+          cardId: old.cardId,
         );
       }
     } else if (item.kind == 'New' && item.newTxn != null) {

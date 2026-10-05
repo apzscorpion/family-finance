@@ -384,7 +384,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // 4. Quick Action Buttons Grid (Add transaction, SMS inbox, Family, Reports)
+          // 4. Quick Action Buttons Grid (Add transaction, Cards, SMS inbox, Family, Insights)
           Padding(
             padding: const EdgeInsets.only(left: 18, right: 18, top: 18),
             child: Row(
@@ -396,6 +396,13 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.add,
                   isPrimary: true,
                   onTap: () => QuickAddSheet.show(context),
+                ),
+                _buildQuickActionButton(
+                  context: context,
+                  label: 'Cards',
+                  icon: Icons.credit_card_rounded,
+                  badge: provider.cards.isNotEmpty ? '${provider.cards.length}' : null,
+                  onTap: () => provider.openSubPage('cards'),
                 ),
                 _buildQuickActionButton(
                   context: context,
@@ -418,6 +425,143 @@ class HomeScreen extends StatelessWidget {
                   onTap: () => provider.setTab(2),
                 ),
               ],
+            ),
+          ),
+
+          // 4B. Credit Cards & Automatic Credit Usage Section
+          Padding(
+            padding: const EdgeInsets.only(left: 18, right: 18, top: 18),
+            child: InkWell(
+              onTap: () => provider.openSubPage('cards'),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.accent700.withValues(alpha: 0.55)),
+                  boxShadow: const [AppTheme.shadowSm],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: AppTheme.accent900,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.credit_card_rounded, size: 18, color: AppTheme.accent200),
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Credit Cards & Auto Usage (${provider.cards.length})',
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.text),
+                                ),
+                                Text(
+                                  provider.cards.isEmpty
+                                      ? 'Tap to add cards, limits & auto-detect SMS/statements'
+                                      : 'Used ${formatInr(provider.totalCreditUsed)} of ${formatInr(provider.totalCreditLimit)} (${provider.totalCreditUtilizationPct.toStringAsFixed(0)}%)',
+                                  style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accent900,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppTheme.accent700),
+                          ),
+                          child: Text(
+                            provider.cards.isEmpty ? '+ Add Card' : 'Total List',
+                            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppTheme.accent200),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (provider.cards.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: provider.totalCreditLimit > 0
+                              ? (provider.totalCreditUsed / provider.totalCreditLimit).clamp(0.0, 1.0)
+                              : 0.0,
+                          minHeight: 6,
+                          backgroundColor: AppTheme.bg,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            provider.totalCreditUtilizationPct >= 70
+                                ? AppTheme.red
+                                : (provider.totalCreditUtilizationPct >= 30 ? AppTheme.amber : AppTheme.green),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: provider.cards.map((c) {
+                            final used = provider.cardUsedAmount(c.id);
+                            final avail = provider.cardAvailableCredit(c.id);
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Color(c.colorHex),
+                                      Color.lerp(Color(c.colorHex), Colors.black, 0.4) ?? Colors.black87,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.white24),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          c.shortLabel,
+                                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          c.network.toUpperCase(),
+                                          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white70),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      'Used ${formatInr(used)} · Avl ${formatInr(avail)}',
+                                      style: const TextStyle(fontSize: 10.5, color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
 
@@ -834,7 +978,9 @@ class HomeScreen extends StatelessWidget {
                                               border: Border.all(color: AppTheme.accent700),
                                             ),
                                             child: Text(
-                                              '${t.method} · Bal ₹${provider.accountBalance(t.method).round()}',
+                                              t.cardId != null && provider.cardById(t.cardId) != null
+                                                  ? '${provider.cardById(t.cardId)!.shortLabel} · Avl ₹${provider.cardAvailableCredit(t.cardId!).round()}'
+                                                  : '${t.method} · Bal ₹${provider.accountBalance(t.method).round()}',
                                               style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.accent200),
                                             ),
                                           ),

@@ -12,6 +12,7 @@ import 'screens/sms_inbox_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/notifs_screen.dart';
 import 'screens/notes_screen.dart';
+import 'screens/cards_screen.dart';
 import 'screens/auth_screen.dart';
 import 'services/supabase_service.dart';
 import 'widgets/quick_add_sheet.dart';
@@ -153,6 +154,8 @@ class MainNavigationScreen extends StatelessWidget {
         return const NotifsScreen();
       case 'notes':
         return const NotesScreen();
+      case 'cards':
+        return const CardsScreen();
       default:
         return const SizedBox.shrink();
     }

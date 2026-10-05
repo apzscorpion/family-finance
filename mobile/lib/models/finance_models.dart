@@ -216,6 +216,171 @@ class FamilyMemberDef {
       );
 }
 
+class CreditCardDef {
+  final String id;
+  final String bankName;
+  final String cardName;
+  final String last4;
+  final String network; // 'Visa', 'Mastercard', 'RuPay', 'Amex'
+  final String cardType; // 'Credit', 'RuPay UPI', 'Debit'
+  final double creditLimit;
+  final double openingUsed;
+  final int billingDay;
+  final int dueDay;
+  final int colorHex;
+  final String holderMemberId;
+  final bool autoTrackSms;
+
+  const CreditCardDef({
+    required this.id,
+    required this.bankName,
+    required this.cardName,
+    required this.last4,
+    this.network = 'Visa',
+    this.cardType = 'Credit',
+    required this.creditLimit,
+    this.openingUsed = 0.0,
+    this.billingDay = 15,
+    this.dueDay = 5,
+    this.colorHex = 0xFF312E81,
+    this.holderMemberId = 'me',
+    this.autoTrackSms = true,
+  });
+
+  String get displayTitle => cardName.isNotEmpty ? '$bankName $cardName' : bankName;
+  String get shortLabel => '$bankName ••$last4';
+
+  CreditCardDef copyWith({
+    String? id,
+    String? bankName,
+    String? cardName,
+    String? last4,
+    String? network,
+    String? cardType,
+    double? creditLimit,
+    double? openingUsed,
+    int? billingDay,
+    int? dueDay,
+    int? colorHex,
+    String? holderMemberId,
+    bool? autoTrackSms,
+  }) {
+    return CreditCardDef(
+      id: id ?? this.id,
+      bankName: bankName ?? this.bankName,
+      cardName: cardName ?? this.cardName,
+      last4: last4 ?? this.last4,
+      network: network ?? this.network,
+      cardType: cardType ?? this.cardType,
+      creditLimit: creditLimit ?? this.creditLimit,
+      openingUsed: openingUsed ?? this.openingUsed,
+      billingDay: billingDay ?? this.billingDay,
+      dueDay: dueDay ?? this.dueDay,
+      colorHex: colorHex ?? this.colorHex,
+      holderMemberId: holderMemberId ?? this.holderMemberId,
+      autoTrackSms: autoTrackSms ?? this.autoTrackSms,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'bankName': bankName,
+        'cardName': cardName,
+        'last4': last4,
+        'network': network,
+        'cardType': cardType,
+        'creditLimit': creditLimit,
+        'openingUsed': openingUsed,
+        'billingDay': billingDay,
+        'dueDay': dueDay,
+        'colorHex': colorHex,
+        'holderMemberId': holderMemberId,
+        'autoTrackSms': autoTrackSms,
+      };
+
+  factory CreditCardDef.fromJson(Map<String, dynamic> json) => CreditCardDef(
+        id: json['id']?.toString() ?? 'card_${DateTime.now().millisecondsSinceEpoch}',
+        bankName: json['bankName']?.toString() ?? 'Bank',
+        cardName: json['cardName']?.toString() ?? 'Credit Card',
+        last4: json['last4']?.toString() ?? '0000',
+        network: json['network']?.toString() ?? 'Visa',
+        cardType: json['cardType']?.toString() ?? 'Credit',
+        creditLimit: (json['creditLimit'] as num?)?.toDouble() ?? 100000.0,
+        openingUsed: (json['openingUsed'] as num?)?.toDouble() ?? 0.0,
+        billingDay: (json['billingDay'] as int?) ?? 15,
+        dueDay: (json['dueDay'] as int?) ?? 5,
+        colorHex: (json['colorHex'] as int?) ?? 0xFF312E81,
+        holderMemberId: json['holderMemberId']?.toString() ?? 'me',
+        autoTrackSms: (json['autoTrackSms'] as bool?) ?? true,
+      );
+}
+
+class AutoCardCharge {
+  final String id;
+  final String cardId;
+  final String title;
+  final double amount;
+  final String catKey;
+  final int dayOfMonth;
+  final bool isActive;
+  final String? lastAppliedMonth; // e.g. '2026-10'
+
+  const AutoCardCharge({
+    required this.id,
+    required this.cardId,
+    required this.title,
+    required this.amount,
+    this.catKey = 'bills',
+    this.dayOfMonth = 1,
+    this.isActive = true,
+    this.lastAppliedMonth,
+  });
+
+  AutoCardCharge copyWith({
+    String? id,
+    String? cardId,
+    String? title,
+    double? amount,
+    String? catKey,
+    int? dayOfMonth,
+    bool? isActive,
+    String? lastAppliedMonth,
+  }) {
+    return AutoCardCharge(
+      id: id ?? this.id,
+      cardId: cardId ?? this.cardId,
+      title: title ?? this.title,
+      amount: amount ?? this.amount,
+      catKey: catKey ?? this.catKey,
+      dayOfMonth: dayOfMonth ?? this.dayOfMonth,
+      isActive: isActive ?? this.isActive,
+      lastAppliedMonth: lastAppliedMonth ?? this.lastAppliedMonth,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'cardId': cardId,
+        'title': title,
+        'amount': amount,
+        'catKey': catKey,
+        'dayOfMonth': dayOfMonth,
+        'isActive': isActive,
+        'lastAppliedMonth': lastAppliedMonth,
+      };
+
+  factory AutoCardCharge.fromJson(Map<String, dynamic> json) => AutoCardCharge(
+        id: json['id']?.toString() ?? 'ac_${DateTime.now().millisecondsSinceEpoch}',
+        cardId: json['cardId']?.toString() ?? '',
+        title: json['title']?.toString() ?? 'Subscription',
+        amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+        catKey: json['catKey']?.toString() ?? 'bills',
+        dayOfMonth: (json['dayOfMonth'] as int?) ?? 1,
+        isActive: (json['isActive'] as bool?) ?? true,
+        lastAppliedMonth: json['lastAppliedMonth']?.toString(),
+      );
+}
+
 class TransactionDef {
   final int id;
   final int daysAgo; // 0 = Today, 1 = Yesterday, etc.
@@ -225,10 +390,11 @@ class TransactionDef {
   final double amount;
   final String type; // 'expense' or 'income'
   final String memberId;
-  final String method; // 'UPI', 'Cash', 'Card', 'Bank'
-  final String origin; // 'sms' or 'manual'
+  final String method; // 'UPI', 'Cash', 'Card', 'Bank', 'Salary', 'Loan'
+  final String origin; // 'sms' or 'manual' or 'auto_card'
   final String time;
   final String? fundPoolId;
+  final String? cardId;
   final ExpenseSplit? split;
 
   const TransactionDef({
@@ -244,6 +410,7 @@ class TransactionDef {
     required this.origin,
     required this.time,
     this.fundPoolId,
+    this.cardId,
     this.split,
   });
 
@@ -260,6 +427,7 @@ class TransactionDef {
         'origin': origin,
         'time': time,
         'fundPoolId': fundPoolId,
+        'cardId': cardId,
       };
 
   factory TransactionDef.fromJson(Map<String, dynamic> json) => TransactionDef(
@@ -275,6 +443,7 @@ class TransactionDef {
         origin: json['origin']?.toString() ?? 'manual',
         time: json['time']?.toString() ?? 'Now',
         fundPoolId: json['fundPoolId']?.toString(),
+        cardId: json['cardId']?.toString(),
       );
 }
 
@@ -301,6 +470,8 @@ class SmsQueueItem {
   final bool isDuplicate;
   final String snippet;
   final String note;
+  final String? cardId;
+  final String? cardLast4;
 
   const SmsQueueItem({
     required this.id,
@@ -313,6 +484,8 @@ class SmsQueueItem {
     this.isDuplicate = false,
     required this.snippet,
     required this.note,
+    this.cardId,
+    this.cardLast4,
   });
 }
 
