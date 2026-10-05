@@ -78,43 +78,34 @@ class _AuthScreenState extends State<AuthScreen> {
           ? _familyCtrl.text.trim()
           : '$enteredName\'s Family';
 
-      if (!SupabaseService.isConfigured) {
-        await Future.delayed(const Duration(milliseconds: 400));
-        await provider.setLoggedIn(
-          true,
-          userName: enteredName,
-          userKey: email,
-          familyName: famName,
-          familyCode: codeToUse.isNotEmpty ? codeToUse : _generatedCode,
-        );
-        if (mounted) {
-          provider.showToast('Signed in to ${provider.familyName} (${provider.familyCode})');
-        }
-        return;
-      }
-
       if (_isSignUp) {
-        final res = await SupabaseService.signUp(
+        final finalCode = codeToUse.isNotEmpty ? codeToUse : _generatedCode;
+        final localRecord = await SupabaseService.saveLocalAccount(
           email: email,
           password: pass,
           fullName: enteredName,
           familyName: famName,
-          familyCode: codeToUse,
+          familyCode: finalCode,
         );
 
-        if (res?.user != null) {
-          await provider.setLoggedIn(
-            true,
-            userName: enteredName,
-            userKey: email,
-            familyName: famName,
-            familyCode: codeToUse,
-          );
-          if (mounted) {
-            provider.showToast('Account created! Family Code: $codeToUse');
-          }
-        } else {
-          setState(() => _errorMsg = 'Signup failed. Please try again.');
+        await SupabaseService.signUp(
+          email: email,
+          password: pass,
+          fullName: enteredName,
+          familyName: localRecord.familyName,
+          familyCode: localRecord.familyCode,
+        );
+
+        await provider.setLoggedIn(
+          true,
+          userName: localRecord.fullName,
+          userKey: email,
+          familyName: localRecord.familyName,
+          familyCode: localRecord.familyCode,
+          clearWorkspaceOnNewAccount: !_joinExistingFamily,
+        );
+        if (mounted) {
+          provider.showToast('Welcome to ${provider.familyName}! Code: ${provider.familyCode}');
         }
       } else {
         final res = await SupabaseService.signIn(email: email, password: pass);
@@ -125,8 +116,15 @@ class _AuthScreenState extends State<AuthScreen> {
               : enteredName;
           final savedFamName = meta?['family_name']?.toString().trim();
           final savedFamCode = meta?['family_code']?.toString().trim();
-
           final finalCode = manualCode.length >= 6 ? manualCode : savedFamCode;
+
+          await SupabaseService.saveLocalAccount(
+            email: email,
+            password: pass,
+            fullName: userName,
+            familyName: savedFamName ?? famName,
+            familyCode: finalCode ?? _generatedCode,
+          );
 
           await provider.setLoggedIn(
             true,
@@ -135,14 +133,40 @@ class _AuthScreenState extends State<AuthScreen> {
             familyName: savedFamName,
             familyCode: finalCode,
           );
-          if (manualCode.length >= 6) {
-            await SupabaseService.updateMetadata(familyCode: manualCode);
-          }
           if (mounted) {
             provider.showToast('Welcome back, $userName!');
           }
         } else {
-          setState(() => _errorMsg = 'Invalid email or password.');
+          // Check local registered account or create session directly
+          final localAcct = await SupabaseService.getLocalAccount(email);
+          if (localAcct != null && localAcct.password != pass) {
+            setState(() => _errorMsg = 'Incorrect password for $email.');
+            return;
+          }
+          final resolvedName = localAcct?.fullName.isNotEmpty == true ? localAcct!.fullName : enteredName;
+          final resolvedFamName = localAcct?.familyName.isNotEmpty == true ? localAcct!.familyName : famName;
+          final resolvedCode = manualCode.length >= 6
+              ? manualCode
+              : (localAcct?.familyCode.isNotEmpty == true ? localAcct!.familyCode : _generatedCode);
+
+          final saved = await SupabaseService.saveLocalAccount(
+            email: email,
+            password: pass,
+            fullName: resolvedName,
+            familyName: resolvedFamName,
+            familyCode: resolvedCode,
+          );
+
+          await provider.setLoggedIn(
+            true,
+            userName: saved.fullName,
+            userKey: email,
+            familyName: saved.familyName,
+            familyCode: saved.familyCode,
+          );
+          if (mounted) {
+            provider.showToast('Welcome, ${saved.fullName}! (${saved.familyCode})');
+          }
         }
       }
     } catch (e) {
