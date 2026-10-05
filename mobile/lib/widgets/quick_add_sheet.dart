@@ -44,7 +44,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
   late String _amountStr;
   late String _selectedCatKey;
   String _selectedMethod = 'UPI';
-  String _selectedMemberId = 'asif';
+  String _selectedMemberId = 'me';
 
   String? _selectedSubCatKey;
 
@@ -83,10 +83,10 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
     if (amt <= 0) return;
 
     final catDef = FinanceProvider.categories[_selectedCatKey] ?? FinanceProvider.categories['shopping']!;
-    final isForOther = _type == 'expense' && _selectedMemberId != 'asif';
-    final targetMember = FinanceProvider.members.firstWhere(
+    final isForOther = _type == 'expense' && _selectedMemberId != 'me';
+    final targetMember = provider.members.firstWhere(
       (m) => m.id == _selectedMemberId,
-      orElse: () => FinanceProvider.members.first,
+      orElse: () => provider.members.first,
     );
 
     if (isForOther) {
@@ -104,7 +104,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
           subCatKey: _selectedSubCatKey,
           amount: amt,
           type: _type,
-          memberId: 'asif',
+          memberId: _selectedMemberId,
           method: _selectedMethod,
           origin: widget.smsId != null ? 'sms' : 'manual',
           time: 'Now',
@@ -143,10 +143,10 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
   Widget build(BuildContext context) {
     final provider = Provider.of<FinanceProvider>(context, listen: false);
     final amtVal = double.tryParse(_amountStr) ?? 0.0;
-    final isForOther = _type == 'expense' && _selectedMemberId != 'asif';
-    final targetMember = FinanceProvider.members.firstWhere(
+    final isForOther = _type == 'expense' && _selectedMemberId != 'me';
+    final targetMember = provider.members.firstWhere(
       (m) => m.id == _selectedMemberId,
-      orElse: () => FinanceProvider.members.first,
+      orElse: () => provider.members.first,
     );
     final activeCatList = _type == 'expense' ? _expenseCatKeys : _incomeCatKeys;
 
@@ -358,7 +358,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: FinanceProvider.members.map((m) {
+                    children: provider.members.map((m) {
                       final isSelected = _selectedMemberId == m.id;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),

@@ -28,38 +28,91 @@ class SettingsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Section 1: Auto-read SMS
-            const Text('AUTO-READ SMS', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
+            // Section 0: Account & Family Workspace
+            const Text('ACCOUNT & WORKSPACE', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(colors: [AppTheme.accent500, AppTheme.accent700]),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(provider.currentUserInitial, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              provider.currentUserName.isNotEmpty ? provider.currentUserName : 'User',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.text),
+                            ),
+                            Text(
+                              '${provider.familyName} · Code: ${provider.familyCode}',
+                              style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => provider.clearAllData(),
+                          icon: const Icon(Icons.delete_sweep_outlined, size: 16, color: AppTheme.textMuted),
+                          label: const Text('Clear Data', style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFF3F424D)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            minimumSize: const Size(0, 38),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => provider.logout(),
+                          icon: const Icon(Icons.logout, size: 16, color: AppTheme.red),
+                          label: const Text('Sign Out', style: TextStyle(fontSize: 12.5, color: AppTheme.red)),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: AppTheme.red.withOpacity(0.5)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            minimumSize: const Size(0, 38),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            // Section 1: Smart SMS Parsing
+            const Text('SMART SMS & CATEGORIZATION', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
               child: Column(
                 children: [
-                  _buildSwitchRow('Read bank SMS automatically', 'Detect debits & credits from your bank messages', provider.autoSms, (val) => provider.autoSms = val),
                   _buildSwitchRow('Smart categories', 'Guess category from merchant name', provider.smartCat, (val) => provider.smartCat = val),
                   _buildSwitchRow('Review before adding', 'Detected items wait in the inbox for you to confirm', provider.reviewSms, (val) => provider.reviewSms = val),
                   _buildSwitchRow('Skip OTP & promotional', 'Never parse OTPs, offers or personal messages', provider.skipPromo, (val) => provider.skipPromo = val),
-                  const Divider(color: Color(0xFF292B31), height: 1),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('Banks detected', style: TextStyle(fontSize: 14, color: AppTheme.text)),
-                        SizedBox(height: 8),
-                        Row(
-                          children: [
-                            _BankTag(label: 'HDFC ··4821'),
-                            SizedBox(width: 6),
-                            _BankTag(label: 'ICICI ··9910'),
-                            SizedBox(width: 6),
-                            _BankTag(label: 'SBI ··2207'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -116,20 +169,7 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 22),
 
-            // Section 3: Privacy Information
-            const Text('PRIVACY', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
-              child: const Text(
-                'Turning off SMS reading keeps manual tracking working. Parsed data stays in your family workspace; raw messages are never uploaded.',
-                style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted, height: 1.5),
-              ),
-            ),
-            const SizedBox(height: 22),
-
-            // Section 4: App Updates
+            // Section 3: App Updates
             const Text('APP UPDATES', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
             const SizedBox(height: 6),
             Container(
@@ -138,11 +178,11 @@ class SettingsScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
+                  const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Version 1.0.0', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.text)),
-                      Text('Direct in-app updates enabled', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
+                    children: [
+                      Text('Version ${UpdateService.currentVersion}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.text)),
+                      Text('GitHub release updates enabled', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
                     ],
                   ),
                   OutlinedButton.icon(
@@ -160,7 +200,7 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 22),
 
-            // Section 5: Developer Support & Error Reporting
+            // Section 4: Developer Support & Error Reporting
             const Text('DEVELOPER SUPPORT & FEEDBACK', style: TextStyle(fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: AppTheme.accent300)),
             const SizedBox(height: 6),
             Container(
@@ -219,8 +259,8 @@ class SettingsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Icon(Icons.developer_mode, color: AppTheme.accent, size: 22),
                   SizedBox(width: 8),
                   Text('Developer Support', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.text)),
@@ -234,7 +274,7 @@ class SettingsScreen extends StatelessWidget {
                 maxLines: 4,
                 style: const TextStyle(fontSize: 13.5, color: AppTheme.text),
                 decoration: const InputDecoration(
-                  hintText: 'e.g., SMS parser missed an entry from HDFC, or encountered a screen freeze...',
+                  hintText: 'Describe the issue or feedback...',
                   hintStyle: TextStyle(color: AppTheme.textSubtle),
                   filled: true,
                   fillColor: AppTheme.bg,
@@ -290,20 +330,6 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _BankTag extends StatelessWidget {
-  final String label;
-  const _BankTag({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: AppTheme.bg, borderRadius: BorderRadius.circular(8)),
-      child: Text(label, style: const TextStyle(fontSize: 11.5, color: AppTheme.text)),
     );
   }
 }

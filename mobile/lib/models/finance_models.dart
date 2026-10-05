@@ -33,8 +33,8 @@ class CategoryDef {
 class ExpenseSplit {
   final String paidByMemberId;
   final String splitType; // 'equal', 'percentage', 'custom'
-  final Map<String, double> shares; // e.g. {'asif': 1000, 'sara': 1000}
-  final bool requiresPayback; // whether members need to pay back or it's a gift/shared
+  final Map<String, double> shares;
+  final bool requiresPayback;
   final bool isSettled;
 
   const ExpenseSplit({
@@ -48,8 +48,8 @@ class ExpenseSplit {
 
 class FundPool {
   final String id;
-  final String title; // e.g., 'Wedding Loan', 'Home Renovation Loan'
-  final String poolType; // 'Loan', 'Savings Pool', 'Grant'
+  final String title;
+  final String poolType;
   final double totalAmount;
   final double spentAmount;
   final String createdDate;
@@ -82,6 +82,24 @@ class SharedNote {
     required this.lastEditedTime,
     this.categoryTag,
   });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'content': content,
+        'lastEditedBy': lastEditedBy,
+        'lastEditedTime': lastEditedTime,
+        'categoryTag': categoryTag,
+      };
+
+  factory SharedNote.fromJson(Map<String, dynamic> json) => SharedNote(
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        content: json['content']?.toString() ?? '',
+        lastEditedBy: json['lastEditedBy']?.toString() ?? '',
+        lastEditedTime: json['lastEditedTime']?.toString() ?? '',
+        categoryTag: json['categoryTag']?.toString(),
+      );
 }
 
 class MemberAuthority {
@@ -138,7 +156,25 @@ class FamilyMemberDef {
     this.authority = MemberAuthority.member,
   });
 
-  String get initial => name.isNotEmpty ? name[0] : 'U';
+  String get initial => name.isNotEmpty ? name[0].toUpperCase() : 'U';
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'rel': rel,
+        'role': role,
+        'openingBalance': openingBalance,
+        'colorValue': color.toARGB32(),
+      };
+
+  factory FamilyMemberDef.fromJson(Map<String, dynamic> json) => FamilyMemberDef(
+        id: json['id']?.toString() ?? 'me',
+        name: json['name']?.toString() ?? 'Me',
+        rel: json['rel']?.toString() ?? 'You',
+        role: json['role']?.toString() ?? 'Member',
+        openingBalance: (json['openingBalance'] as num?)?.toDouble() ?? 0.0,
+        color: Color((json['colorValue'] as int?) ?? 0xFF9184D9),
+      );
 }
 
 class TransactionDef {
@@ -153,7 +189,7 @@ class TransactionDef {
   final String method; // 'UPI', 'Cash', 'Card', 'Bank'
   final String origin; // 'sms' or 'manual'
   final String time;
-  final String? fundPoolId; // If linked to a Loan / Special Pool Fund
+  final String? fundPoolId;
   final ExpenseSplit? split;
 
   const TransactionDef({
@@ -171,6 +207,36 @@ class TransactionDef {
     this.fundPoolId,
     this.split,
   });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'daysAgo': daysAgo,
+        'title': title,
+        'catKey': catKey,
+        'subCatKey': subCatKey,
+        'amount': amount,
+        'type': type,
+        'memberId': memberId,
+        'method': method,
+        'origin': origin,
+        'time': time,
+        'fundPoolId': fundPoolId,
+      };
+
+  factory TransactionDef.fromJson(Map<String, dynamic> json) => TransactionDef(
+        id: (json['id'] as int?) ?? DateTime.now().millisecondsSinceEpoch,
+        daysAgo: (json['daysAgo'] as int?) ?? 0,
+        title: json['title']?.toString() ?? '',
+        catKey: json['catKey']?.toString() ?? 'shopping',
+        subCatKey: json['subCatKey']?.toString(),
+        amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+        type: json['type']?.toString() ?? 'expense',
+        memberId: json['memberId']?.toString() ?? 'me',
+        method: json['method']?.toString() ?? 'UPI',
+        origin: json['origin']?.toString() ?? 'manual',
+        time: json['time']?.toString() ?? 'Now',
+        fundPoolId: json['fundPoolId']?.toString(),
+      );
 }
 
 class BudgetDef {
@@ -192,7 +258,7 @@ class SmsQueueItem {
   final double amount;
   final String merchant;
   final String catKey;
-  final String confidence; // 'High', 'Check', 'Duplicate?'
+  final String confidence;
   final bool isDuplicate;
   final String snippet;
   final String note;
@@ -218,7 +284,7 @@ class ApprovalItem {
   final int? txnId;
   final String time;
   final String reason;
-  final Map<String, dynamic>? changes; // e.g. {'amt': 2200.0}
+  final Map<String, dynamic>? changes;
   final TransactionDef? newTxn;
 
   const ApprovalItem({

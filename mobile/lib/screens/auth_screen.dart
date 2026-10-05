@@ -58,9 +58,10 @@ class _AuthScreenState extends State<AuthScreen> {
     }
 
     try {
-      final codeToUse = _joinExistingFamily
-          ? _familyCodeCtrl.text.trim().toUpperCase()
-          : _generatedCode;
+      final manualCode = _familyCodeCtrl.text.trim().toUpperCase();
+      final codeToUse = _isSignUp
+          ? (_joinExistingFamily ? manualCode : _generatedCode)
+          : manualCode;
 
       if (_isSignUp && _joinExistingFamily && codeToUse.length < 6) {
         setState(() {
@@ -70,42 +71,76 @@ class _AuthScreenState extends State<AuthScreen> {
         return;
       }
 
-      final famName = _familyCtrl.text.trim().isEmpty ? 'Family Workspace' : _familyCtrl.text.trim();
+      final enteredName = _nameCtrl.text.trim().isNotEmpty
+          ? _nameCtrl.text.trim()
+          : email.split('@')[0];
+      final famName = _familyCtrl.text.trim().isNotEmpty
+          ? _familyCtrl.text.trim()
+          : '$enteredName\'s Family';
 
       if (!SupabaseService.isConfigured) {
-        // Fallback for demo mode before Supabase credentials are inserted
-        await Future.delayed(const Duration(milliseconds: 600));
-        provider.setFamilyDetails(name: famName, code: codeToUse);
-        provider.setLoggedIn(true, userName: _nameCtrl.text.isNotEmpty ? _nameCtrl.text.trim() : 'User');
+        await Future.delayed(const Duration(milliseconds: 400));
+        await provider.setLoggedIn(
+          true,
+          userName: enteredName,
+          userKey: email,
+          familyName: famName,
+          familyCode: codeToUse.isNotEmpty ? codeToUse : _generatedCode,
+        );
         if (mounted) {
-          provider.showToast(_joinExistingFamily ? 'Joined Family ($codeToUse)!' : 'Created Family (Code: $codeToUse)!');
+          provider.showToast('Signed in to ${provider.familyName} (${provider.familyCode})');
         }
         return;
       }
 
       if (_isSignUp) {
-        final name = _nameCtrl.text.trim().isEmpty ? 'User' : _nameCtrl.text.trim();
-
         final res = await SupabaseService.signUp(
           email: email,
           password: pass,
-          fullName: name,
+          fullName: enteredName,
           familyName: famName,
+          familyCode: codeToUse,
         );
 
         if (res?.user != null) {
-          provider.setFamilyDetails(name: famName, code: codeToUse);
-          provider.setLoggedIn(true, userName: name);
-          if (mounted) provider.showToast('Account created! Family Code: $codeToUse');
+          await provider.setLoggedIn(
+            true,
+            userName: enteredName,
+            userKey: email,
+            familyName: famName,
+            familyCode: codeToUse,
+          );
+          if (mounted) {
+            provider.showToast('Account created! Family Code: $codeToUse');
+          }
         } else {
           setState(() => _errorMsg = 'Signup failed. Please try again.');
         }
       } else {
         final res = await SupabaseService.signIn(email: email, password: pass);
         if (res?.user != null) {
-          final userName = res?.user?.userMetadata?['full_name'] ?? 'Member';
-          provider.setLoggedIn(true, userName: userName);
-          if (mounted) provider.showToast('Logged in successfully!');
+          final meta = res?.user?.userMetadata;
+          final userName = (meta?['full_name'] != null && meta!['full_name'].toString().trim().isNotEmpty)
+              ? meta['full_name'].toString().trim()
+              : enteredName;
+          final savedFamName = meta?['family_name']?.toString().trim();
+          final savedFamCode = meta?['family_code']?.toString().trim();
+
+          final finalCode = manualCode.length >= 6 ? manualCode : savedFamCode;
+
+          await provider.setLoggedIn(
+            true,
+            userName: userName,
+            userKey: email,
+            familyName: savedFamName,
+            familyCode: finalCode,
+          );
+          if (manualCode.length >= 6) {
+            await SupabaseService.updateMetadata(familyCode: manualCode);
+          }
+          if (mounted) {
+            provider.showToast('Welcome back, $userName!');
+          }
         } else {
           setState(() => _errorMsg = 'Invalid email or password.');
         }
@@ -232,9 +267,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     const SizedBox(height: 20),
 
                     if (_isSignUp) ...[
-                      _buildTextField(_nameCtrl, 'Your Full Name', Icons.person_outline),
+                      _buildTextField(_nameCtrl, 'Your Full Name (e.g. Asif)', Icons.person_outline),
                       const SizedBox(height: 12),
-                      
+
                       // Choice: Create new family vs Join via code
                       Container(
                         padding: const EdgeInsets.all(3),
@@ -254,7 +289,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   alignment: Alignment.center,
-                                  child: Text('New Family', style: TextStyle(fontSize: 11.5, color: !_joinExistingFamily ? Colors.white : AppTheme.textMuted)),
+                                  child: Text('Create My Family', style: TextStyle(fontSize: 11.5, color: !_joinExistingFamily ? Colors.white : AppTheme.textMuted)),
                                 ),
                               ),
                             ),
@@ -278,7 +313,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       const SizedBox(height: 12),
 
                       if (!_joinExistingFamily) ...[
-                        _buildTextField(_familyCtrl, 'Family Name (e.g. Khan Household)', Icons.people_outline),
+                        _buildTextField(_familyCtrl, 'Your Family Name (e.g. Asif\'s Family)', Icons.people_outline),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -287,13 +322,13 @@ class _AuthScreenState extends State<AuthScreen> {
                             children: [
                               const Icon(Icons.key, size: 14, color: AppTheme.accent300),
                               const SizedBox(width: 8),
-                              Text('Generated Family Code: ', style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle)),
+                              const Text('Your Unique Family Code: ', style: TextStyle(fontSize: 11.5, color: AppTheme.textSubtle)),
                               Text(_generatedCode, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.accent100, letterSpacing: 1.2)),
                             ],
                           ),
                         ),
                       ] else ...[
-                        _buildTextField(_familyCodeCtrl, 'Enter 8-digit Family Code (e.g. K9L2M4X7)', Icons.vibration, keyboardType: TextInputType.text),
+                        _buildTextField(_familyCodeCtrl, 'Enter 6-8 digit Family Code', Icons.vpn_key_outlined, keyboardType: TextInputType.text),
                       ],
                       const SizedBox(height: 12),
                     ],
@@ -301,6 +336,11 @@ class _AuthScreenState extends State<AuthScreen> {
                     _buildTextField(_emailCtrl, 'Email Address', Icons.email_outlined, keyboardType: TextInputType.emailAddress),
                     const SizedBox(height: 12),
                     _buildTextField(_passCtrl, 'Password', Icons.lock_outline, obscureText: true),
+
+                    if (!_isSignUp) ...[
+                      const SizedBox(height: 12),
+                      _buildTextField(_familyCodeCtrl, 'Family Code (Optional · 6-8 chars to join)', Icons.vpn_key_outlined, keyboardType: TextInputType.text),
+                    ],
 
                     if (_errorMsg != null) ...[
                       const SizedBox(height: 12),
@@ -325,32 +365,6 @@ class _AuthScreenState extends State<AuthScreen> {
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.bg))
                             : Text(_isSignUp ? (_joinExistingFamily ? 'Join Family Household' : 'Create Family Account') : 'Sign In to Workspace', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Demo mode pill indicator
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      SupabaseService.isConfigured ? Icons.cloud_done : Icons.offline_bolt_outlined,
-                      size: 14,
-                      color: SupabaseService.isConfigured ? AppTheme.green : AppTheme.amber,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      SupabaseService.isConfigured ? 'Connected to Supabase Cloud' : 'Cloud Setup Ready · Instant Demo Mode',
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                     ),
                   ],
                 ),

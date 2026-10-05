@@ -37,10 +37,10 @@ class ActivityScreen extends StatelessWidget {
           const Text('Activity', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500, color: AppTheme.text)),
           Text(
             provider.scopeMemberId == null
-                ? 'Family Workspace · all members'
-                : (provider.scopeMemberId == 'asif'
+                ? '${provider.familyName} · all members'
+                : (provider.scopeMemberId == 'me'
                     ? 'My finances'
-                    : '${FinanceProvider.members.firstWhere((m) => m.id == provider.scopeMemberId, orElse: () => FinanceProvider.members.first).name}\'s finances'),
+                    : '${provider.members.firstWhere((m) => m.id == provider.scopeMemberId, orElse: () => provider.members.first).name}\'s finances'),
             style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle),
           ),
           const SizedBox(height: 14),
@@ -206,9 +206,9 @@ class ActivityScreen extends StatelessWidget {
                     child: Column(
                       children: dayTxns.map((t) {
                         final cat = FinanceProvider.categories[t.catKey] ?? FinanceProvider.categories['shopping']!;
-                        final member = FinanceProvider.members.firstWhere(
+                        final member = provider.members.firstWhere(
                           (m) => m.id == t.memberId,
-                          orElse: () => FamilyMemberDef(id: t.memberId, name: t.memberId, rel: 'Member', role: 'Member', openingBalance: 0, color: AppTheme.accent),
+                          orElse: () => FamilyMemberDef(id: t.memberId, name: provider.currentUserName, rel: 'You', role: 'Owner', openingBalance: 0, color: AppTheme.accent),
                         );
                         final isIncome = t.type == 'income';
 
