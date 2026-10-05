@@ -22,7 +22,7 @@ class FamilyScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header & Invite Button
+          // Header & Group Actions
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -42,6 +42,25 @@ class FamilyScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: provider.isCurrentGroupOwner ? AppTheme.accent900 : AppTheme.bg,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: provider.isCurrentGroupOwner ? AppTheme.accent : const Color(0xFF3F424D),
+                            ),
+                          ),
+                          child: Text(
+                            '${provider.groupKind} · ${provider.isCurrentGroupOwner ? 'Owner' : 'Member'}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: provider.isCurrentGroupOwner ? AppTheme.accent200 : AppTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
                         InkWell(
                           onTap: () => _showRenameFamilyDialog(context, provider),
                           child: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.textSubtle),
@@ -50,26 +69,148 @@ class FamilyScreen extends StatelessWidget {
                     ),
                     Text(
                       '${provider.members.length} ${provider.members.length == 1 ? 'member' : 'members'}'
-                      '${disabledCount > 0 ? ' ($disabledCount disabled)' : ''} · Code: ${provider.familyCode}',
+                      '${disabledCount > 0 ? ' ($disabledCount disabled)' : ''} · Shared Code: ${provider.familyCode}',
                       style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle),
                     ),
                   ],
                 ),
               ),
-              OutlinedButton.icon(
-                onPressed: () => _showJoinFamilyDialog(context, provider),
-                icon: const Icon(Icons.group_add, size: 16, color: AppTheme.accent200),
-                label: const Text('Join', style: TextStyle(fontSize: 13, color: AppTheme.accent200)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppTheme.accent),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  minimumSize: const Size(0, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _showJoinFamilyDialog(context, provider),
+                    icon: const Icon(Icons.group_add, size: 15, color: AppTheme.accent200),
+                    label: const Text('Join Code', style: TextStyle(fontSize: 12, color: AppTheme.accent200)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppTheme.accent),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      minimumSize: const Size(0, 34),
+                      padding: const EdgeInsets.symmetric(horizontal: 9),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  OutlinedButton.icon(
+                    onPressed: () => _showCreateGroupDialog(context, provider),
+                    icon: const Icon(Icons.add_circle_outline, size: 15, color: AppTheme.green),
+                    label: const Text('New Group', style: TextStyle(fontSize: 12, color: AppTheme.green)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppTheme.green.withOpacity(0.6)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      minimumSize: const Size(0, 34),
+                      padding: const EdgeInsets.symmetric(horizontal: 9),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+
+          // Multi-Group Switcher (Switch between your Family, Invited Families, Friends Groups, Trips)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF3F424D)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.swap_horiz_rounded, size: 16, color: AppTheme.accent200),
+                        SizedBox(width: 6),
+                        Text(
+                          'YOUR GROUPS (FAMILIES · FRIENDS · TRIPS)',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.accent200,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${provider.joinedGroups.length} joined',
+                      style: const TextStyle(fontSize: 10.5, color: AppTheme.textSubtle),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final g in provider.joinedGroups)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: InkWell(
+                            onTap: () => provider.switchActiveGroup(g.code),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: g.code.toUpperCase() == provider.familyCode.toUpperCase()
+                                    ? AppTheme.accent900
+                                    : AppTheme.bg,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: g.code.toUpperCase() == provider.familyCode.toUpperCase()
+                                      ? AppTheme.accent
+                                      : const Color(0xFF3F424D),
+                                  width: g.code.toUpperCase() == provider.familyCode.toUpperCase() ? 1.4 : 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    g.kind == 'Friends'
+                                        ? Icons.diversity_3_rounded
+                                        : (g.kind == 'Trip' ? Icons.flight_takeoff_rounded : Icons.home_rounded),
+                                    size: 15,
+                                    color: g.code.toUpperCase() == provider.familyCode.toUpperCase()
+                                        ? AppTheme.accent200
+                                        : AppTheme.textSubtle,
+                                  ),
+                                  const SizedBox(width: 7),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        g.name,
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: g.code.toUpperCase() == provider.familyCode.toUpperCase()
+                                              ? Colors.white
+                                              : AppTheme.text,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${g.code} · ${g.role} (${g.kind})',
+                                        style: const TextStyle(fontSize: 10, color: AppTheme.textSubtle),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
 
           // Family Invite Code + 6-Digit Family Security OTP Card
           Container(
@@ -83,14 +224,16 @@ class FamilyScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.verified_user_outlined, size: 17, color: AppTheme.accent200),
-                    SizedBox(width: 8),
+                    const Icon(Icons.verified_user_outlined, size: 17, color: AppTheme.accent200),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'FAMILY INVITE CODE',
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppTheme.accent300, letterSpacing: 0.7),
+                        provider.isCurrentGroupOwner
+                            ? 'SHARED ${provider.groupKind.toUpperCase()} INVITE CODE (YOU ARE OWNER)'
+                            : 'SHARED ${provider.groupKind.toUpperCase()} CODE (JOINED AS MEMBER)',
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppTheme.accent300, letterSpacing: 0.7),
                       ),
                     ),
                   ],
@@ -832,61 +975,153 @@ class FamilyScreen extends StatelessWidget {
   void _showJoinFamilyDialog(BuildContext context, FinanceProvider provider) {
     final ctrl = TextEditingController();
     final nameCtrl = TextEditingController();
+    String selectedKind = 'Family';
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Join Family Household', style: TextStyle(color: AppTheme.text, fontSize: 18)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Enter the 6–8 character unique Family Invite Code:', style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              autofocus: true,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5),
-              decoration: InputDecoration(
-                hintText: 'Invite Code (e.g. A7B9X2K4)',
-                hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textSubtle, letterSpacing: 0),
-                filled: true,
-                fillColor: AppTheme.bg,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppTheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Join Family or Friends Group', style: TextStyle(color: AppTheme.text, fontSize: 18)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter the 6–8 character shared Invite Code (e.g. NTY5AFLR). You will join that exact code as a Member:',
+                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5),
+                decoration: InputDecoration(
+                  hintText: 'Invite Code (e.g. NTY5AFLR)',
+                  hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textSubtle, letterSpacing: 0),
+                  filled: true,
+                  fillColor: AppTheme.bg,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: nameCtrl,
+                style: const TextStyle(fontSize: 14, color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Group Name (Optional · auto-synced)',
+                  hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textSubtle),
+                  filled: true,
+                  fillColor: AppTheme.bg,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                children: ['Family', 'Friends', 'Trip', 'Roommates'].map((kind) {
+                  final active = selectedKind == kind;
+                  return ChoiceChip(
+                    label: Text(kind, style: TextStyle(fontSize: 11.5, color: active ? Colors.white : AppTheme.textMuted)),
+                    selected: active,
+                    selectedColor: AppTheme.accent800,
+                    backgroundColor: AppTheme.bg,
+                    onSelected: (_) => setDialogState(() => selectedKind = kind),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: AppTheme.textSubtle)),
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: nameCtrl,
-              style: const TextStyle(fontSize: 14, color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Family Name (Optional)',
-                hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textSubtle),
-                filled: true,
-                fillColor: AppTheme.bg,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
+            ElevatedButton(
+              onPressed: () {
+                final code = ctrl.text.trim().toUpperCase();
+                if (code.length >= 6) {
+                  final fallbackName = code == 'NTY5AFLR' && nameCtrl.text.trim().isEmpty
+                      ? 'Asif\'s Family'
+                      : nameCtrl.text.trim();
+                  provider.joinFamilyWithCode(code, familyName: fallbackName, groupKind: selectedKind);
+                  Navigator.pop(ctx);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
+              child: const Text('Join Group'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSubtle)),
+      ),
+    );
+  }
+
+  void _showCreateGroupDialog(BuildContext context, FinanceProvider provider) {
+    final nameCtrl = TextEditingController();
+    String selectedKind = 'Friends';
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppTheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Create New Group', style: TextStyle(color: AppTheme.text, fontSize: 18)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Create an additional Friends Group, Trip Group, or Family workspace. You can switch between all your groups anytime with 1 tap:',
+                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                autofocus: true,
+                style: const TextStyle(fontSize: 14, color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Group Name (e.g. Goa Trip Squad, College Friends)',
+                  hintStyle: const TextStyle(fontSize: 12.5, color: AppTheme.textSubtle),
+                  filled: true,
+                  fillColor: AppTheme.bg,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                children: ['Friends', 'Trip', 'Family', 'Roommates'].map((kind) {
+                  final active = selectedKind == kind;
+                  return ChoiceChip(
+                    label: Text(kind, style: TextStyle(fontSize: 11.5, color: active ? Colors.white : AppTheme.textMuted)),
+                    selected: active,
+                    selectedColor: AppTheme.accent800,
+                    backgroundColor: AppTheme.bg,
+                    onSelected: (_) => setDialogState(() => selectedKind = kind),
+                  );
+                }).toList(),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              final code = ctrl.text.trim();
-              if (code.length >= 6) {
-                provider.joinFamilyWithCode(code, familyName: nameCtrl.text.trim());
-                Navigator.pop(ctx);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
-            child: const Text('Join Workspace'),
-          ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: AppTheme.textSubtle)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                if (name.isNotEmpty) {
+                  provider.createNewGroup(name: name, kind: selectedKind);
+                  Navigator.pop(ctx);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
+              child: const Text('Create Group'),
+            ),
+          ],
+        ),
       ),
     );
   }

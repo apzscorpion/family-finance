@@ -44,10 +44,20 @@ class FamilyNotesRoomHub:
     def __init__(self) -> None:
         self.rooms: Dict[str, List[WebSocket]] = {}
         self.room_notes: Dict[str, Dict[str, dict]] = {}
+        self.room_metadata: Dict[str, dict] = {}
 
     async def connect(self, room_code: str, websocket: WebSocket) -> None:
         await websocket.accept()
         self.rooms.setdefault(room_code, []).append(websocket)
+        existing_meta = self.room_metadata.get(room_code)
+        if existing_meta:
+            await websocket.send_text(json.dumps({
+                "event": "group_workspace_sync",
+                "payload": {
+                    "sender": "Server",
+                    **existing_meta,
+                }
+            }))
         existing = list(self.room_notes.get(room_code, {}).values())
         if existing:
             await websocket.send_text(json.dumps({
@@ -80,6 +90,18 @@ class FamilyNotesRoomHub:
                 for n in payload["notes"]:
                     if isinstance(n, dict) and n.get("id"):
                         self.room_notes.setdefault(room_code, {})[str(n["id"])] = n
+            elif event == "group_workspace_sync":
+                meta = self.room_metadata.setdefault(room_code, {})
+                if payload.get("familyName"):
+                    meta["familyName"] = payload["familyName"]
+                if payload.get("groupKind"):
+                    meta["groupKind"] = payload["groupKind"]
+                if payload.get("ownerEmail"):
+                    meta["ownerEmail"] = payload["ownerEmail"]
+                if isinstance(payload.get("members"), list):
+                    meta["members"] = payload["members"]
+                if isinstance(payload.get("transactions"), list):
+                    meta["transactions"] = payload["transactions"]
         except Exception:
             pass
 

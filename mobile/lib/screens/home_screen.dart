@@ -40,23 +40,38 @@ class HomeScreen extends StatelessWidget {
                   child: Text(provider.currentUserInitial, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white)),
                 ),
                 const SizedBox(width: 12),
-                // Greeting & Context Title
+                // Greeting & Group Switcher Title
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Good morning, ${provider.currentUserName.isNotEmpty ? provider.currentUserName : 'User'}', style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
-                      Text(
-                        provider.scopeMemberId == null
-                            ? '${provider.familyName} · ${provider.members.length} ${provider.members.length == 1 ? 'member' : 'members'}'
-                            : (provider.scopeMemberId == 'me'
-                                ? 'My finances'
-                                : '${provider.members.firstWhere((m) => m.id == provider.scopeMemberId, orElse: () => provider.members.first).name}\'s finances'),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.text),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  child: InkWell(
+                    onTap: () => _showQuickGroupSwitcher(context, provider),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${provider.currentUserName.isNotEmpty ? provider.currentUserName : 'User'} · Code: ${provider.familyCode}',
+                          style: const TextStyle(fontSize: 11.5, color: AppTheme.accent200, fontWeight: FontWeight.w500),
+                        ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                provider.scopeMemberId == null
+                                    ? '${provider.familyName} (${provider.members.length})'
+                                    : (provider.scopeMemberId == 'me'
+                                        ? 'My finances'
+                                        : '${provider.members.firstWhere((m) => m.id == provider.scopeMemberId, orElse: () => provider.members.first).name}\'s finances'),
+                                style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: AppTheme.text),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppTheme.accent200),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 // Shared Notes Button
@@ -435,11 +450,10 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Row(
+                        Row(
                           children: [
                             Container(
                               width: 34,
@@ -453,8 +467,8 @@ class HomeScreen extends StatelessWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                 Text(
                                   'Credit Cards & Auto Usage (${provider.cards.length})',
                                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.text),
@@ -471,12 +485,14 @@ class HomeScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            ),
-                          ],
-                        ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
+                          ),
+                        ],
+                      ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Container(
+                            alignment: Alignment.center,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             color: AppTheme.accent900,
@@ -486,6 +502,7 @@ class HomeScreen extends StatelessWidget {
                           child: Text(
                             provider.cards.isEmpty ? '+ Add Card' : 'Total List',
                             style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppTheme.accent200),
+                          ),
                           ),
                         ),
                       ],
@@ -1284,6 +1301,97 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+
+  void _showQuickGroupSwitcher(BuildContext context, FinanceProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Switch Family / Friends Group',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.text),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    provider.setTab(3);
+                  },
+                  icon: const Icon(Icons.group_add_outlined, size: 16, color: AppTheme.accent200),
+                  label: const Text('Join / Create', style: TextStyle(fontSize: 12.5, color: AppTheme.accent200)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final g in provider.joinedGroups)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    provider.switchActiveGroup(g.code);
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: g.code.toUpperCase() == provider.familyCode.toUpperCase()
+                          ? AppTheme.accent900
+                          : AppTheme.bg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: g.code.toUpperCase() == provider.familyCode.toUpperCase()
+                            ? AppTheme.accent
+                            : const Color(0xFF3F424D),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          g.kind == 'Friends'
+                              ? Icons.diversity_3_rounded
+                              : (g.kind == 'Trip' ? Icons.flight_takeoff_rounded : Icons.home_rounded),
+                          color: AppTheme.accent200,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                g.name,
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                              ),
+                              Text(
+                                'Code: ${g.code} · ${g.role} (${g.kind})',
+                                style: const TextStyle(fontSize: 11.5, color: AppTheme.textSubtle),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (g.code.toUpperCase() == provider.familyCode.toUpperCase())
+                          const Icon(Icons.check_circle, color: AppTheme.green, size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

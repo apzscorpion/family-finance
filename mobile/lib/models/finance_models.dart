@@ -614,3 +614,51 @@ class ApprovalItem {
     this.newTxn,
   });
 }
+
+class JoinedGroupDef {
+  final String code; // e.g. 'NTY5AFLR' (permanent group code shared by all members)
+  final String name; // e.g. "Asif's Family" or "Friends Goa Trip"
+  final String kind; // 'Family', 'Friends', 'Trip', 'Couple', 'Office'
+  final String role; // 'Owner' or 'Member'
+  final String ownerEmail;
+
+  const JoinedGroupDef({
+    required this.code,
+    required this.name,
+    this.kind = 'Family',
+    this.role = 'Owner',
+    this.ownerEmail = '',
+  });
+
+  JoinedGroupDef copyWith({
+    String? code,
+    String? name,
+    String? kind,
+    String? role,
+    String? ownerEmail,
+  }) =>
+      JoinedGroupDef(
+        code: code ?? this.code,
+        name: name ?? this.name,
+        kind: kind ?? this.kind,
+        role: role ?? this.role,
+        ownerEmail: ownerEmail ?? this.ownerEmail,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'code': code,
+        'name': name,
+        'kind': kind,
+        'role': role,
+        'ownerEmail': ownerEmail,
+      };
+
+  factory JoinedGroupDef.fromJson(Map<String, dynamic> json) => JoinedGroupDef(
+        code: (json['code']?.toString() ?? '').trim().toUpperCase(),
+        name: json['name']?.toString() ?? 'Family Group',
+        kind: json['kind']?.toString() ?? 'Family',
+        role: json['role']?.toString() ?? 'Member',
+        ownerEmail: json['ownerEmail']?.toString() ?? '',
+      );
+}
+

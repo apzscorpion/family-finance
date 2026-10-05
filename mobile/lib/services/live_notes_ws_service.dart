@@ -20,6 +20,7 @@ class LiveNotesWsService {
   final void Function(FamilyLoginRequest req)? onRemoteFamilyLoginRequest;
   final void Function(String requestId, String email, bool approved)? onRemoteFamilyLoginDecision;
   final void Function(String email, String name, bool disabled)? onRemoteMemberDisabledChanged;
+  final void Function(Map<String, dynamic> groupPayload)? onRemoteGroupWorkspaceSync;
   final List<SharedNote> Function()? getLocalNotes;
   final void Function()? onStateChanged;
 
@@ -30,6 +31,7 @@ class LiveNotesWsService {
     this.onRemoteFamilyLoginRequest,
     this.onRemoteFamilyLoginDecision,
     this.onRemoteMemberDisabledChanged,
+    this.onRemoteGroupWorkspaceSync,
     this.getLocalNotes,
     this.onStateChanged,
   });
@@ -130,6 +132,11 @@ class LiveNotesWsService {
           final name = payload['name']?.toString() ?? '';
           final disabled = (payload['disabled'] as bool?) ?? true;
           onRemoteMemberDisabledChanged?.call(email, name, disabled);
+          return;
+        case 'group_workspace_sync':
+          if (sender != _currentUserName) {
+            onRemoteGroupWorkspaceSync?.call(payload);
+          }
           return;
       }
 
@@ -283,6 +290,23 @@ class LiveNotesWsService {
       'email': email,
       'name': name,
       'disabled': disabled,
+    });
+  }
+
+  Future<void> broadcastGroupWorkspaceSync({
+    required String familyName,
+    required String groupKind,
+    required String ownerEmail,
+    required List<FamilyMemberDef> members,
+    required List<TransactionDef> transactions,
+  }) async {
+    await _sendEvent('group_workspace_sync', {
+      'sender': _currentUserName,
+      'familyName': familyName,
+      'groupKind': groupKind,
+      'ownerEmail': ownerEmail,
+      'members': members.map((m) => m.toJson()).toList(),
+      'transactions': transactions.map((t) => t.toJson()).toList(),
     });
   }
 

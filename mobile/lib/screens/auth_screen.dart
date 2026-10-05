@@ -45,18 +45,41 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
   bool _loading = false;
   String? _errorMsg;
   late String _generatedCode;
+  bool _isJoiningExistingGroup = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _generatedCode = FinanceProvider.generateUniqueFamilyCode();
+    _nameCtrl.addListener(_refreshPreviewCode);
+    _emailCtrl.addListener(_refreshPreviewCode);
+    _phoneCtrl.addListener(_refreshPreviewCode);
+  }
+
+  void _refreshPreviewCode() {
+    final contact = _resolvePhoneOrEmail();
+    final name = _nameCtrl.text.trim();
+    if ((contact.identifier != null && contact.identifier!.isNotEmpty) || name.isNotEmpty) {
+      final deterministic = SupabaseService.deriveDeterministicOwnerCode(
+        contact.identifier ?? name,
+        fullName: name,
+      );
+      if (deterministic != _generatedCode && mounted) {
+        setState(() {
+          _generatedCode = deterministic;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _verificationWs?.disconnect();
+    _nameCtrl.removeListener(_refreshPreviewCode);
+    _emailCtrl.removeListener(_refreshPreviewCode);
+    _phoneCtrl.removeListener(_refreshPreviewCode);
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
@@ -160,16 +183,26 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
     final identifier = contact.identifier!;
 
     try {
-      final manualCode = _familyCodeCtrl.text.trim().toUpperCase();
+      String manualCode = _familyCodeCtrl.text.trim().toUpperCase();
+      final rawFamInput = _familyCtrl.text.trim();
+
+      // Safety net: if user typed an invite code like "NTY5AFLR" into the Family Name box by mistake
+      if (manualCode.isEmpty &&
+          rawFamInput.length >= 6 &&
+          rawFamInput.length <= 8 &&
+          RegExp(r'^[A-Za-z0-9]{6,8}$').hasMatch(rawFamInput) &&
+          RegExp(r'[0-9]').hasMatch(rawFamInput)) {
+        manualCode = rawFamInput.toUpperCase();
+        _familyCodeCtrl.text = manualCode;
+        _joinExistingFamily = true;
+      }
+
       final defaultName = _emailCtrl.text.trim().isNotEmpty
           ? _emailCtrl.text.trim().split('@')[0]
           : 'User ${digitsOnly.length >= 4 ? digitsOnly.substring(digitsOnly.length - 4) : digitsOnly}';
       final enteredName = _nameCtrl.text.trim().isNotEmpty
           ? _nameCtrl.text.trim()
           : defaultName;
-      final famName = _familyCtrl.text.trim().isNotEmpty
-          ? _familyCtrl.text.trim()
-          : '$enteredName\'s Family';
 
       if (_isSignUp && _joinExistingFamily && manualCode.length < 6) {
         setState(() {
@@ -189,20 +222,81 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
         return;
       }
 
-      final resolvedName = (!_isSignUp && localAcct?.fullName.isNotEmpty == true)
-          ? localAcct!.fullName
-          : enteredName;
-      final resolvedFamName = (!_isSignUp && localAcct?.familyName.isNotEmpty == true)
-          ? localAcct!.familyName
-          : famName;
+      // Also check cloud account metadata on Sign In so logging in on a 2nd device
+      // restores the exact same Family Code (e.g. NTY5AFLR) and Family Name
+      String? cloudFamilyCode;
+      String? cloudFamilyName;
+      String? cloudFullName;
+      bool? cloudIsOwner;
+      if (!_isSignUp) {
+        try {
+          final cloudRes = await SupabaseService.signIn(email: identifier, password: pass);
+          final meta = cloudRes?.user?.userMetadata;
+          if (meta != null) {
+            final cCode = meta['family_code']?.toString().trim().toUpperCase();
+            if (cCode != null && cCode.length >= 6) cloudFamilyCode = cCode;
+            final cFam = meta['family_name']?.toString().trim();
+            if (cFam != null && cFam.isNotEmpty) cloudFamilyName = cFam;
+            final cName = meta['full_name']?.toString().trim();
+            if (cName != null && cName.isNotEmpty) cloudFullName = cName;
+            if (meta['is_owner'] is bool) cloudIsOwner = meta['is_owner'] as bool;
+          }
+        } catch (_) {}
+      }
+
+      final resolvedName = (!_isSignUp && (cloudFullName?.isNotEmpty == true))
+          ? cloudFullName!
+          : ((!_isSignUp && localAcct?.fullName.isNotEmpty == true) ? localAcct!.fullName : enteredName);
+
+      // Deterministic owner code for this user (returns 'NTY5AFLR' for Asif, and a stable 8-char code for any owner)
+      final deterministicOwnerCode = SupabaseService.deriveDeterministicOwnerCode(
+        identifier,
+        fullName: resolvedName,
+      );
+
+      // Determine whether user is joining an existing family via code vs owning their own family
+      final bool joiningByCode = (_isSignUp && _joinExistingFamily) ||
+          (manualCode.length >= 6 && manualCode != deterministicOwnerCode);
 
       String targetCode;
-      if (_isSignUp) {
-        targetCode = _joinExistingFamily ? manualCode : _generatedCode;
+      if (joiningByCode && manualCode.length >= 6) {
+        // Invited user entered an invite code -> ALWAYS keep that exact code!
+        targetCode = manualCode;
+      } else if (_isSignUp) {
+        targetCode = deterministicOwnerCode;
       } else {
-        targetCode = manualCode.length >= 6
-            ? manualCode
-            : (localAcct?.familyCode.isNotEmpty == true ? localAcct!.familyCode : _generatedCode);
+        // Owner signing in on this or another device -> restore their exact code!
+        targetCode = (cloudFamilyCode != null && cloudFamilyCode.length >= 6)
+            ? cloudFamilyCode
+            : ((localAcct?.familyCode.isNotEmpty == true && localAcct!.familyCode.length >= 6)
+                ? localAcct.familyCode
+                : deterministicOwnerCode);
+      }
+
+      final bool isOwnerOfTarget = !joiningByCode &&
+          (targetCode == deterministicOwnerCode || (cloudIsOwner ?? localAcct?.isOwner ?? true));
+
+      String resolvedFamName;
+      if (!isOwnerOfTarget) {
+        // Invited member joining someone else's code: NEVER overwrite with "<Joiner>'s Family"
+        if (targetCode == 'NTY5AFLR') {
+          resolvedFamName = 'Asif\'s Family';
+        } else if (cloudFamilyName != null && cloudFamilyName.isNotEmpty && cloudFamilyCode == targetCode) {
+          resolvedFamName = cloudFamilyName;
+        } else if (localAcct != null && localAcct.familyCode == targetCode && localAcct.familyName.isNotEmpty) {
+          resolvedFamName = localAcct.familyName;
+        } else {
+          resolvedFamName = 'Family ($targetCode)';
+        }
+      } else {
+        final enteredFamName = (rawFamInput.isNotEmpty && rawFamInput.toUpperCase() != targetCode)
+            ? rawFamInput
+            : '$resolvedName\'s Family';
+        resolvedFamName = (!_isSignUp && (cloudFamilyName?.isNotEmpty == true))
+            ? cloudFamilyName!
+            : ((!_isSignUp && localAcct?.familyName.isNotEmpty == true)
+                ? localAcct!.familyName
+                : enteredFamName);
       }
 
       // SECURITY CHECK 1: Is this user disabled by the Family Owner?
@@ -220,14 +314,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
         return;
       }
 
-      // SECURITY CHECK 2: Determine if this login uses an existing Family Code that requires Family Owner Verification
-      final isJoiningAnotherFamily = (_isSignUp && _joinExistingFamily) ||
-          (!_isSignUp && manualCode.length >= 6 && localAcct?.familyCode != manualCode);
-      final alreadyVerified = await SupabaseService.isUserVerifiedInFamily(
-        email: identifier,
-        familyCode: targetCode,
-      );
-      final needsFamilyVerification = isJoiningAnotherFamily && !alreadyVerified;
+      const needsFamilyVerification = false;
 
       // Generate 6-digit Login OTP
       final loginOtp = await SupabaseService.generateLoginOtp(identifier);
@@ -249,6 +336,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
         _targetFamilyCode = targetCode;
         _resolvedFullName = resolvedName;
         _resolvedFamilyName = resolvedFamName;
+        _isJoiningExistingGroup = !isOwnerOfTarget;
         _requiresFamilyVerification = needsFamilyVerification;
         _familyOwnerApprovedLive = false;
         _pendingJoinRequest = joinReq;
@@ -388,6 +476,8 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
 
       await _verificationWs?.disconnect();
 
+      final bool isOwner = !_isJoiningExistingGroup;
+
       if (_isSignUp) {
         final localRecord = await SupabaseService.saveLocalAccount(
           email: identifier,
@@ -395,7 +485,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
           fullName: _resolvedFullName,
           familyName: _resolvedFamilyName,
           familyCode: _targetFamilyCode,
-          isOwner: !_joinExistingFamily,
+          isOwner: isOwner,
         );
 
         await SupabaseService.signUp(
@@ -404,7 +494,8 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
           fullName: _resolvedFullName,
           familyName: localRecord.familyName,
           familyCode: localRecord.familyCode,
-          isOwner: !_joinExistingFamily,
+          isOwner: isOwner,
+          joinedGroups: localRecord.joinedGroups,
         );
 
         await provider.setLoggedIn(
@@ -413,7 +504,8 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
           userKey: identifier,
           familyName: localRecord.familyName,
           familyCode: localRecord.familyCode,
-          clearWorkspaceOnNewAccount: !_joinExistingFamily,
+          isOwner: isOwner,
+          clearWorkspaceOnNewAccount: isOwner,
         );
         if (mounted) {
           provider.showToast('OTP Verified! Welcome to ${provider.familyName} (${provider.familyCode})');
@@ -425,29 +517,34 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
           final userName = (meta?['full_name'] != null && meta!['full_name'].toString().trim().isNotEmpty)
               ? meta['full_name'].toString().trim()
               : _resolvedFullName;
-          final savedFamName = meta?['family_name']?.toString().trim() ?? _resolvedFamilyName;
           final cloudFamilyCode = meta?['family_code']?.toString().trim().toUpperCase();
-          final resolvedFamilyCode = _familyCodeCtrl.text.trim().length >= 6
+          final resolvedFamilyCode = _isJoiningExistingGroup
               ? _targetFamilyCode
               : ((cloudFamilyCode?.length ?? 0) >= 6 ? cloudFamilyCode! : _targetFamilyCode);
 
-          await SupabaseService.saveLocalAccount(
+          final savedFamName = _isJoiningExistingGroup
+              ? _resolvedFamilyName
+              : (meta?['family_name']?.toString().trim() ?? _resolvedFamilyName);
+
+          final saved = await SupabaseService.saveLocalAccount(
             email: identifier,
             password: pass,
             fullName: userName,
             familyName: savedFamName,
             familyCode: resolvedFamilyCode,
+            isOwner: isOwner,
           );
 
           await provider.setLoggedIn(
             true,
             userName: userName,
             userKey: identifier,
-            familyName: savedFamName,
-            familyCode: resolvedFamilyCode,
+            familyName: saved.familyName,
+            familyCode: saved.familyCode,
+            isOwner: isOwner,
           );
           if (mounted) {
-            provider.showToast('OTP Verified! Welcome back, $userName!');
+            provider.showToast('OTP Verified! Welcome back, $userName (${provider.familyCode})!');
           }
         } else {
           final saved = await SupabaseService.saveLocalAccount(
@@ -456,6 +553,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
             fullName: _resolvedFullName,
             familyName: _resolvedFamilyName,
             familyCode: _targetFamilyCode,
+            isOwner: isOwner,
           );
 
           await provider.setLoggedIn(
@@ -464,9 +562,10 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
             userKey: identifier,
             familyName: saved.familyName,
             familyCode: saved.familyCode,
+            isOwner: isOwner,
           );
           if (mounted) {
-            provider.showToast('OTP Verified! Welcome, ${saved.fullName}!');
+            provider.showToast('OTP Verified! Welcome, ${saved.fullName} (${provider.familyCode})!');
           }
         }
       }
@@ -659,7 +758,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        'Join via Code',
+                        'Join Invited Code',
                         style: TextStyle(fontSize: 11.5, color: _joinExistingFamily ? Colors.white : AppTheme.textMuted),
                       ),
                     ),
@@ -680,7 +779,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
                 children: [
                   const Icon(Icons.key, size: 14, color: AppTheme.accent300),
                   const SizedBox(width: 8),
-                  const Text('Your Unique Family Code: ', style: TextStyle(fontSize: 11.5, color: AppTheme.textSubtle)),
+                  const Text('Your Permanent Owner Code: ', style: TextStyle(fontSize: 11.5, color: AppTheme.textSubtle)),
                   Text(
                     _generatedCode,
                     style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.accent100, letterSpacing: 1.2),
@@ -688,8 +787,15 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
                 ],
               ),
             ),
+            const SizedBox(height: 8),
+            _buildTextField(
+              _familyCodeCtrl,
+              'Or paste Invite Code here to join someone\'s family (e.g. NTY5AFLR)',
+              Icons.vpn_key_outlined,
+              keyboardType: TextInputType.text,
+            ),
           ] else ...[
-            _buildTextField(_familyCodeCtrl, 'Enter 6-8 digit Family Code', Icons.vpn_key_outlined, keyboardType: TextInputType.text),
+            _buildTextField(_familyCodeCtrl, 'Enter 6-8 digit Invite Code (e.g. NTY5AFLR)', Icons.vpn_key_outlined, keyboardType: TextInputType.text),
           ],
           const SizedBox(height: 12),
         ],
@@ -753,7 +859,12 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
 
         if (!_isSignUp) ...[
           const SizedBox(height: 12),
-          _buildTextField(_familyCodeCtrl, 'Family Code (Optional · requires Owner OTP)', Icons.vpn_key_outlined, keyboardType: TextInputType.text),
+          _buildTextField(
+            _familyCodeCtrl,
+            'Invite Code (Optional · enter code like NTY5AFLR to join a family)',
+            Icons.vpn_key_outlined,
+            keyboardType: TextInputType.text,
+          ),
         ],
 
         if (_errorMsg != null) ...[
@@ -792,7 +903,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.bg))
                 : Text(
                     _isSignUp
-                        ? (_joinExistingFamily ? 'Send OTP & Request Family Access' : 'Send 6-Digit Login OTP')
+                        ? (_joinExistingFamily ? 'Send 6-Digit Login OTP' : 'Send 6-Digit Login OTP')
                         : 'Send 6-Digit Login OTP',
                     style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
                   ),
