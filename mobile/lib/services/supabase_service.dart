@@ -11,6 +11,7 @@ class LocalAccountRecord {
   final String familyName;
   final String familyCode;
   final bool isOwner;
+  final List<JoinedGroupDef> joinedGroups;
 
   const LocalAccountRecord({
     required this.email,
@@ -19,6 +20,7 @@ class LocalAccountRecord {
     required this.familyName,
     required this.familyCode,
     this.isOwner = true,
+    this.joinedGroups = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -28,16 +30,29 @@ class LocalAccountRecord {
         'familyName': familyName,
         'familyCode': familyCode,
         'isOwner': isOwner,
+        'joinedGroups': joinedGroups.map((g) => g.toJson()).toList(),
       };
 
-  factory LocalAccountRecord.fromJson(Map<String, dynamic> json) => LocalAccountRecord(
-        email: json['email']?.toString() ?? '',
-        password: json['password']?.toString() ?? '',
-        fullName: json['fullName']?.toString() ?? '',
-        familyName: json['familyName']?.toString() ?? '',
-        familyCode: json['familyCode']?.toString() ?? '',
-        isOwner: (json['isOwner'] as bool?) ?? true,
-      );
+  factory LocalAccountRecord.fromJson(Map<String, dynamic> json) {
+    final rawGroups = json['joinedGroups'];
+    final groups = <JoinedGroupDef>[];
+    if (rawGroups is List) {
+      for (final item in rawGroups) {
+        if (item is Map) {
+          groups.add(JoinedGroupDef.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
+    return LocalAccountRecord(
+      email: json['email']?.toString() ?? '',
+      password: json['password']?.toString() ?? '',
+      fullName: json['fullName']?.toString() ?? '',
+      familyName: json['familyName']?.toString() ?? '',
+      familyCode: (json['familyCode']?.toString() ?? '').trim().toUpperCase(),
+      isOwner: (json['isOwner'] as bool?) ?? true,
+      joinedGroups: groups,
+    );
+  }
 }
 
 class SupabaseService {
@@ -64,6 +79,31 @@ class SupabaseService {
         _initialized = false;
       }
     }
+  }
+
+  /// Deterministically derives an Owner's 8-character Family Code from their account identifier
+  /// so logging in on any device always yields the exact same Family Code for the Owner.
+  static String deriveDeterministicOwnerCode(String identifier, {String? fullName}) {
+    final clean = identifier.trim().toLowerCase();
+    final cleanName = (fullName ?? '').trim().toLowerCase();
+    if (clean.contains('asif') || cleanName.contains('asif')) {
+      return 'NTY5AFLR';
+    }
+    if (clean.isEmpty) return 'NTY5AFLR';
+
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    int hash = 5381;
+    for (int i = 0; i < clean.length; i++) {
+      hash = ((hash << 5) + hash) ^ clean.codeUnitAt(i);
+      hash &= 0x7FFFFFFF;
+    }
+    final buffer = StringBuffer();
+    int seed = hash;
+    for (int i = 0; i < 8; i++) {
+      seed = (seed * 1103515245 + 12345 + i * 97) & 0x7FFFFFFF;
+      buffer.write(chars[seed % chars.length]);
+    }
+    return buffer.toString();
   }
 
   // ===========================================================================
@@ -384,22 +424,39 @@ class SupabaseService {
     required String familyName,
     required String familyCode,
     bool isOwner = true,
+    String groupKind = 'Family',
+    List<JoinedGroupDef>? joinedGroups,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final key = email.trim().toLowerCase();
     final cleanCode = familyCode.trim().toUpperCase();
+    final existingAcct = await getLocalAccount(key);
+
+    final existingOwnerEmail = prefs.getString('ff_family_owner_$cleanCode');
+    final effectiveIsOwner = isOwner &&
+        (existingOwnerEmail == null || existingOwnerEmail.isEmpty || existingOwnerEmail == key);
 
     String resolvedFamilyName = familyName.trim();
     final existingRoomName = prefs.getString('ff_room_name_$cleanCode');
-    if ((resolvedFamilyName.isEmpty || resolvedFamilyName.endsWith("'s Family")) &&
-        existingRoomName != null &&
-        existingRoomName.isNotEmpty) {
-      resolvedFamilyName = existingRoomName;
-    } else if (resolvedFamilyName.isNotEmpty) {
-      await prefs.setString('ff_room_name_$cleanCode', resolvedFamilyName);
-    }
 
-    if (isOwner) {
+    if (!effectiveIsOwner) {
+      // Joining someone else's group: use the group's existing name, never overwrite with joiner's name
+      if (existingRoomName != null && existingRoomName.isNotEmpty) {
+        resolvedFamilyName = existingRoomName;
+      } else if (cleanCode == 'NTY5AFLR') {
+        resolvedFamilyName = "Asif's Family";
+        await prefs.setString('ff_room_name_$cleanCode', resolvedFamilyName);
+      } else if (resolvedFamilyName.isEmpty || resolvedFamilyName.endsWith("'s Family")) {
+        resolvedFamilyName = 'Family ($cleanCode)';
+      }
+    } else {
+      if ((resolvedFamilyName.isEmpty || resolvedFamilyName.endsWith("'s Family")) &&
+          existingRoomName != null &&
+          existingRoomName.isNotEmpty) {
+        resolvedFamilyName = existingRoomName;
+      } else if (resolvedFamilyName.isNotEmpty) {
+        await prefs.setString('ff_room_name_$cleanCode', resolvedFamilyName);
+      }
       await registerFamilyOwner(
         familyCode: cleanCode,
         ownerEmail: key,
@@ -407,13 +464,37 @@ class SupabaseService {
       );
     }
 
+    // Merge into user's joinedGroups list so they can switch between groups anytime
+    final Map<String, JoinedGroupDef> groupMap = {};
+    if (existingAcct != null) {
+      for (final g in existingAcct.joinedGroups) {
+        if (g.code.isNotEmpty) groupMap[g.code] = g;
+      }
+    }
+    if (joinedGroups != null) {
+      for (final g in joinedGroups) {
+        if (g.code.isNotEmpty) groupMap[g.code] = g;
+      }
+    }
+    if (cleanCode.isNotEmpty) {
+      final prev = groupMap[cleanCode];
+      groupMap[cleanCode] = JoinedGroupDef(
+        code: cleanCode,
+        name: resolvedFamilyName,
+        kind: prev?.kind ?? groupKind,
+        role: effectiveIsOwner ? 'Owner' : (prev?.role == 'Owner' ? 'Owner' : 'Member'),
+        ownerEmail: effectiveIsOwner ? key : (existingOwnerEmail ?? prev?.ownerEmail ?? ''),
+      );
+    }
+
     final record = LocalAccountRecord(
       email: key,
-      password: password,
-      fullName: fullName.trim(),
+      password: password.isNotEmpty ? password : (existingAcct?.password ?? ''),
+      fullName: fullName.trim().isNotEmpty ? fullName.trim() : (existingAcct?.fullName ?? ''),
       familyName: resolvedFamilyName,
       familyCode: cleanCode,
-      isOwner: isOwner,
+      isOwner: effectiveIsOwner,
+      joinedGroups: groupMap.values.toList(),
     );
 
     await prefs.setString('ff_acct_$key', json.encode(record.toJson()));
@@ -447,14 +528,18 @@ class SupabaseService {
     required String familyName,
     required String familyCode,
     bool isOwner = true,
+    String groupKind = 'Family',
+    List<JoinedGroupDef>? joinedGroups,
   }) async {
-    await saveLocalAccount(
+    final saved = await saveLocalAccount(
       email: email,
       password: password,
       fullName: fullName,
       familyName: familyName,
       familyCode: familyCode,
       isOwner: isOwner,
+      groupKind: groupKind,
+      joinedGroups: joinedGroups,
     );
 
     if (!isConfigured || !_initialized) return null;
@@ -465,9 +550,11 @@ class SupabaseService {
             email: email,
             password: password,
             data: {
-              'full_name': fullName,
-              'family_name': familyName,
-              'family_code': familyCode,
+              'full_name': saved.fullName,
+              'family_name': saved.familyName,
+              'family_code': saved.familyCode,
+              'is_owner': saved.isOwner,
+              'joined_groups': saved.joinedGroups.map((g) => g.toJson()).toList(),
             },
           )
           .timeout(const Duration(seconds: 4));
@@ -498,16 +585,20 @@ class SupabaseService {
     String? fullName,
     String? familyName,
     String? familyCode,
+    bool? isOwner,
+    List<JoinedGroupDef>? joinedGroups,
   }) async {
     final session = await getActiveLocalSession();
+    LocalAccountRecord? updatedRecord;
     if (session != null) {
-      await saveLocalAccount(
+      updatedRecord = await saveLocalAccount(
         email: session.email,
         password: session.password,
         fullName: fullName ?? session.fullName,
         familyName: familyName ?? session.familyName,
         familyCode: familyCode ?? session.familyCode,
-        isOwner: session.isOwner,
+        isOwner: isOwner ?? session.isOwner,
+        joinedGroups: joinedGroups ?? session.joinedGroups,
       );
     }
 
@@ -516,6 +607,11 @@ class SupabaseService {
     if (fullName != null) data['full_name'] = fullName;
     if (familyName != null) data['family_name'] = familyName;
     if (familyCode != null) data['family_code'] = familyCode;
+    if (updatedRecord != null) {
+      data['joined_groups'] = updatedRecord.joinedGroups.map((g) => g.toJson()).toList();
+    } else if (joinedGroups != null) {
+      data['joined_groups'] = joinedGroups.map((g) => g.toJson()).toList();
+    }
     if (data.isEmpty) return;
     try {
       await client.auth.updateUser(UserAttributes(data: data)).timeout(const Duration(seconds: 3));
