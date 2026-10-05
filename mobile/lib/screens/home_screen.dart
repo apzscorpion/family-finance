@@ -36,7 +36,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   alignment: Alignment.center,
-                  child: const Text('A', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white)),
+                  child: Text(provider.currentUserInitial, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white)),
                 ),
                 const SizedBox(width: 12),
                 // Greeting & Context Title
@@ -47,10 +47,10 @@ class HomeScreen extends StatelessWidget {
                       Text('Good morning, ${provider.currentUserName.isNotEmpty ? provider.currentUserName : 'User'}', style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
                       Text(
                         provider.scopeMemberId == null
-                            ? 'Family Workspace · all members'
-                            : (provider.scopeMemberId == 'asif'
+                            ? '${provider.familyName} · ${provider.members.length} ${provider.members.length == 1 ? 'member' : 'members'}'
+                            : (provider.scopeMemberId == 'me'
                                 ? 'My finances'
-                                : '${FinanceProvider.members.firstWhere((m) => m.id == provider.scopeMemberId, orElse: () => FinanceProvider.members.first).name}\'s finances'),
+                                : '${provider.members.firstWhere((m) => m.id == provider.scopeMemberId, orElse: () => provider.members.first).name}\'s finances'),
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.text),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -137,11 +137,11 @@ class HomeScreen extends StatelessWidget {
                   provider: provider,
                   id: 'me',
                   label: 'Me',
-                  initial: 'A',
+                  initial: provider.currentUserInitial,
                   avatarBg: AppTheme.accent700,
                 ),
                 const SizedBox(width: 8),
-                ...FinanceProvider.members.skip(1).map((m) {
+                ...provider.members.skip(1).map((m) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: _buildContextChip(
@@ -178,7 +178,7 @@ class HomeScreen extends StatelessWidget {
                       Text(
                         provider.scopeMemberId == null
                             ? 'FAMILY TRACKED BALANCE'
-                            : (provider.scopeMemberId == 'asif' ? 'MY TRACKED BALANCE' : 'MEMBER BALANCE'),
+                            : (provider.scopeMemberId == 'me' ? 'MY TRACKED BALANCE' : 'MEMBER BALANCE'),
                         style: const TextStyle(
                           fontSize: 11,
                           letterSpacing: 0.8,
@@ -473,13 +473,13 @@ class HomeScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    ...FinanceProvider.members.map((m) {
+                    ...provider.members.map((m) {
                       final mSpend = provider.transactions
                           .filterInScope(m.id, provider.maxDays)
                           .where((t) => t.type == 'expense')
                           .fold(0.0, (sum, t) => sum + t.amount);
 
-                      final maxMemberSpend = FinanceProvider.members.map((mem) {
+                      final maxMemberSpend = provider.members.map((mem) {
                         return provider.transactions
                             .filterInScope(mem.id, provider.maxDays)
                             .where((t) => t.type == 'expense')
@@ -491,7 +491,7 @@ class HomeScreen extends StatelessWidget {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 14.0),
                         child: InkWell(
-                          onTap: () => provider.setContext(m.id == 'asif' ? 'me' : m.id),
+                          onTap: () => provider.setContext(m.id),
                           child: Row(
                             children: [
                               Container(
@@ -672,32 +672,24 @@ class HomeScreen extends StatelessWidget {
                 boxShadow: const [AppTheme.shadowSm],
               ),
               child: provider.scopedTransactions.isEmpty
-                  ? Column(
-                      children: [
-                        const Icon(Icons.account_balance_wallet_outlined, size: 36, color: AppTheme.textSubtle),
-                        const SizedBox(height: 8),
-                        const Text('No transactions recorded yet', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.text)),
-                        const SizedBox(height: 4),
-                        const Text('Tap the + button to log an expense or receive bank notifications automatically.', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle), textAlign: TextAlign.center),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () => provider.loadDemoData(),
-                          icon: const Icon(Icons.science_outlined, size: 16),
-                          label: const Text('Try Demo Data', style: TextStyle(fontSize: 12)),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppTheme.accent),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            foregroundColor: AppTheme.accent200,
-                          ),
-                        ),
-                      ],
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Column(
+                        children: [
+                          Icon(Icons.account_balance_wallet_outlined, size: 36, color: AppTheme.textSubtle),
+                          SizedBox(height: 8),
+                          Text('No transactions recorded yet', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.text)),
+                          SizedBox(height: 4),
+                          Text('Tap the + button above to log an expense or income for your family.', style: TextStyle(fontSize: 12, color: AppTheme.textSubtle), textAlign: TextAlign.center),
+                        ],
+                      ),
                     )
                   : Column(
                       children: provider.scopedTransactions.take(5).map((t) {
                         final cat = FinanceProvider.categories[t.catKey] ?? FinanceProvider.categories['shopping']!;
-                        final member = FinanceProvider.members.firstWhere(
+                        final member = provider.members.firstWhere(
                           (m) => m.id == t.memberId,
-                          orElse: () => FamilyMemberDef(id: t.memberId, name: t.memberId, rel: 'Member', role: 'Member', openingBalance: 0, color: AppTheme.accent),
+                          orElse: () => FamilyMemberDef(id: t.memberId, name: provider.currentUserName, rel: 'You', role: 'Owner', openingBalance: 0, color: AppTheme.accent),
                         );
                         final isIncome = t.type == 'income';
 
@@ -749,9 +741,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          const Center(
-            child: Text('Demo data · amounts are illustrative', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
-          ),
         ],
       ),
     );

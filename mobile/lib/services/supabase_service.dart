@@ -26,6 +26,7 @@ class SupabaseService {
     required String password,
     required String fullName,
     required String familyName,
+    required String familyCode,
   }) async {
     if (!isConfigured) return null;
 
@@ -35,6 +36,7 @@ class SupabaseService {
       data: {
         'full_name': fullName,
         'family_name': familyName,
+        'family_code': familyCode,
       },
     );
     return response;
@@ -49,6 +51,22 @@ class SupabaseService {
       email: email,
       password: password,
     );
+  }
+
+  static Future<void> updateMetadata({
+    String? fullName,
+    String? familyName,
+    String? familyCode,
+  }) async {
+    if (!isConfigured || currentUser == null) return;
+    final Map<String, dynamic> data = {};
+    if (fullName != null) data['full_name'] = fullName;
+    if (familyName != null) data['family_name'] = familyName;
+    if (familyCode != null) data['family_code'] = familyCode;
+    if (data.isEmpty) return;
+    try {
+      await client.auth.updateUser(UserAttributes(data: data));
+    } catch (_) {}
   }
 
   static Future<void> signOut() async {

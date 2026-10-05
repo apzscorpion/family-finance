@@ -30,6 +30,35 @@ class InsightsScreen extends StatelessWidget {
       if ((w['exp'] as double) > maxVal) maxVal = w['exp'] as double;
     }
 
+    // Compute dynamic highlights from real user transactions
+    final expenses = provider.scopedTransactions.where((t) => t.type == 'expense').toList();
+    final totExp = provider.totalExpense;
+
+    String? topCatTitle;
+    String? topCatBody;
+    if (expenses.isNotEmpty && totExp > 0) {
+      final Map<String, double> byCat = {};
+      for (var t in expenses) {
+        byCat[t.catKey] = (byCat[t.catKey] ?? 0.0) + t.amount;
+      }
+      final topEntry = byCat.entries.reduce((a, b) => a.value >= b.value ? a : b);
+      final catName = FinanceProvider.categories[topEntry.key]?.name ?? topEntry.key;
+      final pct = (topEntry.value / totExp * 100).round();
+      topCatTitle = '$catName leads at $pct%';
+      topCatBody = '${formatInr(topEntry.value)} of ${formatInr(totExp)} spent in the selected period.';
+    }
+
+    String? largestTitle;
+    String? largestBody;
+    if (expenses.isNotEmpty) {
+      final largest = expenses.reduce((a, b) => a.amount >= b.amount ? a : b);
+      final memberName = provider.members
+          .firstWhere((m) => m.id == largest.memberId, orElse: () => provider.members.first)
+          .name;
+      largestTitle = 'Largest expense: ${largest.title}';
+      largestBody = '${formatInr(largest.amount)} by $memberName · ${largest.method}.';
+    }
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(left: 18, right: 18, top: 14, bottom: 110),
@@ -39,7 +68,7 @@ class InsightsScreen extends StatelessWidget {
           const Text('Insights', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500, color: AppTheme.text)),
           Text(
             provider.scopeMemberId == null
-                ? 'Khan Family · last 4 weeks'
+                ? '${provider.familyName} · last 4 weeks'
                 : 'My finances · last 4 weeks',
             style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle),
           ),
@@ -82,7 +111,6 @@ class InsightsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                // Dual Bar Chart Height Container
                 SizedBox(
                   height: 170,
                   child: Row(
@@ -95,7 +123,6 @@ class InsightsScreen extends StatelessWidget {
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          // Income Bar (Green)
                           Container(
                             width: 16,
                             height: incH,
@@ -105,7 +132,6 @@ class InsightsScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 5),
-                          // Expense Bar (Blurple)
                           Container(
                             width: 16,
                             height: expH,
@@ -121,7 +147,6 @@ class InsightsScreen extends StatelessWidget {
                 ),
                 const Divider(color: Color(0xFF3F424D), height: 1),
                 const SizedBox(height: 8),
-                // Labels below bars
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: weeks.map((w) {
@@ -138,24 +163,29 @@ class InsightsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          // 2. Highlight Cards
-          _buildInsightHighlightCard(
-            icon: Icons.pie_chart_outline,
-            title: 'Groceries leads at 32%',
-            body: '${formatInr(11470)} of ${formatInr(35800)} spent in the selected period.',
-          ),
-          const SizedBox(height: 10),
-          _buildInsightHighlightCard(
-            icon: Icons.arrow_circle_up_outlined,
-            title: 'Largest expense: School fees',
-            body: '${formatInr(12500)} by Asif, 4 days ago.',
-          ),
-          const SizedBox(height: 10),
-          _buildInsightHighlightCard(
-            icon: Icons.chat_bubble_outline,
-            title: '16 of 22 expenses captured from SMS',
-            body: 'The rest were added manually by members.',
-          ),
+          // 2. Dynamic Highlight Cards
+          if (expenses.isEmpty)
+            _buildInsightHighlightCard(
+              icon: Icons.insights_outlined,
+              title: 'No spending data yet',
+              body: 'Add your first income or expense to see real-time category breakdowns and weekly trends.',
+            )
+          else ...[
+            if (topCatTitle != null && topCatBody != null) ...[
+              _buildInsightHighlightCard(
+                icon: Icons.pie_chart_outline,
+                title: topCatTitle,
+                body: topCatBody,
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (largestTitle != null && largestBody != null)
+              _buildInsightHighlightCard(
+                icon: Icons.arrow_circle_up_outlined,
+                title: largestTitle,
+                body: largestBody,
+              ),
+          ],
           const SizedBox(height: 14),
 
           // 3. Category Breakdown List

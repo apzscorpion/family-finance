@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/finance_models.dart';
 import '../providers/finance_provider.dart';
@@ -23,12 +24,33 @@ class FamilyScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(provider.familyName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500, color: AppTheme.text)),
-                  Text('${FinanceProvider.members.length} members · Household Code: ${provider.familyCode}', style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            provider.familyName,
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500, color: AppTheme.text),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        InkWell(
+                          onTap: () => _showRenameFamilyDialog(context, provider),
+                          child: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.textSubtle),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${provider.members.length} ${provider.members.length == 1 ? 'member' : 'members'} · Household Code: ${provider.familyCode}',
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textSubtle),
+                    ),
+                  ],
+                ),
               ),
               OutlinedButton.icon(
                 onPressed: () => _showJoinFamilyDialog(context, provider),
@@ -76,28 +98,25 @@ class FamilyScreen extends StatelessWidget {
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 2.0),
                       ),
                     ),
-                    Row(
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            provider.showToast('Family Code ${provider.familyCode} copied!');
-                          },
-                          icon: const Icon(Icons.copy, size: 14),
-                          label: const Text('Copy Code', style: TextStyle(fontSize: 12)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.accent,
-                            foregroundColor: AppTheme.bg,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          ),
-                        ),
-                      ],
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: provider.familyCode));
+                        provider.showToast('Family Code ${provider.familyCode} copied to clipboard!');
+                      },
+                      icon: const Icon(Icons.copy, size: 14),
+                      label: const Text('Copy Code', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accent,
+                        foregroundColor: AppTheme.bg,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Share this 8-digit unique code with family members so they can join your household during sign-up.',
+                  'Share this unique code with family members so they can join your household during sign-up or login.',
                   style: TextStyle(fontSize: 11.5, color: AppTheme.textSubtle, height: 1.3),
                 ),
               ],
@@ -137,7 +156,7 @@ class FamilyScreen extends StatelessWidget {
             )
           else
             ...provider.approvals.map((a) {
-              final fromMember = FinanceProvider.members.firstWhere(
+              final fromMember = provider.members.firstWhere(
                 (m) => m.id == a.fromMemberId,
                 orElse: () => FamilyMemberDef(id: a.fromMemberId, name: a.fromMemberId, rel: 'Member', role: 'Member', openingBalance: 0, color: AppTheme.accent),
               );
@@ -194,7 +213,6 @@ class FamilyScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Difference Diff Card
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(color: AppTheme.bg, borderRadius: BorderRadius.circular(12)),
@@ -202,20 +220,9 @@ class FamilyScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Amount', style: TextStyle(fontSize: 12.5, color: AppTheme.textSubtle)),
-                          Row(
-                            children: [
-                              Text(
-                                a.kind == 'Edit' ? formatInr(2000) : '—',
-                                style: const TextStyle(fontSize: 12.5, color: AppTheme.textSubtle, decoration: TextDecoration.lineThrough),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward, size: 12, color: AppTheme.textSubtle),
-                              const SizedBox(width: 8),
-                              Text(
-                                formatInr(a.kind == 'Edit' ? (a.changes!['amt'] as num).toDouble() : (a.newTxn?.amount ?? 0)),
-                                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.amber),
-                              ),
-                            ],
+                          Text(
+                            formatInr(a.kind == 'Edit' ? (a.changes!['amt'] as num).toDouble() : (a.newTxn?.amount ?? 0)),
+                            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.amber),
                           ),
                         ],
                       ),
@@ -223,7 +230,6 @@ class FamilyScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(a.reason, style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
                     const SizedBox(height: 12),
-                    // Action Buttons (Reject vs Approve)
                     Row(
                       children: [
                         Expanded(
@@ -258,8 +264,19 @@ class FamilyScreen extends StatelessWidget {
               );
             }),
 
-          const SizedBox(height: 16),
-          const Text('Members', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.text)),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Members', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.text)),
+              TextButton.icon(
+                onPressed: () => _showAddMemberDialog(context, provider),
+                icon: const Icon(Icons.person_add_alt_1, size: 16, color: AppTheme.accent200),
+                label: const Text('Add Member', style: TextStyle(fontSize: 12.5, color: AppTheme.accent200)),
+                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
 
           // Member Directory List
@@ -267,7 +284,7 @@ class FamilyScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(18)),
             child: Column(
-              children: FinanceProvider.members.map((m) {
+              children: provider.members.map((m) {
                 final mSpent = provider.transactions
                     .filterInScope(m.id, 30)
                     .where((t) => t.type == 'expense')
@@ -276,7 +293,7 @@ class FamilyScreen extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10.0),
                   child: InkWell(
-                    onTap: () => provider.setContext(m.id == 'asif' ? 'me' : m.id),
+                    onTap: () => provider.setContext(m.id),
                     child: Row(
                       children: [
                         Container(
@@ -303,8 +320,18 @@ class FamilyScreen extends StatelessWidget {
                             const Text('spent · 30d', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
                           ],
                         ),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.chevron_right, size: 18, color: AppTheme.textSubtle),
+                        if (m.id != 'me') ...[
+                          const SizedBox(width: 6),
+                          IconButton(
+                            onPressed: () => provider.removeFamilyMember(m.id),
+                            icon: const Icon(Icons.close, size: 16, color: AppTheme.textSubtle),
+                            visualDensity: VisualDensity.compact,
+                            tooltip: 'Remove member',
+                          ),
+                        ] else ...[
+                          const SizedBox(width: 6),
+                          const Icon(Icons.chevron_right, size: 18, color: AppTheme.textSubtle),
+                        ],
                       ],
                     ),
                   ),
@@ -317,8 +344,116 @@ class FamilyScreen extends StatelessWidget {
     );
   }
 
+  void _showAddMemberDialog(BuildContext context, FinanceProvider provider) {
+    final nameCtrl = TextEditingController();
+    final relCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Add Family Member', style: TextStyle(color: AppTheme.text, fontSize: 18)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Add a member to your family workspace:', style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              style: const TextStyle(fontSize: 14, color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Member Name',
+                hintStyle: const TextStyle(color: AppTheme.textSubtle),
+                filled: true,
+                fillColor: AppTheme.bg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: relCtrl,
+              style: const TextStyle(fontSize: 14, color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Relationship (e.g. Wife, Brother, Father)',
+                hintStyle: const TextStyle(color: AppTheme.textSubtle),
+                filled: true,
+                fillColor: AppTheme.bg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSubtle)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              if (name.isNotEmpty) {
+                provider.addFamilyMember(
+                  name: name,
+                  rel: relCtrl.text.trim().isNotEmpty ? relCtrl.text.trim() : 'Family',
+                );
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
+            child: const Text('Add Member'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRenameFamilyDialog(BuildContext context, FinanceProvider provider) {
+    final ctrl = TextEditingController(text: provider.familyName);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Family Workspace Name', style: TextStyle(color: AppTheme.text, fontSize: 18)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: const TextStyle(fontSize: 15, color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your family name',
+            hintStyle: const TextStyle(color: AppTheme.textSubtle),
+            filled: true,
+            fillColor: AppTheme.bg,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSubtle)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = ctrl.text.trim();
+              if (name.isNotEmpty) {
+                provider.setFamilyDetails(name: name, code: provider.familyCode);
+                Navigator.pop(ctx);
+                provider.showToast('Family name updated to $name');
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: AppTheme.bg),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showJoinFamilyDialog(BuildContext context, FinanceProvider provider) {
     final ctrl = TextEditingController();
+    final nameCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -329,25 +464,30 @@ class FamilyScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Enter the 8-character unique Family Invite Code from the household owner:', style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted)),
-            const SizedBox(height: 14),
-            Container(
-              height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: AppTheme.bg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.accent),
+            const Text('Enter the 6–8 character unique Family Invite Code:', style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5),
+              decoration: InputDecoration(
+                hintText: 'Invite Code (e.g. A7B9X2K4)',
+                hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textSubtle, letterSpacing: 0),
+                filled: true,
+                fillColor: AppTheme.bg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
-              child: TextField(
-                controller: ctrl,
-                autofocus: true,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5),
-                decoration: const InputDecoration(
-                  hintText: 'e.g. K9L2M4X7',
-                  hintStyle: TextStyle(fontSize: 13, color: AppTheme.textSubtle, letterSpacing: 0),
-                  border: InputBorder.none,
-                ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: nameCtrl,
+              style: const TextStyle(fontSize: 14, color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Family Name (Optional)',
+                hintStyle: const TextStyle(fontSize: 13, color: AppTheme.textSubtle),
+                filled: true,
+                fillColor: AppTheme.bg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
           ],
@@ -361,7 +501,7 @@ class FamilyScreen extends StatelessWidget {
             onPressed: () {
               final code = ctrl.text.trim();
               if (code.length >= 6) {
-                provider.joinFamilyWithCode(code);
+                provider.joinFamilyWithCode(code, familyName: nameCtrl.text.trim());
                 Navigator.pop(ctx);
               }
             },
