@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/finance_models.dart';
@@ -62,6 +63,8 @@ class FinanceProvider extends ChangeNotifier {
   String _userKey = 'default';
   String _familyCode = '';
   String _familyName = '';
+  String _familyVerificationOtp = '';
+  final List<FamilyLoginRequest> _familyLoginRequests = [];
   late final LiveNotesWsService _notesWs;
 
   // Real Family Members (Starts with ONLY the logged-in user, 0 opening balance)
@@ -77,10 +80,20 @@ class FinanceProvider extends ChangeNotifier {
             role: 'Owner',
             openingBalance: 0,
             color: const Color(0xFF9184D9),
+            email: _userKey.contains('@') ? _userKey : '',
+            isDisabled: false,
+            isVerified: true,
           ),
         ];
 
   String get familyCode => _familyCode.isNotEmpty ? _familyCode : '--------';
+  String get familyVerificationOtp =>
+      _familyVerificationOtp.isNotEmpty ? _familyVerificationOtp : '------';
+  List<FamilyLoginRequest> get familyLoginRequests =>
+      List.unmodifiable(_familyLoginRequests);
+  List<FamilyLoginRequest> get pendingFamilyLoginRequests =>
+      _familyLoginRequests.where((r) => r.status == 'pending').toList();
+
   String get familyName => _familyName.isNotEmpty
       ? _familyName
       : (_currentUserName.isNotEmpty ? '$_currentUserName\'s Family' : 'My Family');
@@ -98,6 +111,8 @@ class FinanceProvider extends ChangeNotifier {
       onRemoteNoteUpdated: _handleRemoteNoteUpdated,
       onRemoteNoteDeleted: _handleRemoteNoteDeleted,
       onRemoteFullSync: _handleRemoteFullSync,
+      onRemoteFamilyLoginRequest: _handleRemoteFamilyLoginRequest,
+      onRemoteMemberDisabledChanged: _handleRemoteMemberDisabledChanged,
       getLocalNotes: () => _notes,
       onStateChanged: () => notifyListeners(),
     );
@@ -241,17 +256,39 @@ class FinanceProvider extends ChangeNotifier {
           role: 'Owner',
           openingBalance: 0,
           color: const Color(0xFF9184D9),
+          email: _userKey.contains('@') ? _userKey : '',
+          isDisabled: false,
+          isVerified: true,
         ),
       );
     } else {
-      _members[0] = FamilyMemberDef(
-        id: 'me',
+      _members[0] = _members[0].copyWith(
         name: _currentUserName.isNotEmpty ? _currentUserName : _members[0].name,
         rel: 'You',
         role: 'Owner',
-        openingBalance: _members[0].openingBalance,
-        color: _members[0].color,
+        email: _userKey.contains('@') ? _userKey : _members[0].email,
+        isDisabled: false,
+        isVerified: true,
       );
+    }
+
+    // Check if this user has been disabled by the Family Owner for this family code
+    if (_familyCode.isNotEmpty) {
+      final disabled = await SupabaseService.isUserDisabledInFamily(
+        email: _userKey,
+        name: _currentUserName,
+        familyCode: _familyCode,
+      );
+      if (disabled) {
+        await logout();
+        showToast('Your login access to $_familyCode has been disabled by the Family Owner.');
+        return;
+      }
+      _familyVerificationOtp = await SupabaseService.getFamilyVerificationOtp(_familyCode);
+      final reqs = await SupabaseService.getFamilyLoginRequests(_familyCode);
+      _familyLoginRequests
+        ..clear()
+        ..addAll(reqs);
     }
 
     // Load real transactions created by this user
@@ -346,10 +383,10 @@ class FinanceProvider extends ChangeNotifier {
 
   static String generateUniqueFamilyCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final rnd = DateTime.now().microsecondsSinceEpoch;
+    final rnd = Random.secure();
     final buffer = StringBuffer();
     for (int i = 0; i < 8; i++) {
-      buffer.write(chars[(rnd + i * 37) % chars.length]);
+      buffer.write(chars[rnd.nextInt(chars.length)]);
     }
     return buffer.toString();
   }
@@ -361,6 +398,7 @@ class FinanceProvider extends ChangeNotifier {
     if (code.trim().isNotEmpty) {
       _familyCode = code.trim().toUpperCase();
     }
+    _familyVerificationOtp = await SupabaseService.getFamilyVerificationOtp(_familyCode);
     await _saveUserWorkspace();
     await SupabaseService.updateMetadata(
       familyName: _familyName,
@@ -375,10 +413,21 @@ class FinanceProvider extends ChangeNotifier {
 
   Future<void> joinFamilyWithCode(String code, {String? familyName}) async {
     if (code.trim().length >= 6) {
-      _familyCode = code.trim().toUpperCase();
+      final cleanCode = code.trim().toUpperCase();
+      final disabled = await SupabaseService.isUserDisabledInFamily(
+        email: _userKey,
+        name: _currentUserName,
+        familyCode: cleanCode,
+      );
+      if (disabled) {
+        showToast('Access Denied: Your login is disabled in family $cleanCode');
+        return;
+      }
+      _familyCode = cleanCode;
       if (familyName != null && familyName.trim().isNotEmpty) {
         _familyName = familyName.trim();
       }
+      _familyVerificationOtp = await SupabaseService.getFamilyVerificationOtp(_familyCode);
       await _saveUserWorkspace();
       await SupabaseService.updateMetadata(
         familyName: _familyName,
@@ -393,15 +442,25 @@ class FinanceProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> rotateFamilyVerificationOtp() async {
+    if (_familyCode.isEmpty) return;
+    _familyVerificationOtp = await SupabaseService.regenerateFamilyVerificationOtp(_familyCode);
+    notifyListeners();
+    showToast('New Family Verification OTP: $_familyVerificationOtp');
+  }
+
   Future<void> addFamilyMember({
     required String name,
     required String rel,
     String role = 'Member',
+    String email = '',
   }) async {
     final cleanName = name.trim();
     if (cleanName.isEmpty) return;
+    final cleanEmail = email.trim().toLowerCase();
     final id = '${cleanName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}_${DateTime.now().millisecondsSinceEpoch % 10000}';
     final color = _memberPalette[_members.length % _memberPalette.length];
+    final otp = SupabaseService.generateSixDigitCode();
     _members.add(
       FamilyMemberDef(
         id: id,
@@ -410,11 +469,152 @@ class FinanceProvider extends ChangeNotifier {
         role: role,
         openingBalance: 0,
         color: color,
+        email: cleanEmail,
+        isDisabled: false,
+        isVerified: true,
+        memberOtp: otp,
       ),
+    );
+    if (_familyCode.isNotEmpty) {
+      await SupabaseService.markUserVerifiedInFamily(
+        email: cleanEmail.isNotEmpty ? cleanEmail : cleanName,
+        name: cleanName,
+        familyCode: _familyCode,
+      );
+      await SupabaseService.setUserDisabledInFamily(
+        email: cleanEmail,
+        name: cleanName,
+        familyCode: _familyCode,
+        disabled: false,
+      );
+    }
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('$cleanName added · Login OTP: $otp');
+  }
+
+  Future<void> toggleMemberDisabled(String memberId) async {
+    if (memberId == 'me') return;
+    final idx = _members.indexWhere((m) => m.id == memberId);
+    if (idx < 0) return;
+    final member = _members[idx];
+    final nextDisabled = !member.isDisabled;
+    _members[idx] = member.copyWith(isDisabled: nextDisabled);
+
+    if (_familyCode.isNotEmpty) {
+      await SupabaseService.setUserDisabledInFamily(
+        email: member.email,
+        name: member.name,
+        familyCode: _familyCode,
+        disabled: nextDisabled,
+      );
+    }
+    _notesWs.broadcastMemberDisabledChanged(
+      email: member.email,
+      name: member.name,
+      disabled: nextDisabled,
     );
     await _saveUserWorkspace();
     notifyListeners();
-    showToast('$cleanName added to $familyName');
+    showToast(
+      nextDisabled
+          ? '${member.name}\'s family login has been DISABLED'
+          : '${member.name}\'s family login has been ENABLED',
+    );
+  }
+
+  Future<void> regenerateMemberOtp(String memberId) async {
+    final idx = _members.indexWhere((m) => m.id == memberId);
+    if (idx < 0) return;
+    final newOtp = SupabaseService.generateSixDigitCode();
+    _members[idx] = _members[idx].copyWith(memberOtp: newOtp);
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('New Login OTP for ${_members[idx].name}: $newOtp');
+  }
+
+  Future<void> approveFamilyLoginRequest(FamilyLoginRequest req) async {
+    final idx = _familyLoginRequests.indexWhere((r) => r.id == req.id);
+    if (idx >= 0) {
+      _familyLoginRequests[idx] = req.copyWith(status: 'approved');
+    }
+    await SupabaseService.saveFamilyLoginRequests(_familyCode, _familyLoginRequests);
+    await SupabaseService.markUserVerifiedInFamily(
+      email: req.email,
+      name: req.name,
+      familyCode: _familyCode,
+    );
+    await SupabaseService.setUserDisabledInFamily(
+      email: req.email,
+      name: req.name,
+      familyCode: _familyCode,
+      disabled: false,
+    );
+
+    // Ensure they appear in the family member list as verified & active
+    final existingIdx = _members.indexWhere(
+      (m) =>
+          (req.email.isNotEmpty && m.email.toLowerCase() == req.email.toLowerCase()) ||
+          m.name.toLowerCase() == req.name.toLowerCase(),
+    );
+    if (existingIdx >= 0) {
+      _members[existingIdx] = _members[existingIdx].copyWith(
+        isDisabled: false,
+        isVerified: true,
+        email: req.email.isNotEmpty ? req.email : _members[existingIdx].email,
+      );
+    } else {
+      final color = _memberPalette[_members.length % _memberPalette.length];
+      _members.add(
+        FamilyMemberDef(
+          id: '${req.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}_${DateTime.now().millisecondsSinceEpoch % 10000}',
+          name: req.name,
+          rel: 'Family',
+          role: 'Member',
+          openingBalance: 0,
+          color: color,
+          email: req.email,
+          isDisabled: false,
+          isVerified: true,
+          memberOtp: req.verificationOtp,
+        ),
+      );
+    }
+
+    _notesWs.broadcastFamilyJoinDecision(
+      requestId: req.id,
+      email: req.email,
+      approved: true,
+    );
+    await _saveUserWorkspace();
+    notifyListeners();
+    showToast('Verified & approved ${req.name} for family login');
+  }
+
+  Future<void> rejectAndBlockFamilyLoginRequest(FamilyLoginRequest req) async {
+    final idx = _familyLoginRequests.indexWhere((r) => r.id == req.id);
+    if (idx >= 0) {
+      _familyLoginRequests[idx] = req.copyWith(status: 'rejected');
+    }
+    await SupabaseService.saveFamilyLoginRequests(_familyCode, _familyLoginRequests);
+    await SupabaseService.setUserDisabledInFamily(
+      email: req.email,
+      name: req.name,
+      familyCode: _familyCode,
+      disabled: true,
+    );
+    _notesWs.broadcastFamilyJoinDecision(
+      requestId: req.id,
+      email: req.email,
+      approved: false,
+    );
+    _notesWs.broadcastMemberDisabledChanged(
+      email: req.email,
+      name: req.name,
+      disabled: true,
+    );
+    notifyListeners();
+    showToast('Blocked ${req.name} from using your family login');
   }
 
   Future<void> removeFamilyMember(String id) async {
@@ -1072,6 +1272,37 @@ class FinanceProvider extends ChangeNotifier {
     }
   }
 
+  void _handleRemoteFamilyLoginRequest(FamilyLoginRequest req) async {
+    if (_familyCode.isEmpty) return;
+    _familyLoginRequests.removeWhere((r) => r.email.toLowerCase() == req.email.toLowerCase());
+    _familyLoginRequests.insert(0, req);
+    await SupabaseService.saveFamilyLoginRequests(_familyCode, _familyLoginRequests);
+    notifyListeners();
+    showToast('Security Alert: ${req.name} requested to use your Family Login');
+  }
+
+  void _handleRemoteMemberDisabledChanged(String email, String name, bool disabled) async {
+    final myEmail = _userKey.trim().toLowerCase();
+    final myName = _currentUserName.trim().toLowerCase();
+    final matchesMe = (email.isNotEmpty && email.toLowerCase() == myEmail) ||
+        (name.isNotEmpty && name.toLowerCase() == myName);
+    if (matchesMe && disabled) {
+      await logout();
+      showToast('Your access to this family login was disabled by the Family Owner.');
+      return;
+    }
+    final idx = _members.indexWhere(
+      (m) =>
+          (email.isNotEmpty && m.email.toLowerCase() == email.toLowerCase()) ||
+          (name.isNotEmpty && m.name.toLowerCase() == name.toLowerCase()),
+    );
+    if (idx >= 0 && _members[idx].id != 'me') {
+      _members[idx] = _members[idx].copyWith(isDisabled: disabled);
+      await _saveUserWorkspace();
+      notifyListeners();
+    }
+  }
+
   Future<void> saveNote(SharedNote note, {bool broadcast = true}) async {
     final updated = note.copyWith(
       updatedAtMs: DateTime.now().millisecondsSinceEpoch,
@@ -1282,6 +1513,7 @@ class FinanceProvider extends ChangeNotifier {
   int get notifBadgeCount {
     int count = 0;
     if (_approvals.isNotEmpty) count++;
+    if (pendingFamilyLoginRequests.isNotEmpty) count++;
     if (_smsQueue.isNotEmpty && autoSms) count++;
     return count;
   }

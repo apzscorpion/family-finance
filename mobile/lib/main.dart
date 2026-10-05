@@ -100,14 +100,6 @@ class MainNavigationScreen extends StatelessWidget {
               ),
             ),
 
-          // Custom Floating Bottom Navigation Bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildBottomBar(context, provider),
-          ),
-
           // Toast Banner Overlay
           if (provider.toastMessage != null)
             Positioned(
@@ -139,6 +131,12 @@ class MainNavigationScreen extends StatelessWidget {
               ),
             ),
         ],
+      ),
+      // Let Scaffold reserve space for navigation. Keeping this bar in the
+      // body Stack made every page render underneath it on shorter phones.
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: _buildBottomBar(context, provider),
       ),
     );
   }

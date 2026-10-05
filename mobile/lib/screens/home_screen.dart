@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../models/finance_models.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
-import '../widgets/quick_add_sheet.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -16,7 +15,9 @@ class HomeScreen extends StatelessWidget {
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 110),
+      // The Scaffold owns the bottom navigation bar, so content no longer
+      // needs an oversized overlay workaround.
+      padding: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -264,15 +265,13 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // Interactive Account / Wallet Selector (All, Cash, Salary, Loan, UPI, Bank, Card)
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: FinanceProvider.walletAccounts.map((acct) {
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: FinanceProvider.walletAccounts.map((acct) {
                         final isSelected = provider.selectedAccount == acct;
                         final bal = provider.accountBalance(acct);
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: GestureDetector(
+                        return GestureDetector(
                             onTap: () => provider.setSelectedAccount(acct),
                             onLongPress: acct == 'All'
                                 ? null
@@ -320,10 +319,8 @@ class HomeScreen extends StatelessWidget {
                                 ],
                               ),
                             ),
-                          ),
                         );
                       }).toList(),
-                    ),
                   ),
 
                   const SizedBox(height: 14),
@@ -392,13 +389,6 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _buildQuickActionButton(
                   context: context,
-                  label: 'Add expense',
-                  icon: Icons.add,
-                  isPrimary: true,
-                  onTap: () => QuickAddSheet.show(context),
-                ),
-                _buildQuickActionButton(
-                  context: context,
                   label: 'Cards',
                   icon: Icons.credit_card_rounded,
                   badge: provider.cards.isNotEmpty ? '${provider.cards.length}' : null,
@@ -448,7 +438,8 @@ class HomeScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
+                        Expanded(
+                          child: Row(
                           children: [
                             Container(
                               width: 34,
@@ -460,23 +451,31 @@ class HomeScreen extends StatelessWidget {
                               child: const Icon(Icons.credit_card_rounded, size: 18, color: AppTheme.accent200),
                             ),
                             const SizedBox(width: 10),
-                            Column(
+                            Expanded(
+                              child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'Credit Cards & Auto Usage (${provider.cards.length})',
                                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.text),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
                                   provider.cards.isEmpty
                                       ? 'Tap to add cards, limits & auto-detect SMS/statements'
                                       : 'Used ${formatInr(provider.totalCreditUsed)} of ${formatInr(provider.totalCreditLimit)} (${provider.totalCreditUtilizationPct.toStringAsFixed(0)}%)',
                                   style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
+                            ),
                           ],
                         ),
+                        ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
