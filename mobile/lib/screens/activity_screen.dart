@@ -276,7 +276,9 @@ class ActivityScreen extends StatelessWidget {
                                             border: Border.all(color: AppTheme.accent700),
                                           ),
                                           child: Text(
-                                            '${t.method} · Bal ${formatInr(provider.accountBalance(t.method))}',
+                                            t.cardId != null && provider.cardById(t.cardId) != null
+                                                ? '${provider.cardById(t.cardId)!.shortLabel} · Avl ${formatInr(provider.cardAvailableCredit(t.cardId!))}'
+                                                : '${t.method} · Bal ${formatInr(provider.accountBalance(t.method))}',
                                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.accent200),
                                           ),
                                         ),

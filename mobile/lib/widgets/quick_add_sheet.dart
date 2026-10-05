@@ -10,6 +10,8 @@ class QuickAddSheet extends StatefulWidget {
   final String? initialCategory;
   final String? initialTitle;
   final String? smsId;
+  final String? initialMethod;
+  final String? initialCardId;
 
   const QuickAddSheet({
     super.key,
@@ -18,9 +20,20 @@ class QuickAddSheet extends StatefulWidget {
     this.initialCategory,
     this.initialTitle,
     this.smsId,
+    this.initialMethod,
+    this.initialCardId,
   });
 
-  static void show(BuildContext context, {String type = 'expense', String? amount, String? cat, String? title, String? smsId}) {
+  static void show(
+    BuildContext context, {
+    String type = 'expense',
+    String? amount,
+    String? cat,
+    String? title,
+    String? smsId,
+    String? initialMethod,
+    String? initialCardId,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -31,6 +44,8 @@ class QuickAddSheet extends StatefulWidget {
         initialCategory: cat,
         initialTitle: title,
         smsId: smsId,
+        initialMethod: initialMethod,
+        initialCardId: initialCardId,
       ),
     );
   }
@@ -45,6 +60,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
   late String _selectedCatKey;
   String _selectedMethod = 'UPI';
   String _selectedMemberId = 'me';
+  String? _selectedCardId;
 
   String? _selectedSubCatKey;
 
@@ -59,13 +75,16 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
     _amountStr = widget.initialAmount ?? '';
     _selectedCatKey = widget.initialCategory ?? (_type == 'expense' ? 'groceries' : 'salary');
     final prov = Provider.of<FinanceProvider>(context, listen: false);
-    if (prov.selectedAccount != 'All' && _methods.contains(prov.selectedAccount)) {
+    if (widget.initialMethod != null && _methods.contains(widget.initialMethod)) {
+      _selectedMethod = widget.initialMethod!;
+    } else if (prov.selectedAccount != 'All' && _methods.contains(prov.selectedAccount)) {
       _selectedMethod = prov.selectedAccount;
     } else if (_type == 'income' && _selectedCatKey == 'salary') {
       _selectedMethod = 'Salary';
     } else if (_type == 'income' && _selectedCatKey == 'loan') {
       _selectedMethod = 'Loan';
     }
+    _selectedCardId = widget.initialCardId ?? (prov.cards.isNotEmpty ? prov.cards.first.id : null);
   }
 
   void _onKeyPress(String key) {
@@ -97,6 +116,10 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
       orElse: () => provider.members.first,
     );
 
+    final effectiveCardId = _selectedMethod == 'Card'
+        ? (_selectedCardId ?? (provider.cards.isNotEmpty ? provider.cards.first.id : null))
+        : null;
+
     if (isForOther) {
       provider.approvals.add(ApprovalItem(
         id: 'a_${DateTime.now().millisecondsSinceEpoch}',
@@ -116,6 +139,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
           method: _selectedMethod,
           origin: widget.smsId != null ? 'sms' : 'manual',
           time: 'Now',
+          cardId: effectiveCardId,
         ),
       ));
       if (widget.smsId != null) {
@@ -136,6 +160,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
         method: _selectedMethod,
         origin: widget.smsId != null ? 'sms' : 'manual',
         time: 'Now',
+        cardId: effectiveCardId,
       );
 
       if (widget.smsId != null) {
@@ -143,7 +168,12 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
       }
       provider.addTransaction(txn);
       Navigator.pop(context);
-      provider.showToast('${_type == 'expense' ? 'Expense' : 'Income'} of ₹${amt.toInt()} saved');
+      final cardObj = provider.cardById(effectiveCardId);
+      if (cardObj != null) {
+        provider.showToast('₹${amt.toInt()} charged to ${cardObj.shortLabel} · Avl ₹${provider.cardAvailableCredit(cardObj.id).round()}');
+      } else {
+        provider.showToast('${_type == 'expense' ? 'Expense' : 'Income'} of ₹${amt.toInt()} saved');
+      }
     }
   }
 
@@ -372,6 +402,60 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
               ),
             ],
           ),
+          if (_selectedMethod == 'Card') ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('Card: ', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppTheme.textMuted)),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ...provider.cards.map((c) {
+                          final isCardSel = _selectedCardId == c.id;
+                          final avail = provider.cardAvailableCredit(c.id);
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6.0),
+                            child: ChoiceChip(
+                              label: Text(
+                                '${c.shortLabel} · Avl ₹${avail.round()}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: isCardSel ? FontWeight.w600 : FontWeight.w400,
+                                  color: isCardSel ? AppTheme.accent100 : AppTheme.textMuted,
+                                ),
+                              ),
+                              selected: isCardSel,
+                              onSelected: (_) => setState(() => _selectedCardId = c.id),
+                              backgroundColor: AppTheme.bg,
+                              selectedColor: AppTheme.accent900,
+                              side: BorderSide(color: isCardSel ? AppTheme.accent : const Color(0xFF3F424D)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            ),
+                          );
+                        }),
+                        ActionChip(
+                          avatar: const Icon(Icons.add_card, size: 14, color: AppTheme.accent200),
+                          label: Text(
+                            provider.cards.isEmpty ? '+ Add Card' : 'Manage Cards',
+                            style: const TextStyle(fontSize: 11, color: AppTheme.accent200),
+                          ),
+                          backgroundColor: AppTheme.bg,
+                          side: const BorderSide(color: AppTheme.accent700),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            provider.openSubPage('cards');
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [
