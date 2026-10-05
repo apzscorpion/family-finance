@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/finance_models.dart';
 import 'supabase_service.dart';
+import 'app_log.dart';
 
 class LiveNotesWsService {
   WebSocket? _ws;
@@ -110,7 +111,9 @@ class LiveNotesWsService {
         });
 
         _channel = channel;
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('LiveNotesWsService.connect', err, errStack);
+      }
     }
 
     // 2. Also connect to local WebSocket if running on local emulator/dev server
@@ -143,7 +146,8 @@ class LiveNotesWsService {
         await _sendEvent('peer_hello', {'sender': _currentUserName});
         await requestRoomSync();
         break;
-      } catch (_) {
+      } catch (err, errStack) {
+        AppLog.error('LiveNotesWsService.connect', err, errStack);
         // Supabase Realtime handles internet sync when local dev server is not running
       }
     }
@@ -158,7 +162,9 @@ class LiveNotesWsService {
       if (payloadRaw is! Map) return;
       final payload = Map<String, dynamic>.from(payloadRaw);
       _dispatchEvent(event, payload);
-    } catch (_) {}
+    } catch (err, errStack) {
+      AppLog.error('LiveNotesWsService._handleIncomingMessage', err, errStack);
+    }
   }
 
   void _dispatchEvent(String event, Map<String, dynamic> payload) {
@@ -247,7 +253,9 @@ class LiveNotesWsService {
           onPeerRequestedWorkspaceSync?.call();
           break;
       }
-    } catch (_) {}
+    } catch (err, errStack) {
+      AppLog.error('LiveNotesWsService._dispatchEvent', err, errStack);
+    }
   }
 
   Future<void> _sendEvent(String event, Map<String, dynamic> payload) async {
@@ -263,7 +271,9 @@ class LiveNotesWsService {
           event: event,
           payload: fullPayload,
         );
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('LiveNotesWsService._sendEvent', err, errStack);
+      }
     }
 
     final socket = _ws;
@@ -273,7 +283,9 @@ class LiveNotesWsService {
           'event': event,
           'payload': fullPayload,
         }));
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('LiveNotesWsService._sendEvent', err, errStack);
+      }
     }
   }
 
@@ -394,13 +406,17 @@ class LiveNotesWsService {
     if (ch != null && SupabaseService.isConfigured) {
       try {
         await SupabaseService.client.removeChannel(ch);
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('LiveNotesWsService.disconnect', err, errStack);
+      }
     }
     await _wsSub?.cancel();
     _wsSub = null;
     try {
       await _ws?.close();
-    } catch (_) {}
+    } catch (err, errStack) {
+      AppLog.error('LiveNotesWsService.disconnect', err, errStack);
+    }
     _ws = null;
     onStateChanged?.call();
   }

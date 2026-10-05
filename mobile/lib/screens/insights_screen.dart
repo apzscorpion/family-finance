@@ -18,7 +18,7 @@ class InsightsScreen extends StatelessWidget {
       {'label': 'Last week', 'min': 7, 'max': 13},
       {'label': 'This week', 'min': 0, 'max': 6},
     ].map((w) {
-      final rangeTxns = provider.scopedTransactions.where((t) => t.daysAgo >= (w['min'] as int) && t.daysAgo <= (w['max'] as int)).toList();
+      final rangeTxns = provider.scopedTransactions.where((t) => t.ageInDays >= (w['min'] as int) && t.ageInDays <= (w['max'] as int)).toList();
       final inc = rangeTxns.where((t) => t.type == 'income').fold(0.0, (s, t) => s + t.amount);
       final exp = rangeTxns.where((t) => t.type == 'expense').fold(0.0, (s, t) => s + t.amount);
       return {'label': w['label'], 'inc': inc, 'exp': exp};

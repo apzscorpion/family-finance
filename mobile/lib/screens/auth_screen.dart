@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/finance_provider.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
+import '../services/app_log.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -103,7 +104,9 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
           _errorMsg = 'No 6-digit verification code found in clipboard.';
         });
       }
-    } catch (_) {}
+    } catch (err, errStack) {
+      AppLog.error('AuthScreen._tryAutoReadOtpFromClipboard', err, errStack);
+    }
   }
 
   Future<void> _handlePrimaryAuthAction(FinanceProvider provider) async {
@@ -120,14 +123,6 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
       setState(() {
         _loading = false;
         _errorMsg = 'Please enter a valid Email Address.';
-      });
-      return;
-    }
-
-    if (rawEmail.contains('sinanakaruvadan')) {
-      setState(() {
-        _loading = false;
-        _errorMsg = 'This account has been removed.';
       });
       return;
     }
@@ -155,9 +150,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
         _joinExistingFamily = true;
       }
 
-      final defaultName = rawEmail.contains('apzscorpion') || rawEmail.contains('asif')
-          ? 'Asif'
-          : rawEmail.split('@')[0];
+      final defaultName = rawEmail.split('@')[0];
       final enteredName = _nameCtrl.text.trim().isNotEmpty
           ? _nameCtrl.text.trim()
           : defaultName;
@@ -171,7 +164,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
       }
 
       final localAcct = await SupabaseService.getLocalAccount(rawEmail);
-      if (!_isSignUp && localAcct != null && localAcct.password.isNotEmpty && localAcct.password != pass) {
+      if (!_isSignUp && localAcct != null && localAcct.hasPassword && !localAcct.verifyPassword(pass)) {
         setState(() {
           _loading = false;
           _errorMsg = 'Incorrect password for $rawEmail.';
@@ -186,8 +179,34 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
       bool? cloudIsOwner;
       if (!_isSignUp) {
         try {
-          final cloudRes = await SupabaseService.signIn(email: rawEmail, password: pass);
-          final meta = cloudRes?.user?.userMetadata;
+          final outcome =
+              await SupabaseService.signInDetailed(email: rawEmail, password: pass);
+
+          // The server actively rejected these credentials -> never log in.
+          if (outcome.isRejected) {
+            setState(() {
+              _loading = false;
+              _errorMsg = outcome.message?.isNotEmpty == true
+                  ? outcome.message
+                  : 'Incorrect email or password.';
+            });
+            return;
+          }
+
+          // Cloud unreachable: only allow an offline login for an account that
+          // already exists on this device AND whose stored password matches.
+          if (outcome.status == SignInStatus.cloudUnavailable) {
+            if (localAcct == null || !localAcct.hasPassword || !localAcct.verifyPassword(pass)) {
+              setState(() {
+                _loading = false;
+                _errorMsg =
+                    'Could not reach the server. Connect to the internet to sign in to this account.';
+              });
+              return;
+            }
+          }
+
+          final meta = outcome.response?.user?.userMetadata;
           if (meta != null) {
             final cCode = meta['family_code']?.toString().trim().toUpperCase();
             if (cCode != null && cCode.length >= 6 && cCode != '38DJPUZ6' && cCode != 'MKSN3DGQ') {
@@ -203,7 +222,14 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
             }
             if (meta['is_owner'] is bool) cloudIsOwner = meta['is_owner'] as bool;
           }
-        } catch (_) {}
+        } catch (e) {
+          // Never fall through to a successful login on an unexpected auth error.
+          setState(() {
+            _loading = false;
+            _errorMsg = 'Could not sign in right now. Please try again.';
+          });
+          return;
+        }
       }
 
       String resolvedName = (!_isSignUp && (cloudFullName?.isNotEmpty == true))
@@ -212,7 +238,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
               ? localAcct.fullName
               : enteredName);
 
-      if (rawEmail.contains('apzscorpion') || rawEmail.contains('asif')) {
+      if (SupabaseService.ownerLegacyCodes.containsKey(rawEmail)) {
         if (resolvedName.toLowerCase().contains('tester') || resolvedName.toLowerCase() == 'apzscorpion') {
           resolvedName = 'Asif';
         }
@@ -229,8 +255,8 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
       String targetCode;
       if (joiningByCode && manualCode.length >= 6) {
         targetCode = manualCode;
-      } else if (rawEmail.contains('apzscorpion') || rawEmail.contains('asif')) {
-        targetCode = 'NTY5AFLR';
+      } else if (SupabaseService.ownerLegacyCodes.containsKey(rawEmail)) {
+        targetCode = SupabaseService.ownerLegacyCodes[rawEmail]!;
       } else if (_isSignUp) {
         targetCode = deterministicOwnerCode;
       } else {
@@ -407,7 +433,9 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
           type: OtpType.signup,
           email: _activeIdentifier,
         );
-      } catch (_) {}
+      } catch (err, errStack) {
+        AppLog.error('AuthScreen._resendEmailOtp', err, errStack);
+      }
     }
     if (mounted) {
       setState(() {

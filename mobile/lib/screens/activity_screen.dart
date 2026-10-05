@@ -24,7 +24,7 @@ class ActivityScreen extends StatelessWidget {
     // Group transactions by date
     final Map<int, List<TransactionDef>> groups = {};
     for (var t in filteredTxns) {
-      groups.putIfAbsent(t.daysAgo, () => []).add(t);
+      groups.putIfAbsent(t.ageInDays, () => []).add(t);
     }
     final sortedDays = groups.keys.toList()..sort();
 

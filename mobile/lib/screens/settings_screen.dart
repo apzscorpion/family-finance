@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../models/finance_models.dart';
 import '../providers/finance_provider.dart';
+import '../services/app_log.dart';
 import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 
@@ -743,10 +745,27 @@ class SettingsScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 44,
                 child: ElevatedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     final msg = reportCtrl.text.trim();
                     Navigator.pop(ctx);
-                    provider.showToast(msg.isNotEmpty ? 'Error report sent to developer (apzscorpion)' : 'Diagnostic log captured');
+                    // Previously this discarded the report and only showed a
+                    // toast. Open a prefilled GitHub issue with whatever errors
+                    // AppLog captured so the report actually reaches somewhere.
+                    final body = StringBuffer()
+                      ..writeln(msg.isNotEmpty ? msg : '(no description provided)')
+                      ..writeln()
+                      ..writeln('---')
+                      ..writeln('Recent errors:')
+                      ..writeln(AppLog.hasEntries ? AppLog.dump() : '(none captured)');
+                    final uri = Uri.parse(
+                      'https://github.com/${UpdateService.githubRepo}/issues/new'
+                      '?title=${Uri.encodeComponent('App error report')}'
+                      '&body=${Uri.encodeComponent(body.toString())}',
+                    );
+                    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    provider.showToast(opened
+                        ? 'Opening error report…'
+                        : 'Could not open the browser to send the report');
                   },
                   icon: const Icon(Icons.send_rounded, size: 16),
                   label: const Text('Send Error Log', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -790,3 +809,4 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
+
