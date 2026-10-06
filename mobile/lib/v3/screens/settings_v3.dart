@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../services/update_service.dart';
 import '../../theme/nocturne.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
+import '../sheets/update_sheet_v3.dart';
 import '../v3_design.dart';
 import '../v3_state.dart';
 import 'sources_manager_v3.dart';
@@ -246,6 +248,21 @@ class SettingsV3 extends StatelessWidget {
                 },
               ),
             ],
+          ),
+        ),
+
+        const _Kicker('About'),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Nocturne.surface,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: _DataRow(
+            icon: PhRegular.arrowCircleDown,
+            label: 'Version ${UpdateService.currentVersion} · check for updates',
+            onTap: () => UpdateSheetV3.check(context),
           ),
         ),
 

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../services/update_service.dart';
 import '../../theme/nocturne.dart';
 import '../phosphor_icons.dart';
+import '../sheets/update_sheet_v3.dart';
+import '../widgets/v3_motion.dart';
 
 /// Sign in / sign up.
 ///
@@ -101,7 +104,35 @@ class _AuthV3State extends State<AuthV3> {
           ),
         ),
         child: SafeArea(
-          child: Center(
+          child: Stack(
+            children: [
+              // Updating has to be reachable without signing in: someone on an
+              // old build may be unable to get past this screen, and settings
+              // sit behind the sign-in.
+              Positioned(
+                top: 4,
+                right: 4,
+                child: V3Press(
+                  onTap: () => UpdateSheetV3.check(context),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'v${UpdateService.currentVersion}',
+                          style: const TextStyle(
+                              fontSize: 11.5, color: Nocturne.neutral500),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(PhRegular.gear,
+                            size: 18, color: Nocturne.neutral400),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -270,6 +301,8 @@ class _AuthV3State extends State<AuthV3> {
                 ],
               ),
             ),
+          ),
+            ],
           ),
         ),
       ),
