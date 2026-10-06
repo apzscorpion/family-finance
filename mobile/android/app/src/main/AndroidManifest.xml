@@ -4,6 +4,20 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
+    <!-- Prayer alerts and payment reminders must survive a reboot, so the
+         plugin's boot receiver below needs this to re-register them. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <!-- Only requested if "Exact prayer alerts" is switched on. Inexact
+         scheduling is the default precisely because exact alarms are the
+         expensive option for battery. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+
+    <!-- Coarse location only, and only ever read once, behind the optional
+         "Use my location" button in prayer settings. The city picker is the
+         default path and needs no permission at all. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
     <!-- Explicitly strip any sensitive permissions that trigger Google Play Protect blocks -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove"/>
     <uses-permission android:name="android.permission.INSTALL_PACKAGES" tools:node="remove"/>
@@ -11,6 +25,14 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
     <uses-permission android:name="android.permission.READ_SMS" tools:node="remove"/>
     <uses-permission android:name="android.permission.RECEIVE_SMS" tools:node="remove"/>
+    <!-- geolocator_android merges ACCESS_FINE_LOCATION in. Nothing here needs
+         GPS-grade accuracy — a city-sized fix drives prayer times fine — so it
+         is stripped to keep the permission list as small as possible. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove"/>
+    <!-- image_picker hands off to the system camera app via ACTION_IMAGE_CAPTURE,
+         so the app itself never needs camera access. Stripped in case a
+         transitive manifest adds it, which would force a runtime prompt. -->
+    <uses-permission android:name="android.permission.CAMERA" tools:node="remove"/>
 
     <application
         android:label="Family Spend Tracker"
@@ -40,6 +62,34 @@
                 <data android:mimeType="text/plain"/>
             </intent-filter>
         </activity>
+
+        <!-- flutter_local_notifications does not declare these itself. Without
+             the boot receiver every scheduled prayer alert is silently lost on
+             restart; without the action receiver the "Add expense" button on
+             the ongoing notification does nothing. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false"/>
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
+            android:exported="false"/>
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- Asks Play Services to fetch the OCR model when the app is installed
+             rather than on first scan. Paired with the dependency substitution
+             in build.gradle.kts. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr" />
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
