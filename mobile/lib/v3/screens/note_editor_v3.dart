@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../theme/nocturne.dart';
 import '../data/data_export.dart';
 import '../data/note_blocks.dart';
+import '../data/note_structure.dart';
 import '../data/notes_presence.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';

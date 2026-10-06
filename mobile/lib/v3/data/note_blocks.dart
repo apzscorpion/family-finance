@@ -78,6 +78,32 @@ class NoteBlock {
         items: const [TodoItem(text: '')],
       );
 
+  /// A todo block from already-built items. Used by the paste structurer.
+  factory NoteBlock.todoItems(List<TodoItem> items) => NoteBlock(
+        id: _id(),
+        kind: NoteBlockKind.todo,
+        items: items.isEmpty ? const [TodoItem(text: '')] : items,
+      );
+
+  /// A table from a header row and body rows, padded to a uniform width.
+  factory NoteBlock.tableOf(List<String> head, List<List<String>> rows) {
+    final width = head.isEmpty ? 1 : head.length;
+    return NoteBlock(
+      id: _id(),
+      kind: NoteBlockKind.table,
+      head: head.isEmpty ? const ['Column 1'] : head,
+      rows: rows.isEmpty
+          ? [List.filled(width, '')]
+          : [
+              for (final r in rows)
+                [
+                  ...r.take(width),
+                  ...List.filled((width - r.length).clamp(0, width), ''),
+                ],
+            ],
+    );
+  }
+
   factory NoteBlock.table() => NoteBlock(
         id: _id(),
         kind: NoteBlockKind.table,
@@ -160,122 +186,6 @@ class NoteBlock {
           head.every((h) => h.trim().isEmpty) &&
               rows.every((r) => r.every((c) => c.trim().isEmpty)),
       };
-}
-
-/// Parses pasted text into blocks, detecting Markdown headings, checklists,
-/// bullet lists and pipe/tab/comma tables — the design's "format is detected
-/// for you".
-List<NoteBlock> parsePastedText(String raw) {
-  final lines = raw.replaceAll('\r\n', '\n').split('\n');
-  final blocks = <NoteBlock>[];
-
-  var i = 0;
-  final para = <String>[];
-
-  void flushParagraph() {
-    final joined = para.join('\n').trim();
-    if (joined.isNotEmpty) blocks.add(NoteBlock.paragraph(joined));
-    para.clear();
-  }
-
-  bool looksLikeTableRow(String l) =>
-      l.contains('|') || l.contains('\t') || l.split(',').length >= 3;
-
-  List<String> splitRow(String l) {
-    var s = l.trim();
-    if (s.startsWith('|')) s = s.substring(1);
-    if (s.endsWith('|')) s = s.substring(0, s.length - 1);
-    if (s.contains('|')) return s.split('|').map((c) => c.trim()).toList();
-    if (s.contains('\t')) return s.split('\t').map((c) => c.trim()).toList();
-    return s.split(',').map((c) => c.trim()).toList();
-  }
-
-  /// A Markdown separator row: |---|:--:|
-  bool isSeparator(String l) =>
-      RegExp(r'^\s*\|?[\s:-]+\|[\s:|-]*$').hasMatch(l) && l.contains('-');
-
-  while (i < lines.length) {
-    final line = lines[i];
-    final trimmed = line.trim();
-
-    if (trimmed.isEmpty) {
-      flushParagraph();
-      i++;
-      continue;
-    }
-
-    // Heading: # Title
-    final h = RegExp(r'^(#{1,6})\s+(.*)$').firstMatch(trimmed);
-    if (h != null) {
-      flushParagraph();
-      blocks.add(NoteBlock.heading(h.group(2)!.trim()));
-      i++;
-      continue;
-    }
-
-    // Checklist / bullet list run
-    final checkRe = RegExp(r'^\s*(?:[-*]\s*)?\[( |x|X)\]\s*(.*)$');
-    final bulletRe = RegExp(r'^\s*[-*•]\s+(.*)$');
-    if (checkRe.hasMatch(line) || bulletRe.hasMatch(line)) {
-      flushParagraph();
-      final items = <TodoItem>[];
-      while (i < lines.length) {
-        final l = lines[i];
-        final c = checkRe.firstMatch(l);
-        final b = bulletRe.firstMatch(l);
-        if (c != null) {
-          items.add(TodoItem(
-              text: c.group(2)!.trim(),
-              done: c.group(1)!.toLowerCase() == 'x'));
-        } else if (b != null) {
-          items.add(TodoItem(text: b.group(1)!.trim()));
-        } else {
-          break;
-        }
-        i++;
-      }
-      blocks.add(NoteBlock(
-          id: NoteBlock._id(), kind: NoteBlockKind.todo, items: items));
-      continue;
-    }
-
-    // Table run
-    if (looksLikeTableRow(line) && i + 1 < lines.length) {
-      final next = lines[i + 1];
-      if (looksLikeTableRow(next) || isSeparator(next)) {
-        flushParagraph();
-        final head = splitRow(line);
-        i++;
-        if (i < lines.length && isSeparator(lines[i])) i++;
-        final rows = <List<String>>[];
-        while (i < lines.length &&
-            lines[i].trim().isNotEmpty &&
-            looksLikeTableRow(lines[i])) {
-          final cells = splitRow(lines[i]);
-          // Pad or trim so every row matches the header width.
-          while (cells.length < head.length) {
-            cells.add('');
-          }
-          rows.add(cells.take(head.length).toList());
-          i++;
-        }
-        blocks.add(NoteBlock(
-          id: NoteBlock._id(),
-          kind: NoteBlockKind.table,
-          head: head,
-          rows: rows.isEmpty ? [List.filled(head.length, '')] : rows,
-        ));
-        continue;
-      }
-    }
-
-    para.add(line);
-    i++;
-  }
-
-  flushParagraph();
-  if (blocks.isEmpty) blocks.add(NoteBlock.paragraph());
-  return blocks;
 }
 
 /// Flattens blocks for the `content` mirror.
