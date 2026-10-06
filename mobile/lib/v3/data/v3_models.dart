@@ -285,6 +285,10 @@ class RecurringRow {
   final bool autoPost;
   final int remindDays;
 
+  /// Who the charge belongs to. The posted transaction is attributed to this
+  /// person rather than to whoever happened to trigger the posting.
+  final String? ownerUserId;
+
   const RecurringRow({
     required this.id,
     required this.title,
@@ -298,6 +302,7 @@ class RecurringRow {
     this.active = true,
     this.autoPost = false,
     this.remindDays = 2,
+    this.ownerUserId,
   });
 
   bool get isIncome =>
@@ -322,6 +327,7 @@ class RecurringRow {
       active: (j['active'] as bool?) ?? true,
       autoPost: (j['auto_post'] as bool?) ?? false,
       remindDays: (j['remind_days'] as num?)?.toInt() ?? 2,
+      ownerUserId: j['owner_user_id']?.toString(),
     );
   }
 

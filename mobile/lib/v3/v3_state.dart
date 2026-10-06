@@ -44,7 +44,16 @@ class V3State extends ChangeNotifier {
 
   // ── Selection ─────────────────────────────────────────────────────────────
   /// 'family', or a member's user id.
+  ///
+  /// Defaults to the signed-in member once the workspace loads: what someone
+  /// adds is their own spending, so landing on the household view made every
+  /// personal total look like everyone else's. The family view is still
+  /// reachable from the "View finances for" sheet.
   String scope = 'family';
+
+  /// True until the first load picks a scope, so a deliberate switch back to
+  /// the family view is never overwritten by a later refresh.
+  bool _scopeChosen = false;
   String period = '30d';
   bool hidden = false;
   String? srcFilter;
@@ -164,6 +173,14 @@ class V3State extends ChangeNotifier {
     detected = (results[11] as List<DetectedRow>?) ?? detected;
     prefs = (results[12] as PrefsRow?) ?? prefs;
 
+    if (!_scopeChosen) {
+      final mine = myId;
+      if (mine != null && members.any((m) => m.userId == mine)) {
+        scope = mine;
+        _scopeChosen = true;
+      }
+    }
+
     loading = false;
     notifyListeners();
   }
@@ -207,6 +224,7 @@ class V3State extends ChangeNotifier {
 
   void setScope(String s) {
     scope = s;
+    _scopeChosen = true;
     notifyListeners();
   }
 
@@ -497,6 +515,7 @@ class V3State extends ChangeNotifier {
     String? sourceId,
     bool autoPost = true,
     int remindDays = 2,
+    String? ownerUserId,
   }) async {
     final cat = categoryByKey(
         categoryKey ?? (type == 'income' ? 'salary' : 'bills'));
@@ -513,6 +532,7 @@ class V3State extends ChangeNotifier {
         sourceId: sourceId,
         autoPost: autoPost,
         remindDays: remindDays,
+        ownerUserId: ownerUserId ?? myId,
       ),
     );
     if (created == null) return false;
