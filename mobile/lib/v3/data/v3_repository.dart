@@ -367,13 +367,75 @@ class V3Repository {
   Future<List<RecurringRow>> recurring(String familyId) async {
     final rows = await _db
         .from('recurring_charges')
-        .select('id,title,amount,cadence,next_due,category_id,active,categories(key)')
+        .select('id,family_id,title,amount,cadence,next_due,category_id,source_id,card_id,active,auto_post,remind_days,categories(key)')
         .eq('family_id', familyId)
         .eq('active', true)
         .order('next_due');
     return (rows as List)
         .map((r) => RecurringRow.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
+  }
+
+  Future<RecurringRow> addRecurring({
+    required String familyId,
+    required String title,
+    required double amount,
+    required String cadence,
+    required DateTime nextDue,
+    String type = 'expense',
+    String? categoryId,
+    String? sourceId,
+    bool autoPost = true,
+    int remindDays = 2,
+  }) async {
+    final payload = <String, dynamic>{
+      'family_id': familyId,
+      'title': title,
+      'amount': amount,
+      'cadence': cadence,
+      'next_due': nextDue.toIso8601String().substring(0, 10),
+      'type': type,
+      'category_id': ?categoryId,
+      'source_id': ?sourceId,
+      'auto_post': autoPost,
+      'remind_days': remindDays,
+      'active': true,
+    };
+
+    Map<String, dynamic> row;
+    try {
+      row = await _db
+          .from('recurring_charges')
+          .insert(payload)
+          .select('id,family_id,title,amount,cadence,next_due,category_id,source_id,card_id,active,auto_post,remind_days,categories(key)')
+          .single();
+    } catch (_) {
+      // Fallback if 'type' column is not yet created in the database schema:
+      payload.remove('type');
+      row = await _db
+          .from('recurring_charges')
+          .insert(payload)
+          .select('id,family_id,title,amount,cadence,next_due,category_id,source_id,card_id,active,auto_post,remind_days,categories(key)')
+          .single();
+    }
+    return RecurringRow.fromJson({...row, 'type': type});
+  }
+
+  Future<void> updateRecurring(String id, Map<String, dynamic> patch) async {
+    await _db.from('recurring_charges').update(patch).eq('id', id);
+  }
+
+  Future<void> deleteRecurring(String id) async {
+    await _db.from('recurring_charges').delete().eq('id', id);
+  }
+
+  Future<int> postDueRecurring(String familyId) async {
+    try {
+      final res = await _db.rpc('post_due_recurring', params: {'p_family': familyId});
+      return (res as num?)?.toInt() ?? 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   Future<List<CardRow>> cards(String familyId) async {

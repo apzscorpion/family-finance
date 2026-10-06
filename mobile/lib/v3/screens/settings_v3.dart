@@ -14,6 +14,7 @@ import 'import_v3.dart';
 import '../v3_design.dart';
 import '../v3_state.dart';
 import 'sources_manager_v3.dart';
+import '../sheets/v3_sheets.dart';
 import '../widgets/v3_primitives.dart';
 
 /// Settings: the profile card, grouped toggles, display segments and data rows.
@@ -117,6 +118,12 @@ class SettingsV3 extends StatelessWidget {
                 icon: PhRegular.wallet,
                 label: 'Money sources (${s.sources.length})',
                 onTap: () => SourcesManagerV3.open(context),
+              ),
+              const V3RowDivider(),
+              _DataRow(
+                icon: PhRegular.arrowsClockwise,
+                label: 'Recurring rules (${s.recurring.length})',
+                onTap: () => V3Sheets.openRecurring(context),
               ),
               const V3RowDivider(),
               _DataRow(

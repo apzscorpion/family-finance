@@ -275,6 +275,10 @@ class RecurringRow {
   final String categoryKey;
   final bool active;
 
+  /// Either 'expense' or 'income'.
+  final String type;
+  final String? sourceId;
+
   /// True when the money leaves the account by itself (an EMI or a standing
   /// instruction), so the server posts the transaction on the due date and the
   /// app only needs to remind for the rest.
@@ -287,6 +291,8 @@ class RecurringRow {
     required this.amount,
     required this.cadence,
     required this.nextDue,
+    this.type = 'expense',
+    this.sourceId,
     this.categoryId,
     this.categoryKey = 'bills',
     this.active = true,
@@ -294,16 +300,25 @@ class RecurringRow {
     this.remindDays = 2,
   });
 
+  bool get isIncome =>
+      type == 'income' || V3Design.incomeCats.contains(categoryKey);
+  bool get isExpense => !isIncome;
+
   factory RecurringRow.fromJson(Map<String, dynamic> j) {
     final cat = j['categories'];
+    final cKey = cat is Map ? (cat['key']?.toString() ?? 'bills') : 'bills';
+    final inferredType =
+        j['type']?.toString() ?? (V3Design.incomeCats.contains(cKey) ? 'income' : 'expense');
     return RecurringRow(
       id: j['id'].toString(),
       title: j['title']?.toString() ?? '',
       amount: _num(j['amount']),
       cadence: j['cadence']?.toString() ?? 'monthly',
       nextDue: _ts(j['next_due']),
+      type: inferredType,
+      sourceId: j['source_id']?.toString(),
       categoryId: j['category_id']?.toString(),
-      categoryKey: cat is Map ? (cat['key']?.toString() ?? 'bills') : 'bills',
+      categoryKey: cKey,
       active: (j['active'] as bool?) ?? true,
       autoPost: (j['auto_post'] as bool?) ?? false,
       remindDays: (j['remind_days'] as num?)?.toInt() ?? 2,

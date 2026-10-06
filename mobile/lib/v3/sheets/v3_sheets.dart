@@ -9,7 +9,8 @@ import '../v3_design.dart';
 import '../screens/sources_manager_v3.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
-import '../widgets/v3_motion.dart';
+import 'calc_engine.dart';
+import 'recurring_sheet_v3.dart';
 
 /// Bottom sheets, matching the design's single sheet container:
 ///   `border-radius:28px 28px 0 0; background:var(--color-surface);
@@ -46,6 +47,9 @@ class V3Sheets {
 
   static Future<void> openApproval(BuildContext context, ApprovalRow a) =>
       _show(context, V3ApprovalSheet(approval: a));
+
+  static Future<void> openRecurring(BuildContext context) =>
+      _show(context, const V3RecurringSheet());
 }
 
 class _SheetShell extends StatelessWidget {
@@ -454,23 +458,30 @@ class V3AddSheet extends StatefulWidget {
 
 class _V3AddSheetState extends State<V3AddSheet> {
   String _type = 'expense';
-  String _amount = '';
+  String _expression = '';
   String _catKey = 'groceries';
   String _method = 'UPI';
   String? _sourceId;
-  String? _forUser;
   final _note = TextEditingController();
-  bool _split = false;
-  final Set<String> _splitWith = {};
 
-  /// Who actually paid. Defaults to me.
-  String? _paidBy;
+  /// Single "For" selector members. Defaults to logged-in user.
+  final Set<String> _selectedMembers = {};
 
-  /// When false the payer takes no share — "I paid this entirely for them".
-  bool _payerShares = true;
+  /// Split mode:
+  /// - 'gift': "I pay for them / no return" (nobody owes anything)
+  /// - 'full_owe': "They owe 100%"
+  /// - 'equal': divided equally among all selected
+  /// - 'partial': custom partial amount
+  String _splitMode = 'equal';
+  double _partialOwed = 0;
+  final Map<String, double> _customShares = {};
+
+  /// Toggle to repeat monthly on this day of month
+  bool _repeatMonthly = false;
+
   bool _saving = false;
 
-  static const _methods = ['UPI', 'Cash', 'Card', 'Bank'];
+  static const _methods = ['UPI', 'Cash', 'Card', 'Bank', 'Loan'];
 
   @override
   void initState() {
@@ -478,14 +489,20 @@ class _V3AddSheetState extends State<V3AddSheet> {
     final e = widget.edit;
     if (e != null) {
       _type = e.type;
-      _amount = e.amount.toStringAsFixed(0);
+      _expression = CalcEngine.format(e.amount);
       _catKey = e.categoryKey;
       _method = e.method;
       _sourceId = e.sourceId;
-      _forUser = e.userId;
       _note.text = e.title;
-      _splitWith.addAll(e.splitWith);
-      _split = _splitWith.isNotEmpty;
+      if (e.shares.isNotEmpty) {
+        _selectedMembers.addAll(e.shares.keys);
+        _splitMode = 'equal';
+      } else if (e.userId != null) {
+        _selectedMembers.add(e.userId!);
+        if (e.paidBy != null && e.paidBy != e.userId) {
+          _splitMode = 'gift';
+        }
+      }
     }
   }
 
@@ -495,69 +512,136 @@ class _V3AddSheetState extends State<V3AddSheet> {
     super.dispose();
   }
 
-  double get _value => double.tryParse(_amount) ?? 0;
+  double get _value => CalcEngine.evaluate(_expression);
 
   void _press(String k) {
     HapticFeedback.selectionClick();
     setState(() {
       if (k == '<') {
-        if (_amount.isNotEmpty) {
-          _amount = _amount.substring(0, _amount.length - 1);
+        if (_expression.isNotEmpty) {
+          _expression = _expression.substring(0, _expression.length - 1);
         }
+      } else if (k == '=') {
+        final res = _value;
+        if (res > 0) _expression = CalcEngine.format(res);
       } else if (k == '.') {
-        if (!_amount.contains('.')) _amount += _amount.isEmpty ? '0.' : '.';
+        // Prevent duplicate dot in the current operand
+        final parts = _expression.split(RegExp(r'[\+\-×÷]'));
+        final lastPart = parts.isNotEmpty ? parts.last : '';
+        if (!lastPart.contains('.')) {
+          _expression += lastPart.isEmpty ? '0.' : '.';
+        }
+      } else if (k == '+' || k == '-' || k == '×' || k == '÷') {
+        if (_expression.isNotEmpty) {
+          if (_expression.endsWith('+') ||
+              _expression.endsWith('-') ||
+              _expression.endsWith('×') ||
+              _expression.endsWith('÷')) {
+            _expression =
+                _expression.substring(0, _expression.length - 1) + k;
+          } else {
+            _expression += k;
+          }
+        }
       } else {
-        if (_amount.contains('.') && _amount.split('.')[1].length >= 2) return;
-        if (_amount.length >= 9) return;
-        _amount = (_amount == '0' ? '' : _amount) + k;
+        if (_expression.length >= 18) return;
+        _expression += k;
       }
     });
   }
 
+  void _clearAll() {
+    HapticFeedback.mediumImpact();
+    setState(() => _expression = '');
+  }
+
   Future<void> _save() async {
     final s = context.read<V3State>();
-    if (_value <= 0 || _saving) return;
+    final amountToSave = _value;
+    if (amountToSave <= 0 || _saving) return;
     setState(() => _saving = true);
 
-    final payer = _paidBy ?? s.myId;
+    final myId = s.myId;
+    final isMulti = _selectedMembers.length > 1;
+    final isOnlyMe = _selectedMembers.length == 1 && _selectedMembers.contains(myId);
+    final isOtherSingle = _selectedMembers.length == 1 && !isOnlyMe;
 
-    // Beneficiaries each owe an equal part. The payer is only included when
-    // they are actually sharing the cost — "I paid this entirely for her"
-    // leaves the payer owing nothing.
     Map<String, double>? shares;
-    if (_split && _splitWith.isNotEmpty) {
-      final people = <String>{
-        ..._splitWith,
-        if (_payerShares && payer != null) payer,
-      };
-      final each = _value / people.length;
-      shares = {for (final p in people) p: each};
+    String? forUserId;
+    String? paidBy = myId;
+
+    if (isOnlyMe) {
+      forUserId = myId;
+      paidBy = myId;
+      shares = null;
+    } else if (isOtherSingle) {
+      final otherId = _selectedMembers.first;
+      forUserId = otherId;
+      paidBy = myId;
+      if (_splitMode == 'gift') {
+        // "No return, paying for them"
+        shares = null;
+      } else if (_splitMode == 'full_owe') {
+        // "They owe 100%"
+        shares = {otherId: amountToSave};
+      } else if (_splitMode == 'partial') {
+        final owed = _partialOwed > 0 ? _partialOwed : (amountToSave / 2);
+        shares = {otherId: owed};
+      }
+    } else if (isMulti) {
+      forUserId = myId;
+      paidBy = myId;
+      if (_splitMode == 'gift') {
+        shares = null;
+      } else if (_splitMode == 'equal') {
+        final each = amountToSave / _selectedMembers.length;
+        shares = {for (final m in _selectedMembers) m: each};
+      } else if (_splitMode == 'partial') {
+        shares = _customShares.isNotEmpty
+            ? _customShares
+            : {for (final m in _selectedMembers) m: amountToSave / _selectedMembers.length};
+      }
     }
 
+    final title = _note.text.trim();
     final ok = widget.edit != null
         ? await s.updateTransaction(
             id: widget.edit!.id,
-            title: _note.text.trim(),
-            amount: _value,
+            title: title,
+            amount: amountToSave,
             type: _type,
             categoryKey: _catKey,
             method: _method,
             sourceId: _sourceId,
-            forUserId: _forUser,
-            paidBy: payer,
+            forUserId: forUserId,
+            paidBy: paidBy,
             shares: shares,
           )
         : await s.addTransaction(
-            title: _note.text.trim(),
-            amount: _value,
+            title: title,
+            amount: amountToSave,
             type: _type,
             categoryKey: _catKey,
             method: _method,
             sourceId: _sourceId,
-            forUserId: _forUser,
-            paidBy: payer,
+            forUserId: forUserId,
+            paidBy: paidBy,
             shares: shares,
           );
+
+    if (ok && _repeatMonthly) {
+      final now = DateTime.now();
+      await s.addRecurring(
+        title: title.isEmpty ? (s.categoryByKey(_catKey)?.name ?? 'Recurring') : title,
+        amount: amountToSave,
+        cadence: 'monthly',
+        nextDue: now,
+        type: _type,
+        categoryKey: _catKey,
+        sourceId: _sourceId,
+        autoPost: true,
+      );
+    }
 
     if (!mounted) return;
     setState(() => _saving = false);
@@ -576,76 +660,94 @@ class _V3AddSheetState extends State<V3AddSheet> {
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
     final keys = const [
-      '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '<',
+      '1', '2', '3', '+',
+      '4', '5', '6', '-',
+      '7', '8', '9', '×',
+      '.', '0', '<', '=',
     ];
     final catKeys =
         _type == 'expense' ? V3Design.expenseCats : V3Design.incomeCats;
     final members = s.members.where((m) => m.isActive).toList();
 
-    // The save button is pinned beneath the scrolling body. It used to be the
-    // last item inside the scroll view, so on shorter screens it sat below the
-    // fold: tapping where the button appeared to be did nothing, which made
-    // saving look broken rather than merely out of view.
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+    // Default to me if empty
+    if (_selectedMembers.isEmpty && s.myId != null) {
+      _selectedMembers.add(s.myId!);
+    }
+
+    final isMulti = _selectedMembers.length > 1;
+    final isOtherSingle =
+        _selectedMembers.length == 1 && !_selectedMembers.contains(s.myId);
+    final otherMember = isOtherSingle
+        ? members.firstWhere((m) => m.userId == _selectedMembers.first,
+            orElse: () => members.first)
+        : null;
+
+    final hasMath = CalcEngine.hasOperator(_expression);
+    final evaluated = _value;
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // ── Header: Add entry + Type toggle + Checkmark Save button ─────────
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(widget.edit == null ? 'Add entry' : 'Edit entry',
                   style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: Nocturne.text)),
+              const Spacer(),
               V3Segmented(
                 labels: const ['Expense', 'Income'],
                 selected: _type == 'expense' ? 0 : 1,
                 ground: Nocturne.bg,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 onChanged: (i) => setState(() {
                   _type = i == 0 ? 'expense' : 'income';
                   _catKey = i == 0 ? 'groceries' : 'salary';
                 }),
               ),
+              const SizedBox(width: 10),
+              // Header Save Checkmark (✓)
+              GestureDetector(
+                onTap: (evaluated > 0 && !_saving) ? _save : null,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: evaluated > 0
+                        ? (_type == 'income'
+                            ? NocturneSemantic.income
+                            : Nocturne.accent)
+                        : Nocturne.neutral800,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : Icon(
+                          PhBold.check,
+                          size: 20,
+                          color: evaluated > 0
+                              ? Colors.white
+                              : Nocturne.neutral500,
+                        ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Center(
-            child: RichText(
-              text: TextSpan(
-                children: [
-                  const TextSpan(
-                    text: '₹',
-                    style: TextStyle(
-                        fontSize: 24,
-                        color: Nocturne.neutral500,
-                        fontFamily: Nocturne.fontFamily),
-                  ),
-                  TextSpan(
-                    text: _amount.isEmpty ? '0' : _amount,
-                    style: TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -0.84,
-                      fontFamily: Nocturne.fontFamily,
-                      color: _type == 'income'
-                          ? NocturneSemantic.income
-                          : Nocturne.text,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+
+          // ── Note / Merchant text field ────────────────────────────────────
           Container(
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -678,59 +780,63 @@ class _V3AddSheetState extends State<V3AddSheet> {
             ),
           ),
           const SizedBox(height: 10),
-          // 5-up category grid
-          GridView.count(
-            crossAxisCount: 5,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
-            childAspectRatio: 0.92,
-            children: [
-              for (final k in catKeys)
-                Builder(builder: (_) {
-                  final c = s.catStyle(k);
-                  final sel = _catKey == k;
-                  return GestureDetector(
-                    onTap: () => setState(() => _catKey = k),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: sel ? Nocturne.mix(c.color, 16) : Nocturne.bg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: sel ? c.color : Nocturne.neutral900,
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(c.icon, size: 19, color: c.color),
-                          const SizedBox(height: 4),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 2),
-                            child: Text(
-                              c.short,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: sel
-                                    ? Nocturne.text
-                                    : Nocturne.neutral500,
-                              ),
-                            ),
-                          ),
-                        ],
+
+          // ── Single-line Categories with horizontal scroll ─────────────────
+          SizedBox(
+            height: 58,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: catKeys.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final k = catKeys[i];
+                final c = s.catStyle(k);
+                final sel = _catKey == k;
+                return GestureDetector(
+                  onTap: () => setState(() => _catKey = k),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    width: 62,
+                    decoration: BoxDecoration(
+                      color: sel ? Nocturne.mix(c.color, 18) : Nocturne.bg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: sel ? c.color : Nocturne.neutral800,
+                        width: 1.2,
                       ),
                     ),
-                  );
-                }),
-            ],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(c.icon,
+                            size: 20,
+                            color: sel ? c.color : Nocturne.neutral400),
+                        const SizedBox(height: 3),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: Text(
+                            c.short,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight:
+                                  sel ? FontWeight.w600 : FontWeight.w400,
+                              color: sel ? Nocturne.text : Nocturne.neutral400,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
+
+          // ── From / Into Source chips ──────────────────────────────────────
           if (s.sources.isNotEmpty) ...[
             const SizedBox(height: 10),
             _ChipRow(
@@ -743,13 +849,15 @@ class _V3AddSheetState extends State<V3AddSheet> {
                     selected: _sourceId == src.id,
                     icon: src.design.icon,
                     iconColor: src.design.color,
-                    onTap: () => setState(() => _sourceId =
-                        _sourceId == src.id ? null : src.id),
+                    onTap: () => setState(() =>
+                        _sourceId = _sourceId == src.id ? null : src.id),
                   ),
               ],
             ),
           ],
           const SizedBox(height: 8),
+
+          // ── Paid via chips ────────────────────────────────────────────────
           _ChipRow(
             label: 'Paid via',
             children: [
@@ -762,6 +870,8 @@ class _V3AddSheetState extends State<V3AddSheet> {
                 ),
             ],
           ),
+
+          // ── ONLY ONE "For" selector (default: you, multi-selectable) ───────
           if (members.length > 1) ...[
             const SizedBox(height: 10),
             Row(
@@ -781,17 +891,60 @@ class _V3AddSheetState extends State<V3AddSheet> {
                       separatorBuilder: (_, _) => const SizedBox(width: 8),
                       itemBuilder: (_, i) {
                         final m = members[i];
-                        final sel = (_forUser ?? s.myId) == m.userId;
+                        final isMe = m.userId == s.myId;
+                        final sel = _selectedMembers.contains(m.userId);
                         return GestureDetector(
-                          onTap: () => setState(() => _forUser = m.userId),
-                          child: V3Avatar(
-                            initial: m.initial,
-                            color: m.color,
-                            size: 30,
-                            fontSize: 11.5,
-                            opacity: sel ? 1 : 0.45,
-                            ringColor: sel ? Nocturne.accent400 : null,
-                            ringGround: Nocturne.surface,
+                          onTap: () => setState(() {
+                            if (sel) {
+                              if (_selectedMembers.length > 1) {
+                                _selectedMembers.remove(m.userId);
+                              }
+                            } else {
+                              _selectedMembers.add(m.userId);
+                            }
+                          }),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: sel
+                                  ? Nocturne.mix(m.color, 20)
+                                  : Nocturne.bg,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: sel ? m.color : Nocturne.neutral800,
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                V3Avatar(
+                                  initial: m.initial,
+                                  color: m.color,
+                                  size: 22,
+                                  fontSize: 10,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isMe ? 'You' : m.name,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: sel
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: sel
+                                        ? Nocturne.text
+                                        : Nocturne.neutral400,
+                                  ),
+                                ),
+                                if (sel) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(PhBold.check, size: 12, color: m.color),
+                                ],
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -800,196 +953,380 @@ class _V3AddSheetState extends State<V3AddSheet> {
                 ),
               ],
             ),
-          ],
-          // With nobody else in the workspace these controls were hidden
-          // entirely, which made a built feature look missing rather than
-          // inapplicable. Say why instead.
-          if (_type == 'expense' && members.length <= 1) ...[
-            const SizedBox(height: 10),
+          ] else if (_type == 'expense') ...[
+            const SizedBox(height: 8),
             Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+                  const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
               decoration: BoxDecoration(
                 color: Nocturne.bg,
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Nocturne.neutral800, width: 1),
               ),
               child: const Row(
                 children: [
                   Icon(PhRegular.usersThree,
-                      size: 16, color: Nocturne.neutral500),
-                  SizedBox(width: 9),
+                      size: 15, color: Nocturne.neutral500),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Invite someone to this workspace to record who an '
-                      'expense was for, and whether they owe you back.',
+                      'Invite members in More to split expenses and track who owes what.',
                       style: TextStyle(
-                          fontSize: 11.5,
-                          height: 1.4,
-                          color: Nocturne.neutral500),
+                          fontSize: 11, color: Nocturne.neutral500),
                     ),
                   ),
                 ],
               ),
             ),
           ],
-          if (_type == 'expense' && members.length > 1) ...[
+
+          // ── Split / Paying for someone section ─────────────────────────────
+          if (isOtherSingle && otherMember != null) ...[
             const SizedBox(height: 10),
-            GestureDetector(
-              onTap: () => setState(() => _split = !_split),
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: Nocturne.bg,
-                  borderRadius: BorderRadius.circular(11),
-                  border: Border.all(
-                      color: _split ? Nocturne.accent600 : Nocturne.neutral800,
-                      width: 1),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(PhRegular.usersThree,
-                        size: 16, color: Nocturne.neutral400),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text('Paid for someone',
-                          style: TextStyle(
-                              fontSize: 12.5, color: Nocturne.text)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Nocturne.bg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Nocturne.neutral800, width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(PhRegular.gift,
+                          size: 16, color: Nocturne.accent300),
+                      const SizedBox(width: 6),
+                      Text('Paying for ${otherMember.name}',
+                          style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: Nocturne.text)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _splitChip('I cover it (Gift)', 'gift'),
+                      const SizedBox(width: 6),
+                      _splitChip('They owe 100%', 'full_owe'),
+                      const SizedBox(width: 6),
+                      _splitChip('Partial', 'partial'),
+                    ],
+                  ),
+                  if (_splitMode == 'gift') ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'You pay for ${otherMember.name}. They owe ₹0.',
+                      style: const TextStyle(
+                          fontSize: 11.5, color: Nocturne.accent200),
                     ),
-                    _MiniToggle(on: _split),
+                  ] else if (_splitMode == 'full_owe') ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '${otherMember.name} owes you the full amount (${V3Design.inr(evaluated)}).',
+                      style: const TextStyle(
+                          fontSize: 11.5, color: Nocturne.accent200),
+                    ),
+                  ] else if (_splitMode == 'partial') ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text('Amount ${otherMember.name} owes you: ',
+                            style: const TextStyle(
+                                fontSize: 12, color: Nocturne.neutral400)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            height: 32,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Nocturne.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: Nocturne.neutral700, width: 1),
+                            ),
+                            child: TextField(
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(
+                                  fontSize: 13, color: Nocturne.text),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                border: InputBorder.none,
+                                hintText: evaluated > 0
+                                    ? (evaluated / 2).toStringAsFixed(0)
+                                    : '0',
+                                hintStyle: const TextStyle(
+                                    fontSize: 13, color: Nocturne.neutral600),
+                              ),
+                              onChanged: (v) => _partialOwed =
+                                  double.tryParse(v) ?? 0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
-            if (_split) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Nocturne.bg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Text('For',
-                        style: TextStyle(
-                            fontSize: 11.5, color: Nocturne.neutral500)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: SizedBox(
-                        height: 28,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: members.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(width: 6),
-                          itemBuilder: (_, i) {
-                            final m = members[i];
-                            final on = _splitWith.contains(m.userId);
-                            return GestureDetector(
-                              onTap: () => setState(() => on
-                                  ? _splitWith.remove(m.userId)
-                                  : _splitWith.add(m.userId)),
-                              child: V3Avatar(
-                                initial: m.initial,
-                                color: m.color,
-                                size: 28,
-                                fontSize: 11,
-                                opacity: on ? 1 : 0.4,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    if (_splitWith.isNotEmpty && _value > 0)
-                      V3Num(
-                        '${V3Design.inr(_value / (_splitWith.length + (_payerShares ? 1 : 0)))} each',
-                        style: const TextStyle(
-                            fontSize: 11.5, color: Nocturne.accent200),
-                      ),
-                  ],
-                ),
+          ] else if (isMulti) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Nocturne.bg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Nocturne.neutral800, width: 1),
               ),
-            ],
-            GestureDetector(
-              onTap: () => setState(() => _payerShares = !_payerShares),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                  children: [
-                    _MiniToggle(on: _payerShares),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _payerShares
-                            ? "I'm sharing this too"
-                            : 'I paid it entirely for them',
-                        style: const TextStyle(
-                            fontSize: 12, color: Nocturne.neutral300),
-                      ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(PhRegular.usersThree,
+                          size: 16, color: Nocturne.accent300),
+                      const SizedBox(width: 6),
+                      Text('Split among ${_selectedMembers.length} members',
+                          style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: Nocturne.text)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _splitChip('Equal share', 'equal'),
+                      const SizedBox(width: 6),
+                      _splitChip('I cover all (Gift)', 'gift'),
+                      const SizedBox(width: 6),
+                      _splitChip('Partial', 'partial'),
+                    ],
+                  ),
+                  if (_splitMode == 'equal' && evaluated > 0) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '${V3Design.inr(evaluated / _selectedMembers.length)} each (${_selectedMembers.length} people)',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Nocturne.accent200),
+                    ),
+                  ] else if (_splitMode == 'gift') ...[
+                    const SizedBox(height: 6),
+                    const Text(
+                      'You pay for everyone. No one owes anything back.',
+                      style: TextStyle(
+                          fontSize: 11.5, color: Nocturne.accent200),
                     ),
                   ],
-                ),
+                ],
               ),
             ),
           ],
-          const SizedBox(height: 12),
+
+          // ── Repeat monthly (Recurring) toggle ─────────────────────────────
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => setState(() => _repeatMonthly = !_repeatMonthly),
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Nocturne.bg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _repeatMonthly
+                      ? Nocturne.accent600
+                      : Nocturne.neutral800,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(PhRegular.arrowsClockwise,
+                      size: 16,
+                      color: _repeatMonthly
+                          ? Nocturne.accent300
+                          : Nocturne.neutral500),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Repeat monthly on the ${_daySuffix(DateTime.now().day)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _repeatMonthly
+                            ? Nocturne.text
+                            : Nocturne.neutral400,
+                      ),
+                    ),
+                  ),
+                  _MiniToggle(on: _repeatMonthly),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // ── Calculator Input Display (attached directly to keypad) ────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Nocturne.bg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Nocturne.neutral800, width: 1),
+            ),
+            child: Row(
+              children: [
+                const Text('₹',
+                    style: TextStyle(
+                        fontSize: 20, color: Nocturne.neutral500)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _expression.isEmpty ? '0' : _expression,
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
+                      color: _type == 'income'
+                          ? NocturneSemantic.income
+                          : Nocturne.text,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+                if (hasMath && evaluated > 0) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Nocturne.accent900,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: Nocturne.accent700, width: 1),
+                    ),
+                    child: Text(
+                      '= ₹${CalcEngine.format(evaluated)}',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Nocturne.accent200),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // ── 4-column Calculator Keypad ────────────────────────────────────
           GridView.count(
-            crossAxisCount: 3,
+            crossAxisCount: 4,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 6,
             crossAxisSpacing: 6,
-            childAspectRatio: 2.6,
+            childAspectRatio: 1.85,
             children: [
               for (final k in keys)
-                _Key(label: k, onTap: () => _press(k)),
+                _CalcKey(
+                  label: k,
+                  onTap: () => _press(k),
+                  onLongPress: k == '<' ? _clearAll : null,
+                ),
             ],
           ),
-          const SizedBox(height: 12),
-            ],
-          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _splitChip(String label, String mode) {
+    final sel = _splitMode == mode;
+    return GestureDetector(
+      onTap: () => setState(() => _splitMode = mode),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: sel ? Nocturne.neutral700 : Nocturne.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: sel ? Nocturne.neutral500 : Nocturne.neutral800,
+              width: 1),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
+            color: sel ? Nocturne.text : Nocturne.neutral400,
           ),
         ),
-        const SizedBox(height: 10),
-        GestureDetector(
-            onTap: _value > 0 ? _save : null,
-            behavior: HitTestBehavior.opaque,
-            child: Opacity(
-              opacity: _value > 0 ? 1 : 0.45,
-              child: Container(
-                height: 50,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Nocturne.mix(Nocturne.accent, 18),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Nocturne.accent, width: 1),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Nocturne.accent100),
-                      )
-                    : Text(
-                        _value <= 0
-                            ? 'Enter an amount'
-                            : '${widget.edit == null ? 'Save' : 'Update'} ${_type == 'income' ? 'income' : 'expense'} · ${V3Design.inr(_value)}',
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: Nocturne.accent100),
-                      ),
-              ),
-            ),
+      ),
+    );
+  }
+
+  static String _daySuffix(int d) {
+    if (d >= 11 && d <= 13) return '${d}th';
+    switch (d % 10) {
+      case 1:
+        return '${d}st';
+      case 2:
+        return '${d}nd';
+      case 3:
+        return '${d}rd';
+      default:
+        return '${d}th';
+    }
+  }
+}
+
+class _CalcKey extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+
+  const _CalcKey({
+    required this.label,
+    required this.onTap,
+    this.onLongPress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isOp = ['+', '-', '×', '÷', '='].contains(label);
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isOp ? Nocturne.neutral800 : Nocturne.bg,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(
+            color: isOp
+                ? Nocturne.accent600.withValues(alpha: 0.3)
+                : Nocturne.neutral900,
+            width: 1,
           ),
-      ],
+        ),
+        child: label == '<'
+            ? const Icon(PhRegular.backspace, size: 19, color: Nocturne.text)
+            : Text(
+                label,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: isOp ? FontWeight.w600 : FontWeight.w500,
+                  color: isOp ? Nocturne.accent200 : Nocturne.text,
+                ),
+              ),
+      ),
     );
   }
 }
@@ -1047,32 +1384,6 @@ class _MiniToggle extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-        ),
-      );
-}
-
-class _Key extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  const _Key({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => V3Press(
-        onTap: onTap,
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Nocturne.bg,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: label == '<'
-              ? const Icon(PhRegular.backspace,
-                  size: 20, color: Nocturne.text)
-              : Text(label,
-                  style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                      color: Nocturne.text)),
         ),
       );
 }

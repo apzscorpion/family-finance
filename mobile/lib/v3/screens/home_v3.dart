@@ -76,8 +76,21 @@ class HomeV3 extends StatelessWidget {
               const _Budgets(),
             ],
             if (s.recurring.isNotEmpty) ...[
-              const V3SectionHeader(title: 'Coming up', meta: 'Recurring'),
+              V3SectionHeader(
+                title: 'Coming up',
+                meta: 'Recurring',
+                actionLabel: 'Manage',
+                onAction: () => V3Sheets.openRecurring(context),
+              ),
               const _ComingUp(),
+            ] else ...[
+              V3SectionHeader(
+                title: 'Coming up',
+                meta: 'Recurring',
+                actionLabel: '+ Add rule',
+                onAction: () => V3Sheets.openRecurring(context),
+              ),
+              const _EmptyRecurringBanner(),
             ],
             if (s.isFamily && s.byMember.isNotEmpty) ...[
               V3SectionHeader(
@@ -1157,73 +1170,161 @@ class _ComingUp extends StatelessWidget {
           final days = r.dueInDays;
           final soon = days <= 3;
 
-          return Container(
-            width: 150,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Nocturne.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.neutral900, width: 1),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    V3IconTile(
-                        icon: style.icon,
-                        color: style.color,
-                        size: 32,
-                        radius: 10,
-                        iconSize: 16),
-                    Text(
-                      days <= 0 ? 'Due' : 'in ${days}d',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: soon
-                            ? NocturneSemantic.warning
-                            : Nocturne.neutral500,
+          return GestureDetector(
+            onTap: () => V3Sheets.openRecurring(context),
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              width: 154,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Nocturne.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Nocturne.neutral900, width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      V3IconTile(
+                          icon: style.icon,
+                          color: style.color,
+                          size: 32,
+                          radius: 10,
+                          iconSize: 16),
+                      Text(
+                        days <= 0 ? 'Due' : 'in ${days}d',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: soon ? FontWeight.w600 : FontWeight.w400,
+                          color: soon
+                              ? NocturneSemantic.warning
+                              : Nocturne.neutral500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(r.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, color: Nocturne.text)),
+                  V3Num(
+                    '${r.isIncome ? '+' : ''}${s.money(r.amount)}',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: r.isIncome
+                          ? NocturneSemantic.income
+                          : Nocturne.text,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => s.addTransaction(
+                      title: r.title,
+                      amount: r.amount,
+                      type: r.type,
+                      categoryKey: r.categoryKey,
+                      sourceId: r.sourceId,
+                    ),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      height: 30,
+                      width: double.infinity,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: r.isIncome
+                            ? Nocturne.mix(NocturneSemantic.income, 14)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(
+                            color: r.isIncome
+                                ? NocturneSemantic.income
+                                : Nocturne.accent700,
+                            width: 1),
+                      ),
+                      child: Text(
+                        r.isIncome ? 'Record credit' : 'Mark paid',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: r.isIncome
+                              ? NocturneSemantic.income
+                              : Nocturne.accent200,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(r.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13, color: Nocturne.text)),
-                V3Num(s.money(r.amount),
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: Nocturne.text)),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => s.addTransaction(
-                    title: r.title,
-                    amount: r.amount,
-                    type: 'expense',
-                    categoryKey: r.categoryKey,
                   ),
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    height: 30,
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(9),
-                      border: Border.all(color: Nocturne.accent700, width: 1),
-                    ),
-                    child: const Text('Mark paid',
-                        style:
-                            TextStyle(fontSize: 12, color: Nocturne.accent200)),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _EmptyRecurringBanner extends StatelessWidget {
+  const _EmptyRecurringBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Nocturne.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Nocturne.neutral800, width: 1),
+      ),
+      child: Row(
+        children: [
+          const V3IconTile(
+            icon: PhRegular.arrowsClockwise,
+            color: Nocturne.accent400,
+            size: 38,
+            radius: 12,
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Recurring transactions',
+                    style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500,
+                        color: Nocturne.text)),
+                SizedBox(height: 2),
+                Text(
+                  'Track monthly salary, rent, or EMIs to record on a set date.',
+                  style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => V3Sheets.openRecurring(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Nocturne.bg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Nocturne.neutral700, width: 1),
+              ),
+              child: const Text('Set up',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Nocturne.accent200)),
+            ),
+          ),
+        ],
       ),
     );
   }
