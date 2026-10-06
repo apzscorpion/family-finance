@@ -34,6 +34,11 @@ dependencies:
   # Charts
   fl_chart: ^0.71.0
 
+  # Local reminders for card due dates and manually-paid recurring charges.
+  # Scheduling is done in the device's own zone, so timezone ships with it.
+  flutter_local_notifications: ^17.2.4
+  timezone: ^0.9.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
