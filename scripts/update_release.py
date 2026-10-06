@@ -27,14 +27,21 @@ README_PATH = REPO_ROOT / "README.md"
 RELEASES_DIR = REPO_ROOT / "releases"
 FLUTTER_APK_DIR = MOBILE_DIR / "build" / "app" / "outputs" / "flutter-apk"
 
-# Two flavours ship. `standard` carries no notification listener, which is what
-# lets it install from a browser or file manager: Android refuses to install an
-# APK that declares notification access unless it came from the Play Store.
-# `detect` keeps automatic payment detection and has to go on over adb.
+# Only the `standard` flavour ships. It carries no notification listener, which
+# is what lets it install from a browser or file manager: Android refuses to
+# install an APK that declares notification access unless it came from the Play
+# Store.
+#
+# The `detect` flavour still exists in the project and keeps automatic payment
+# detection. It is not built here because it can only be installed over adb,
+# which makes it useless to hand out. Set RELEASE_DETECT=1 to build and publish
+# it too — worth doing once there is a Play Store listing to put it behind.
 BUILT_APK_PATH = FLUTTER_APK_DIR / "app-standard-release.apk"
 TARGET_APK_PATH = RELEASES_DIR / "FamilySpendTracker-latest.apk"
 DETECT_APK_PATH = FLUTTER_APK_DIR / "app-detect-release.apk"
 DETECT_TARGET_PATH = RELEASES_DIR / "FamilySpendTracker-detect.apk"
+
+RELEASE_DETECT = os.environ.get("RELEASE_DETECT") == "1"
 
 
 def main():
@@ -70,7 +77,11 @@ def main():
     env = os.environ.copy()
     env["PATH"] += f";C:\\src\\flutter\\bin"
 
-    for flavor, path in (("standard", BUILT_APK_PATH), ("detect", DETECT_APK_PATH)):
+    builds = [("standard", BUILT_APK_PATH)]
+    if RELEASE_DETECT:
+        builds.append(("detect", DETECT_APK_PATH))
+
+    for flavor, path in builds:
         print(f"  Building {flavor}...")
         result = subprocess.run(
             [flutter_bin, "build", "apk", "--release", "--flavor", flavor],
@@ -91,8 +102,9 @@ def main():
 
     shutil.copy2(BUILT_APK_PATH, TARGET_APK_PATH)
     print(f"  Mapped latest build to {TARGET_APK_PATH}")
-    shutil.copy2(DETECT_APK_PATH, DETECT_TARGET_PATH)
-    print(f"  Mapped detection build to {DETECT_TARGET_PATH}")
+    if RELEASE_DETECT:
+        shutil.copy2(DETECT_APK_PATH, DETECT_TARGET_PATH)
+        print(f"  Mapped detection build to {DETECT_TARGET_PATH}")
 
     # 3. Update README.md
     print("[4/5] Auto-updating README.md...")
