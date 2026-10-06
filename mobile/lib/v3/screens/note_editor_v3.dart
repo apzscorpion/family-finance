@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../data/data_export.dart';
 import '../data/note_blocks.dart';
 import '../data/notes_presence.dart';
 import '../data/v3_models.dart';
@@ -189,6 +190,23 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
     if (!mounted) return;
     await context.read<V3State>().deleteNote(id);
     if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _shareNote() async {
+    final title = _title.text.trim().isEmpty ? 'Note' : _title.text.trim();
+    final md = DataExport.noteMarkdown(NoteRow(
+      id: widget.note?.id ?? 'temp',
+      title: title,
+      content: blocksToPlainText(_blocks),
+      pinned: _pinned,
+      visibility: _private ? 'private' : 'family',
+      folderId: widget.note?.folderId,
+      updatedAt: DateTime.now(),
+      blocks: _blocks,
+    ));
+    final filename =
+        '${title.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_')}.md';
+    await DataExport.share(md, filename, subject: title);
   }
 
   Future<void> _paste() async {
@@ -392,6 +410,10 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
                 icon: PhRegular.arrowsClockwise,
                 enabled: _canRedo,
                 onTap: _redo),
+            _IconBtn(
+                icon: PhRegular.shareNetwork,
+                enabled: true,
+                onTap: _shareNote),
             _IconBtn(icon: PhRegular.trash, enabled: true, onTap: _delete),
             GestureDetector(
               onTap: _dirty ? _save : null,

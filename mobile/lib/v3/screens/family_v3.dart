@@ -37,13 +37,27 @@ class FamilyV3 extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(s.family?.name ?? 'Family',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w500,
-                              color: Nocturne.text)),
+                      GestureDetector(
+                        onTap: () => _renameFamilyDialog(context, s),
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(s.family?.name ?? 'Family',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w500,
+                                      color: Nocturne.text)),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(PhRegular.pencilSimple,
+                                size: 14, color: Nocturne.neutral500),
+                          ],
+                        ),
+                      ),
                       Text(
                           '${s.members.where((m) => m.isActive).length} members · '
                           '${s.family?.kind ?? 'Family'}',
@@ -295,6 +309,59 @@ class FamilyV3 extends StatelessWidget {
       ),
     );
   }
+
+  void _renameFamilyDialog(BuildContext context, V3State s) {
+    final ctrl = TextEditingController(text: s.family?.name ?? '');
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Nocturne.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Rename Workspace',
+            style: TextStyle(
+                color: Nocturne.text,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: const TextStyle(color: Nocturne.text),
+          decoration: InputDecoration(
+            hintText: 'Workspace name',
+            hintStyle: const TextStyle(color: Nocturne.neutral500),
+            filled: true,
+            fillColor: Nocturne.bg,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(color: Nocturne.neutral400)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Nocturne.accent,
+              foregroundColor: Nocturne.bg,
+            ),
+            onPressed: () async {
+              final val = ctrl.text.trim();
+              if (val.isNotEmpty) {
+                Navigator.pop(ctx);
+                await s.renameFamily(val);
+              }
+            },
+            child: const Text('Save',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MemberRowTile extends StatelessWidget {
@@ -436,9 +503,65 @@ class _MemberRowTile extends StatelessWidget {
                   style: const TextStyle(fontSize: 14, color: Nocturne.text)),
               onTap: () async {
                 Navigator.pop(ctx);
-                await s.repo.setMemberStatus(
-                    s.familyId, m.userId, m.isActive ? 'disabled' : 'active');
-                await s.refresh();
+                await s.setMemberStatus(
+                    m.userId, m.isActive ? 'disabled' : 'active');
+              },
+            ),
+            ListTile(
+              leading: const Icon(PhRegular.trash,
+                  size: 18, color: NocturneSemantic.expense),
+              title: const Text('Remove from workspace',
+                  style: TextStyle(
+                      fontSize: 14, color: NocturneSemantic.expense)),
+              subtitle: const Text(
+                  'Past transactions and shared records remain intact',
+                  style: TextStyle(
+                      fontSize: 11.5, color: Nocturne.neutral500)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (c) => AlertDialog(
+                    backgroundColor: Nocturne.surface,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    title: Text('Remove ${m.name}?',
+                        style: const TextStyle(
+                            color: Nocturne.text,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                    content: Text(
+                        'Are you sure you want to remove ${m.name} from the workspace? '
+                        'Their shared transactions and history will be preserved.',
+                        style: const TextStyle(color: Nocturne.neutral400)),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(c, false),
+                        child: const Text('Cancel',
+                            style: TextStyle(color: Nocturne.neutral500)),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: NocturneSemantic.expense),
+                        onPressed: () => Navigator.pop(c, true),
+                        child: const Text('Remove',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  final ok = await s.removeMember(m.userId);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(ok
+                          ? '${m.name} removed from workspace'
+                          : 'Could not remove member'),
+                    ));
+                  }
+                }
               },
             ),
             const SizedBox(height: 12),

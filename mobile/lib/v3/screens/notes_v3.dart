@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../data/data_export.dart';
 import '../data/note_blocks.dart';
 import '../data/notes_presence.dart';
 import '../data/v3_models.dart';
@@ -252,6 +253,54 @@ class _NotesV3State extends State<NotesV3> {
                             ),
                           ),
                       ],
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      if (s.notes.isEmpty) {
+                        messenger.showSnackBar(const SnackBar(
+                            content: Text('You have no notes to export')));
+                        return;
+                      }
+                      final now = DateTime.now();
+                      final stamp =
+                          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+                      final ok = await DataExport.share(
+                        DataExport.notesMarkdown(s.notes),
+                        'notes-$stamp.md',
+                        subject: 'Family Spend Tracker notes',
+                      );
+                      if (!ok) {
+                        messenger.showSnackBar(const SnackBar(
+                            content: Text('Could not export notes')));
+                      }
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Nocturne.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: Nocturne.neutral800, width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(PhRegular.shareNetwork,
+                              size: 13, color: Nocturne.neutral300),
+                          SizedBox(width: 4),
+                          Text('Export',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Nocturne.neutral300)),
+                        ],
+                      ),
                     ),
                   ),
                 ],

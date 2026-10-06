@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../services/app_log.dart';
 import '../../services/update_service.dart';
 import '../../theme/nocturne.dart';
 import '../data/data_export.dart';
@@ -29,62 +31,75 @@ class SettingsV3 extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 40),
       children: [
         // Profile
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Nocturne.surface,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      me?.color ?? Nocturne.accent600,
-                      V3Design.avatarDeep,
-                    ],
+        GestureDetector(
+          onTap: () => _showEditNameDialog(context, s),
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Nocturne.surface,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        me?.color ?? Nocturne.accent600,
+                        V3Design.avatarDeep,
+                      ],
+                    ),
                   ),
+                  child: Text(me?.initial ?? '?',
+                      style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Nocturne.text)),
                 ),
-                child: Text(me?.initial ?? '?',
-                    style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: Nocturne.text)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(me?.name ?? 'You',
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(me?.name ?? 'You',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 15, color: Nocturne.text)),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(PhRegular.pencilSimple,
+                              size: 13, color: Nocturne.neutral500),
+                        ],
+                      ),
+                      Text(
+                        [
+                          _t(me?.role ?? 'member'),
+                          s.family?.name ?? '',
+                          Supabase.instance.client.auth.currentUser?.email ?? '',
+                        ].where((e) => e.isNotEmpty).join(' · '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 15, color: Nocturne.text)),
-                    Text(
-                      [
-                        _t(me?.role ?? 'member'),
-                        s.family?.name ?? '',
-                        Supabase.instance.client.auth.currentUser?.email ?? '',
-                      ].where((e) => e.isNotEmpty).join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 12, color: Nocturne.neutral500),
-                    ),
-                  ],
+                            fontSize: 12, color: Nocturne.neutral500),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
 
@@ -96,10 +111,20 @@ class SettingsV3 extends StatelessWidget {
             color: Nocturne.surface,
             borderRadius: BorderRadius.circular(18),
           ),
-          child: _DataRow(
-            icon: PhRegular.wallet,
-            label: 'Money sources (${s.sources.length})',
-            onTap: () => SourcesManagerV3.open(context),
+          child: Column(
+            children: [
+              _DataRow(
+                icon: PhRegular.wallet,
+                label: 'Money sources (${s.sources.length})',
+                onTap: () => SourcesManagerV3.open(context),
+              ),
+              const V3RowDivider(),
+              _DataRow(
+                icon: PhRegular.pencilSimple,
+                label: 'Rename workspace (${s.family?.name ?? 'Family'})',
+                onTap: () => _showRenameFamilyDialog(context, s),
+              ),
+            ],
           ),
         ),
 
@@ -224,7 +249,90 @@ class SettingsV3 extends StatelessWidget {
           ),
         ),
 
-        const _Kicker('Data'),
+        const _Kicker('App Updates'),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Nocturne.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Nocturne.neutral800, width: 1),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Version ${UpdateService.currentVersion}',
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w500,
+                            color: Nocturne.text,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Nocturne.accent900,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text('Release',
+                              style: TextStyle(
+                                  fontSize: 10, color: Nocturne.accent200)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      'Direct GitHub release updates',
+                      style: TextStyle(
+                          fontSize: 12, color: Nocturne.neutral500),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => UpdateSheetV3.check(context),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Nocturne.mix(Nocturne.accent, 14),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Nocturne.accent, width: 1),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(PhRegular.downloadSimple,
+                          size: 15, color: Nocturne.accent200),
+                      SizedBox(width: 6),
+                      Text(
+                        'Check now',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: Nocturne.accent200,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const _Kicker('Import & Export'),
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -235,14 +343,8 @@ class SettingsV3 extends StatelessWidget {
           child: Column(
             children: [
               _DataRow(
-                icon: PhRegular.arrowsClockwise,
-                label: 'Refresh workspace',
-                onTap: s.refresh,
-              ),
-              const V3RowDivider(),
-              _DataRow(
                 icon: PhRegular.downloadSimple,
-                label: 'Import expenses',
+                label: 'Import expenses (CSV, Excel, Markdown)',
                 onTap: () => ImportV3.open(context),
               ),
               const V3RowDivider(),
@@ -290,6 +392,31 @@ class SettingsV3 extends StatelessWidget {
               ),
               const V3RowDivider(),
               _DataRow(
+                icon: PhRegular.arrowsClockwise,
+                label: 'Refresh workspace',
+                onTap: s.refresh,
+              ),
+            ],
+          ),
+        ),
+
+        const _Kicker('Support & Account'),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Nocturne.surface,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            children: [
+              _DataRow(
+                icon: PhRegular.info,
+                label: 'Developer support & error log',
+                onTap: () => _showDeveloperSupport(context),
+              ),
+              const V3RowDivider(),
+              _DataRow(
                 icon: PhRegular.signOut,
                 label: 'Sign out',
                 color: NocturneSemantic.expense,
@@ -298,22 +425,14 @@ class SettingsV3 extends StatelessWidget {
                   await s.bootstrap();
                 },
               ),
+              const V3RowDivider(),
+              _DataRow(
+                icon: PhRegular.trash,
+                label: 'Delete account',
+                color: NocturneSemantic.expense,
+                onTap: () => _showDeleteAccountDialog(context, s),
+              ),
             ],
-          ),
-        ),
-
-        const _Kicker('About'),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Nocturne.surface,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: _DataRow(
-            icon: PhRegular.arrowCircleDown,
-            label: 'Version ${UpdateService.currentVersion} · check for updates',
-            onTap: () => UpdateSheetV3.check(context),
           ),
         ),
 
@@ -327,6 +446,242 @@ class SettingsV3 extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  static void _showEditNameDialog(BuildContext context, V3State s) {
+    final ctrl = TextEditingController(text: s.me?.name ?? '');
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Nocturne.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Edit Your Name',
+            style: TextStyle(
+                color: Nocturne.text,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: const TextStyle(color: Nocturne.text),
+          decoration: InputDecoration(
+            hintText: 'Your name',
+            hintStyle: const TextStyle(color: Nocturne.neutral500),
+            filled: true,
+            fillColor: Nocturne.bg,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(color: Nocturne.neutral400)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Nocturne.accent,
+              foregroundColor: Nocturne.bg,
+            ),
+            onPressed: () async {
+              final val = ctrl.text.trim();
+              if (val.isNotEmpty) {
+                Navigator.pop(ctx);
+                await s.renameMe(val);
+              }
+            },
+            child: const Text('Save',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void _showRenameFamilyDialog(BuildContext context, V3State s) {
+    final ctrl = TextEditingController(text: s.family?.name ?? '');
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Nocturne.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Rename Workspace',
+            style: TextStyle(
+                color: Nocturne.text,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: const TextStyle(color: Nocturne.text),
+          decoration: InputDecoration(
+            hintText: 'Workspace name',
+            hintStyle: const TextStyle(color: Nocturne.neutral500),
+            filled: true,
+            fillColor: Nocturne.bg,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(color: Nocturne.neutral400)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Nocturne.accent,
+              foregroundColor: Nocturne.bg,
+            ),
+            onPressed: () async {
+              final val = ctrl.text.trim();
+              if (val.isNotEmpty) {
+                Navigator.pop(ctx);
+                await s.renameFamily(val);
+              }
+            },
+            child: const Text('Save',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void _showDeleteAccountDialog(BuildContext context, V3State s) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Nocturne.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Account?',
+            style: TextStyle(
+                color: NocturneSemantic.expense,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
+        content: const Text(
+          'This will permanently delete your account. If other members are in your workspace, '
+          'the workspace will be preserved and ownership handed on.',
+          style: TextStyle(color: Nocturne.neutral400, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(color: Nocturne.neutral400)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: NocturneSemantic.expense,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await s.deleteMyAccount();
+            },
+            child: const Text('Delete Account',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void _showDeveloperSupport(BuildContext context) {
+    final reportCtrl = TextEditingController();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Nocturne.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(PhRegular.info, color: Nocturne.accent200, size: 22),
+                SizedBox(width: 8),
+                Text('Developer Support',
+                    style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Nocturne.text)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text('Describe what went wrong or suggest a feature:',
+                style: TextStyle(fontSize: 12.5, color: Nocturne.neutral500)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reportCtrl,
+              maxLines: 4,
+              style: const TextStyle(fontSize: 13.5, color: Nocturne.text),
+              decoration: InputDecoration(
+                hintText: 'Describe the issue or feedback...',
+                hintStyle: const TextStyle(color: Nocturne.neutral600),
+                filled: true,
+                fillColor: Nocturne.bg,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final msg = reportCtrl.text.trim();
+                  Navigator.pop(ctx);
+                  final body = StringBuffer()
+                    ..writeln(msg.isNotEmpty
+                        ? msg
+                        : '(no description provided)')
+                    ..writeln()
+                    ..writeln('---')
+                    ..writeln('Recent errors:')
+                    ..writeln(
+                        AppLog.hasEntries ? AppLog.dump() : '(none captured)');
+                  final uri = Uri.parse(
+                    'https://github.com/${UpdateService.githubRepo}/issues/new'
+                    '?title=${Uri.encodeComponent('App error report')}'
+                    '&body=${Uri.encodeComponent(body.toString())}',
+                  );
+                  await launchUrl(uri,
+                      mode: LaunchMode.externalApplication);
+                },
+                icon: const Icon(PhRegular.shareNetwork, size: 16),
+                label: const Text('Send Error Log',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Nocturne.accent,
+                  foregroundColor: Nocturne.bg,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
