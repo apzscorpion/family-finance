@@ -55,11 +55,16 @@ class MainActivity : FlutterActivity() {
                     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                         addCategory(Intent.CATEGORY_OPENABLE)
                         type = "*/*"
+                        val sheetTypes = arrayOf(
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            "application/vnd.ms-excel"
+                        )
                         val mimeTypes = when (typeFilter) {
                             "csv" -> arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/csv", "*/*")
                             "pdf" -> arrayOf("application/pdf")
                             "md" -> arrayOf("text/markdown", "text/plain", "*/*")
-                            else -> arrayOf("application/pdf", "text/csv", "text/markdown", "text/plain", "*/*")
+                            "sheet" -> sheetTypes + arrayOf("text/csv", "application/csv", "*/*")
+                            else -> arrayOf("application/pdf", "text/csv", "text/markdown", "text/plain") + sheetTypes + arrayOf("*/*")
                         }
                         putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
                     }
@@ -117,6 +122,20 @@ class MainActivity : FlutterActivity() {
             if (lower.endsWith(".pdf") || contentResolver.getType(uri) == "application/pdf") {
                 val pdfMap = readPdfDocument(uri, fileName)
                 res.success(pdfMap)
+            } else if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+                // A workbook is a zip container, so it goes over as bytes and
+                // is decoded in Dart rather than read as text here.
+                val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: ByteArray(0)
+                res.success(
+                    mapOf(
+                        "kind" to "xlsx",
+                        "fileName" to fileName,
+                        "text" to "",
+                        "bytes" to bytes,
+                        "pageCount" to 1
+                    )
+                )
             } else {
                 val text = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
                 val ext = when {

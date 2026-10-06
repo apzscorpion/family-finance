@@ -241,7 +241,9 @@ class _V3BottomBar extends StatelessWidget {
       (PhRegular.house, 'Home'),
       (PhRegular.listBullets, 'Activity'),
       (PhRegular.chartDonut, 'Insights'),
-      (PhRegular.users, 'Family'),
+      // The tab holds the member list and settings, so "Family" both repeated
+      // the section heading inside it and undersold what it contains.
+      (PhRegular.dotsThree, 'More'),
     ];
 
     return Container(

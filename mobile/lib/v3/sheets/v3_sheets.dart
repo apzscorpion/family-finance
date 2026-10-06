@@ -780,6 +780,38 @@ class _V3AddSheetState extends State<V3AddSheet> {
               ],
             ),
           ],
+          // With nobody else in the workspace these controls were hidden
+          // entirely, which made a built feature look missing rather than
+          // inapplicable. Say why instead.
+          if (_type == 'expense' && members.length <= 1) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+              decoration: BoxDecoration(
+                color: Nocturne.bg,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: Nocturne.neutral800, width: 1),
+              ),
+              child: const Row(
+                children: [
+                  Icon(PhRegular.usersThree,
+                      size: 16, color: Nocturne.neutral500),
+                  SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'Invite someone to this workspace to record who an '
+                      'expense was for, and whether they owe you back.',
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          height: 1.4,
+                          color: Nocturne.neutral500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (_type == 'expense' && members.length > 1) ...[
             const SizedBox(height: 10),
             GestureDetector(

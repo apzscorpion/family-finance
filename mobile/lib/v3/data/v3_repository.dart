@@ -180,6 +180,35 @@ class V3Repository {
         .toList();
   }
 
+  /// Inserts many transactions in one round trip.
+  ///
+  /// An import can be hundreds of rows, and inserting them one at a time was
+  /// both slow and liable to leave a half-finished import behind if the
+  /// connection dropped partway.
+  Future<int> addTransactionsBulk({
+    required String familyId,
+    required List<Map<String, dynamic>> rows,
+  }) async {
+    if (rows.isEmpty) return 0;
+
+    final uid = currentUserId;
+    final payload = [
+      for (final r in rows)
+        {
+          'family_id': familyId,
+          'user_id': uid,
+          'paid_by': uid,
+          'origin': 'import',
+          'method': 'Other',
+          ...r,
+        },
+    ];
+
+    final inserted =
+        await _db.from('transactions').insert(payload).select('id');
+    return (inserted as List).length;
+  }
+
   Future<TxnRow> addTransaction({
     required String familyId,
     required String title,
