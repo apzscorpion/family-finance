@@ -100,6 +100,9 @@ class PhRegular {
   static const IconData batteryHigh = IconData(0xe0c2, fontFamily: 'Phosphor');
   static const IconData dotsThreeVertical = IconData(0xe208, fontFamily: 'Phosphor');
   static const IconData floppyDisk = IconData(0xe248, fontFamily: 'Phosphor');
+  static const IconData gear = IconData(0xe270, fontFamily: 'Phosphor');
+  static const IconData downloadSimple = IconData(0xe20c, fontFamily: 'Phosphor');
+  static const IconData arrowCircleDown = IconData(0xe028, fontFamily: 'Phosphor');
 }
 
 /// Phosphor bold weight.
@@ -195,6 +198,9 @@ class PhBold {
   static const IconData batteryHigh = IconData(0xe0c2, fontFamily: 'PhosphorBold');
   static const IconData dotsThreeVertical = IconData(0xe208, fontFamily: 'PhosphorBold');
   static const IconData floppyDisk = IconData(0xe248, fontFamily: 'PhosphorBold');
+  static const IconData gear = IconData(0xe270, fontFamily: 'PhosphorBold');
+  static const IconData downloadSimple = IconData(0xe20c, fontFamily: 'PhosphorBold');
+  static const IconData arrowCircleDown = IconData(0xe028, fontFamily: 'PhosphorBold');
 }
 
 /// Phosphor fill weight.
@@ -290,4 +296,7 @@ class PhFill {
   static const IconData batteryHigh = IconData(0xe0c2, fontFamily: 'PhosphorFill');
   static const IconData dotsThreeVertical = IconData(0xe208, fontFamily: 'PhosphorFill');
   static const IconData floppyDisk = IconData(0xe248, fontFamily: 'PhosphorFill');
+  static const IconData gear = IconData(0xe270, fontFamily: 'PhosphorFill');
+  static const IconData downloadSimple = IconData(0xe20c, fontFamily: 'PhosphorFill');
+  static const IconData arrowCircleDown = IconData(0xe028, fontFamily: 'PhosphorFill');
 }

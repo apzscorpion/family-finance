@@ -11,6 +11,22 @@ class UpdateService {
   static const String latestApkUrl =
       'https://github.com/$githubRepo/raw/main/releases/FamilySpendTracker-latest.apk';
 
+  /// The version published on main, or null if GitHub could not be reached.
+  ///
+  /// Split out from [checkForUpdates] so the v3 sheet can present the result
+  /// itself while the version and URLs stay defined in one place — the release
+  /// script rewrites [currentVersion] here on every release.
+  static Future<String?> fetchLatestVersion() async {
+    final response = await http.get(Uri.parse(pubspecUrl));
+    if (response.statusCode != 200) return null;
+    final match = RegExp(r'^version:\s*(\d+\.\d+\.\d+)', multiLine: true)
+        .firstMatch(response.body);
+    return match?.group(1);
+  }
+
+  static bool isNewer(String current, String latest) =>
+      _isNewerVersion(current, latest);
+
   static Future<void> checkForUpdates(BuildContext context, {bool silent = true}) async {
     try {
       final response = await http.get(Uri.parse(pubspecUrl));
