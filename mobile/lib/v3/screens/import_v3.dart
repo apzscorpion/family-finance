@@ -1,0 +1,613 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../theme/nocturne.dart';
+import '../data/data_export.dart';
+import '../data/expense_import.dart';
+import '../data/expense_import_xlsx.dart';
+import '../data/import_picker.dart';
+import '../data/v3_models.dart';
+import '../phosphor_icons.dart';
+import '../v3_state.dart';
+import '../widgets/v3_motion.dart';
+import '../widgets/v3_primitives.dart';
+
+/// Bringing expenses in from a file, a pasted table or an existing note.
+///
+/// Nothing is written until the rows have been shown and confirmed: these
+/// files are often messy, and a silent import of a misread column is worse
+/// than no import at all.
+class ImportV3 extends StatefulWidget {
+  const ImportV3({super.key, this.initialText, this.sourceLabel});
+
+  /// Pre-filled when arriving from a note, so the note's text is parsed
+  /// straight away.
+  final String? initialText;
+  final String? sourceLabel;
+
+  static Future<void> open(BuildContext context,
+      {String? text, String? label}) {
+    return Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => ImportV3(initialText: text, sourceLabel: label),
+    ));
+  }
+
+  @override
+  State<ImportV3> createState() => _ImportV3State();
+}
+
+class _ImportV3State extends State<ImportV3> {
+  final _paste = TextEditingController();
+
+  List<ImportedExpense> _rows = const [];
+  String? _source;
+  bool _busy = false;
+  bool _parsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialText != null) {
+      _source = widget.sourceLabel;
+      _rows = ExpenseImport.parse(widget.initialText!);
+      _parsed = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _paste.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    setState(() => _busy = true);
+    final doc = await ImportPicker.pick();
+    if (!mounted) return;
+
+    if (doc == null) {
+      setState(() => _busy = false);
+      return;
+    }
+
+    final rows = doc.isSpreadsheet
+        ? (doc.bytes == null
+            ? const <ImportedExpense>[]
+            : ExpenseImportXlsx.parse(doc.bytes!))
+        : ExpenseImport.parse(doc.text, kind: doc.kind);
+
+    setState(() {
+      _rows = rows;
+      _source = doc.fileName;
+      _parsed = true;
+      _busy = false;
+    });
+  }
+
+  void _parsePaste() {
+    final text = _paste.text;
+    if (text.trim().isEmpty) return;
+    setState(() {
+      _rows = ExpenseImport.parse(text);
+      _source = 'Pasted text';
+      _parsed = true;
+    });
+  }
+
+  Future<void> _pickNote() async {
+    final s = context.read<V3State>();
+    final note = await showModalBottomSheet<NoteRow>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _NotePicker(notes: s.notes),
+    );
+    if (note == null || !mounted) return;
+
+    // The Markdown export is the fullest rendering of a note's blocks, so the
+    // importer reads that rather than the flattened preview text.
+    final text = DataExport.noteMarkdown(note);
+    setState(() {
+      _rows = ExpenseImport.parse(text, kind: 'md');
+      _source = note.title.isEmpty ? 'Untitled note' : note.title;
+      _parsed = true;
+    });
+  }
+
+  Future<void> _import() async {
+    final selected = _rows.where((r) => r.selected).length;
+    if (selected == 0) return;
+
+    setState(() => _busy = true);
+    final n = await context.read<V3State>().importExpenses(_rows);
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(n == 0
+          ? 'Nothing was imported'
+          : 'Added $n transaction${n == 1 ? '' : 's'}'),
+    ));
+    if (n > 0) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = _rows.where((r) => r.selected).length;
+
+    return Scaffold(
+      backgroundColor: Nocturne.bg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 6, 16, 2),
+              child: Row(
+                children: [
+                  V3Press(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Icon(PhRegular.arrowLeft,
+                          size: 20, color: Nocturne.text),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Text('Import expenses',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Nocturne.text)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 28),
+                children: [
+                  if (!_parsed) ..._sourceChoices(),
+                  if (_parsed) ..._preview(),
+                ],
+              ),
+            ),
+            if (_parsed && _rows.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+                child: V3Press(
+                  onTap: _busy ? null : _import,
+                  child: Container(
+                    height: 52,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Nocturne.accent600, Nocturne.accent800],
+                      ),
+                      border:
+                          Border.all(color: Nocturne.accent400, width: 1),
+                    ),
+                    child: Text(
+                      _busy
+                          ? 'Importing…'
+                          : 'Import $selected transaction'
+                              '${selected == 1 ? '' : 's'}',
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Nocturne.accent100),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _sourceChoices() => [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Text(
+            'Bring in spending from a bank export, a spreadsheet, or a note '
+            'you already keep. Nothing is saved until you have seen what was '
+            'read.',
+            style: TextStyle(
+                fontSize: 12.5, height: 1.5, color: Nocturne.neutral400),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _SourceTile(
+          icon: PhRegular.floppyDisk,
+          title: 'Choose a file',
+          subtitle: 'CSV, Excel, Markdown or text',
+          busy: _busy,
+          onTap: _pickFile,
+        ),
+        _SourceTile(
+          icon: PhRegular.note,
+          title: 'From a note',
+          subtitle: 'Read a table or list you already wrote',
+          onTap: _pickNote,
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 18, 16, 6),
+          child: Text('Or paste a table',
+              style: TextStyle(fontSize: 12.5, color: Nocturne.neutral400)),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: Nocturne.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Nocturne.neutral800, width: 1),
+          ),
+          child: TextField(
+            controller: _paste,
+            maxLines: 7,
+            style: const TextStyle(fontSize: 13.5, color: Nocturne.text),
+            cursorColor: Nocturne.accent,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Coffee 120\nGroceries 1,240\n\n'
+                  'or a | Date | Item | Amount | table',
+              hintStyle:
+                  TextStyle(fontSize: 13.5, color: Nocturne.neutral600),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: V3Press(
+            onTap: _parsePaste,
+            child: Container(
+              height: 46,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: Nocturne.accent, width: 1),
+              ),
+              child: const Text('Read pasted text',
+                  style:
+                      TextStyle(fontSize: 14.5, color: Nocturne.accent200)),
+            ),
+          ),
+        ),
+      ];
+
+  List<Widget> _preview() {
+    if (_rows.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
+          child: Column(
+            children: [
+              const Icon(PhRegular.receiptX,
+                  size: 38, color: Nocturne.neutral600),
+              const SizedBox(height: 10),
+              const Text('Nothing recognisable',
+                  style:
+                      TextStyle(fontSize: 14.5, color: Nocturne.neutral300)),
+              const SizedBox(height: 6),
+              Text(
+                'No rows in ${_source ?? 'that source'} had both a '
+                'description and an amount. A column named Amount, or lines '
+                'like "Coffee 120", are read best.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 12.5, height: 1.5, color: Nocturne.neutral500),
+              ),
+              const SizedBox(height: 18),
+              V3Press(
+                onTap: () => setState(() {
+                  _parsed = false;
+                  _rows = const [];
+                }),
+                child: Container(
+                  height: 44,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(color: Nocturne.accent, width: 1),
+                  ),
+                  child: const Text('Try another source',
+                      style: TextStyle(
+                          fontSize: 14, color: Nocturne.accent200)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    final s = context.watch<V3State>();
+    final total = _rows
+        .where((r) => r.selected && !r.isIncome)
+        .fold<double>(0, (a, r) => a + r.amount);
+
+    return [
+      Container(
+        margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Nocturne.accent900,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            const Icon(PhRegular.checkCircle,
+                size: 17, color: Nocturne.accent200),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Read ${_rows.length} row${_rows.length == 1 ? '' : 's'} '
+                'from ${_source ?? 'the file'}. Untick anything you do not '
+                'want.',
+                style: const TextStyle(
+                    fontSize: 12, height: 1.45, color: Nocturne.accent200),
+              ),
+            ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+        child: Row(
+          children: [
+            Text('Spending total',
+                style: const TextStyle(
+                    fontSize: 12.5, color: Nocturne.neutral400)),
+            const Spacer(),
+            Text(s.money(total),
+                style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: Nocturne.text)),
+          ],
+        ),
+      ),
+      Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < _rows.length; i++) ...[
+              V3Rise(
+                index: i,
+                child: _RowTile(
+                  row: _rows[i],
+                  money: s.money,
+                  onToggle: () => setState(
+                      () => _rows[i].selected = !_rows[i].selected),
+                ),
+              ),
+              if (i < _rows.length - 1) const V3RowDivider(),
+            ],
+          ],
+        ),
+      ),
+    ];
+  }
+}
+
+class _SourceTile extends StatelessWidget {
+  const _SourceTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.busy = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: V3Press(
+          onTap: busy ? null : onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              color: Nocturne.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Nocturne.neutral800, width: 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Nocturne.accent900,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, size: 19, color: Nocturne.accent200),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 14.5, color: Nocturne.text)),
+                      const SizedBox(height: 2),
+                      Text(subtitle,
+                          style: const TextStyle(
+                              fontSize: 12, color: Nocturne.neutral500)),
+                    ],
+                  ),
+                ),
+                const Icon(PhRegular.caretRight,
+                    size: 14, color: Nocturne.neutral600),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+class _RowTile extends StatelessWidget {
+  const _RowTile({
+    required this.row,
+    required this.money,
+    required this.onToggle,
+  });
+
+  final ImportedExpense row;
+  final String Function(double) money;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = row.date;
+    return V3Press(
+      onTap: onToggle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              row.selected ? PhFill.checkCircle : PhRegular.circle,
+              size: 20,
+              color: row.selected ? Nocturne.accent : Nocturne.neutral600,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    row.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: row.selected
+                          ? Nocturne.text
+                          : Nocturne.neutral500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      if (date != null)
+                        '${date.day}/${date.month}/${date.year}'
+                      else
+                        'No date · today',
+                      if (row.category != null) row.category!,
+                    ].join(' · '),
+                    style: const TextStyle(
+                        fontSize: 11.5, color: Nocturne.neutral500),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '${row.isIncome ? '+' : '−'}${money(row.amount)}',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: !row.selected
+                    ? Nocturne.neutral600
+                    : row.isIncome
+                        ? NocturneSemantic.income
+                        : Nocturne.text,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotePicker extends StatelessWidget {
+  const _NotePicker({required this.notes});
+
+  final List<NoteRow> notes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7),
+      decoration: const BoxDecoration(
+        color: Nocturne.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Pick a note',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Nocturne.text)),
+          const SizedBox(height: 10),
+          if (notes.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 28),
+              child: Text('You have no notes yet',
+                  style:
+                      TextStyle(fontSize: 13, color: Nocturne.neutral500)),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: notes.length,
+                itemBuilder: (_, i) {
+                  final n = notes[i];
+                  return V3Press(
+                    onTap: () => Navigator.of(context).pop(n),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                              n.isPrivate
+                                  ? PhRegular.lockSimple
+                                  : PhRegular.users,
+                              size: 17,
+                              color: Nocturne.neutral400),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              n.title.isEmpty ? 'Untitled' : n.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Nocturne.text),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

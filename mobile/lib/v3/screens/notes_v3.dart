@@ -28,7 +28,7 @@ class _NotesV3State extends State<NotesV3> {
   _Sort _sort = _Sort.edited;
   int _columns = 2;
   bool _fabOpen = false;
-  String _filter = 'all'; // all | checklists | tables
+  String _filter = 'all'; // all | shared | private | checklists | tables
   bool _showFolders = false;
   String? _folderId;
 
@@ -69,6 +69,8 @@ class _NotesV3State extends State<NotesV3> {
         return false;
       }
       if (_filter == 'all') return true;
+      if (_filter == 'shared') return !n.isPrivate;
+      if (_filter == 'private') return n.isPrivate;
       final blocks = _blocksOf(n);
       return switch (_filter) {
         'checklists' =>
@@ -286,6 +288,10 @@ class _NotesV3State extends State<NotesV3> {
                         children: [
                           for (final f in const [
                             ('all', 'All', PhRegular.note),
+                            // Notes are family-visible by default, but there
+                            // was no way to tell which from the list.
+                            ('shared', 'Shared', PhRegular.users),
+                            ('private', 'Private', PhRegular.lockSimple),
                             ('checklists', 'Lists', PhRegular.listChecks),
                             ('tables', 'Tables', PhRegular.chartBar),
                           ])

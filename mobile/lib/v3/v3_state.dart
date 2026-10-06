@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'data/expense_import.dart';
 import 'data/note_blocks.dart';
 import 'data/notification_bridge.dart';
 import 'data/payment_parser.dart';
@@ -460,6 +461,45 @@ class V3State extends ChangeNotifier {
         'decideApproval', () => _repo.decideApproval(id, approve));
     approvals = approvals.where((a) => a.id != id).toList();
     notifyListeners();
+  }
+
+  /// Saves rows the user confirmed in the import preview.
+  ///
+  /// Category text from the file is matched to a real category by key or name;
+  /// anything unrecognised is left unset rather than guessed at, so an import
+  /// never silently files spending under the wrong heading. Returns how many
+  /// rows were written.
+  Future<int> importExpenses(List<ImportedExpense> rows) async {
+    if (familyId.isEmpty) return 0;
+    final chosen = rows.where((r) => r.selected).toList();
+    if (chosen.isEmpty) return 0;
+
+    final byKey = {for (final c in categories) c.key.toLowerCase(): c.id};
+    final byName = {for (final c in categories) c.name.toLowerCase(): c.id};
+
+    final payload = <Map<String, dynamic>>[];
+    for (final r in chosen) {
+      final raw = r.category?.trim().toLowerCase();
+      final categoryId =
+          raw == null ? null : (byKey[raw] ?? byName[raw]);
+
+      payload.add({
+        'title': r.title,
+        'amount': r.amount,
+        'type': r.isIncome ? 'income' : 'expense',
+        'category_id': ?categoryId,
+        'occurred_at':
+            (r.date ?? DateTime.now()).toUtc().toIso8601String(),
+      });
+    }
+
+    final written = await V3Repository.guard(
+      'importExpenses',
+      () => _repo.addTransactionsBulk(familyId: familyId, rows: payload),
+    );
+
+    if (written != null && written > 0) await refresh();
+    return written ?? 0;
   }
 
   /// Pulls whatever the notification listener captured, drops anything that

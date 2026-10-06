@@ -4,9 +4,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/update_service.dart';
 import '../../theme/nocturne.dart';
+import '../data/data_export.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../sheets/update_sheet_v3.dart';
+import 'import_v3.dart';
 import '../v3_design.dart';
 import '../v3_state.dart';
 import 'sources_manager_v3.dart';
@@ -239,6 +241,55 @@ class SettingsV3 extends StatelessWidget {
               ),
               const V3RowDivider(),
               _DataRow(
+                icon: PhRegular.downloadSimple,
+                label: 'Import expenses',
+                onTap: () => ImportV3.open(context),
+              ),
+              const V3RowDivider(),
+              _DataRow(
+                icon: PhRegular.shareNetwork,
+                label: 'Export transactions (CSV)',
+                onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final csv = DataExport.transactionsCsv(
+                    s.txns,
+                    nameOf: s.memberName,
+                  );
+                  final ok = await DataExport.share(
+                    csv,
+                    'transactions-${_stamp()}.csv',
+                    subject: 'Family Spend Tracker transactions',
+                  );
+                  if (!ok) {
+                    messenger.showSnackBar(const SnackBar(
+                        content: Text('Could not export the file')));
+                  }
+                },
+              ),
+              const V3RowDivider(),
+              _DataRow(
+                icon: PhRegular.note,
+                label: 'Export notes (Markdown)',
+                onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  if (s.notes.isEmpty) {
+                    messenger.showSnackBar(const SnackBar(
+                        content: Text('You have no notes to export')));
+                    return;
+                  }
+                  final ok = await DataExport.share(
+                    DataExport.notesMarkdown(s.notes),
+                    'notes-${_stamp()}.md',
+                    subject: 'Family Spend Tracker notes',
+                  );
+                  if (!ok) {
+                    messenger.showSnackBar(const SnackBar(
+                        content: Text('Could not export the file')));
+                  }
+                },
+              ),
+              const V3RowDivider(),
+              _DataRow(
                 icon: PhRegular.signOut,
                 label: 'Sign out',
                 color: NocturneSemantic.expense,
@@ -277,6 +328,14 @@ class SettingsV3 extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// Dates the export file so successive exports do not overwrite each other
+  /// in the receiving app.
+  static String _stamp() {
+    final n = DateTime.now();
+    return '${n.year}-${n.month.toString().padLeft(2, '0')}-'
+        '${n.day.toString().padLeft(2, '0')}';
   }
 
   static String _t(String v) =>

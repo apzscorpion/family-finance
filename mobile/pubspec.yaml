@@ -34,6 +34,16 @@ dependencies:
   # Charts
   fl_chart: ^0.71.0
 
+  # Reading .xlsx for the expense importer. Pure Dart, no native code, so it
+  # adds no permissions and cannot affect installability.
+  excel: ^4.0.6
+
+  # Handing an exported CSV or Markdown file to another app. Uses the system
+  # share sheet rather than writing into shared storage, so no storage
+  # permission is needed.
+  share_plus: ^10.1.4
+  path_provider: ^2.1.5
+
   # Local reminders for card due dates and manually-paid recurring charges.
   # Scheduling is done in the device's own zone, so timezone ships with it.
   flutter_local_notifications: ^17.2.4
