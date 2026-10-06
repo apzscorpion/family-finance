@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "com.familyfinance.family_finance"
     compileSdk = 36
-    ndkVersion = "27.1.12297006"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -58,6 +58,13 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+            // Needed since the ML Kit text recognition plugin references
+            // optional script modules that are never packaged; see
+            // proguard-rules.pro.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
@@ -70,6 +77,23 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// google_mlkit_text_recognition depends on `com.google.mlkit:text-recognition`,
+// which bundles the Latin OCR model into the APK. Swapping it for the
+// Play-Services artifact keeps the model out of the build entirely: Google Play
+// Services delivers it on demand instead. Same `com.google.mlkit.vision.text`
+// API, so no plugin source changes are needed.
+//
+// The trade-off is that the first scan on a device that has not downloaded the
+// model yet fails; BillScan treats that as "model not ready" and falls back to
+// manual entry rather than surfacing an error.
+configurations.all {
+    resolutionStrategy.dependencySubstitution {
+        substitute(module("com.google.mlkit:text-recognition"))
+            .using(module("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1"))
+            .because("Keeps the ~4MB bundled OCR model out of a sideloaded APK")
+    }
 }
 
 dependencies {

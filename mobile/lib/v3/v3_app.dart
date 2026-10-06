@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/nocturne.dart';
 import 'data/notes_presence.dart';
+import 'data/prayer/prayer_controller.dart';
 import 'data/v3_repository.dart';
 import 'phosphor_icons.dart';
 import 'screens/activity_v3.dart';
@@ -17,6 +18,8 @@ import 'screens/insights_v3.dart';
 import 'screens/notes_v3.dart';
 import 'screens/notifications_v3.dart';
 import 'screens/onboarding_v3.dart';
+import 'screens/prayer_settings_v3.dart';
+import 'screens/prayer_v3.dart';
 import 'screens/settings_v3.dart';
 import 'sheets/v3_sheets.dart';
 import 'v3_nav.dart';
@@ -39,6 +42,9 @@ class V3App extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => NotesPresenceService(Supabase.instance.client),
         ),
+        // Loads its own device-local config. Builds nothing and runs no timer
+        // until the feature is switched on.
+        ChangeNotifierProvider(create: (_) => PrayerController()..load()),
       ],
       child: MaterialApp(
         title: 'Family Spend Tracker',
@@ -228,6 +234,8 @@ class _PageOverlay extends StatelessWidget {
         V3Page.notifications => const NotificationsV3(),
         V3Page.settings => const SettingsV3(),
         V3Page.notes => const NotesV3(),
+        V3Page.prayer => const PrayerV3(),
+        V3Page.prayerSettings => const PrayerSettingsV3(),
       };
 }
 

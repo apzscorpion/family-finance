@@ -103,6 +103,23 @@ class PhRegular {
   static const IconData gear = IconData(0xe270, fontFamily: 'Phosphor');
   static const IconData downloadSimple = IconData(0xe20c, fontFamily: 'Phosphor');
   static const IconData arrowCircleDown = IconData(0xe028, fontFamily: 'Phosphor');
+
+  // Added for prayer times (v1.9.0) and bill capture. Codepoints taken from
+  // @phosphor-icons/web@2.1.1 and verified present in the bundled font.
+  static const IconData mosque = IconData(0xecee, fontFamily: 'Phosphor');
+  static const IconData sun = IconData(0xe472, fontFamily: 'Phosphor');
+  static const IconData sunHorizon = IconData(0xe5b6, fontFamily: 'Phosphor');
+  static const IconData sunDim = IconData(0xe474, fontFamily: 'Phosphor');
+  static const IconData moon = IconData(0xe330, fontFamily: 'Phosphor');
+  static const IconData moonStars = IconData(0xe58e, fontFamily: 'Phosphor');
+  static const IconData starAndCrescent = IconData(0xecf4, fontFamily: 'Phosphor');
+  static const IconData cloudSun = IconData(0xe540, fontFamily: 'Phosphor');
+  static const IconData mapPin = IconData(0xe316, fontFamily: 'Phosphor');
+  static const IconData camera = IconData(0xe10e, fontFamily: 'Phosphor');
+  static const IconData crosshair = IconData(0xe1d6, fontFamily: 'Phosphor');
+  static const IconData compass = IconData(0xe1c8, fontFamily: 'Phosphor');
+  static const IconData image = IconData(0xe2ca, fontFamily: 'Phosphor');
+  static const IconData sparkle = IconData(0xe6a2, fontFamily: 'Phosphor');
 }
 
 /// Phosphor bold weight.
@@ -201,6 +218,23 @@ class PhBold {
   static const IconData gear = IconData(0xe270, fontFamily: 'PhosphorBold');
   static const IconData downloadSimple = IconData(0xe20c, fontFamily: 'PhosphorBold');
   static const IconData arrowCircleDown = IconData(0xe028, fontFamily: 'PhosphorBold');
+
+  // Added for prayer times (v1.9.0) and bill capture. Codepoints taken from
+  // @phosphor-icons/web@2.1.1 and verified present in the bundled font.
+  static const IconData mosque = IconData(0xecee, fontFamily: 'PhosphorBold');
+  static const IconData sun = IconData(0xe472, fontFamily: 'PhosphorBold');
+  static const IconData sunHorizon = IconData(0xe5b6, fontFamily: 'PhosphorBold');
+  static const IconData sunDim = IconData(0xe474, fontFamily: 'PhosphorBold');
+  static const IconData moon = IconData(0xe330, fontFamily: 'PhosphorBold');
+  static const IconData moonStars = IconData(0xe58e, fontFamily: 'PhosphorBold');
+  static const IconData starAndCrescent = IconData(0xecf4, fontFamily: 'PhosphorBold');
+  static const IconData cloudSun = IconData(0xe540, fontFamily: 'PhosphorBold');
+  static const IconData mapPin = IconData(0xe316, fontFamily: 'PhosphorBold');
+  static const IconData camera = IconData(0xe10e, fontFamily: 'PhosphorBold');
+  static const IconData crosshair = IconData(0xe1d6, fontFamily: 'PhosphorBold');
+  static const IconData compass = IconData(0xe1c8, fontFamily: 'PhosphorBold');
+  static const IconData image = IconData(0xe2ca, fontFamily: 'PhosphorBold');
+  static const IconData sparkle = IconData(0xe6a2, fontFamily: 'PhosphorBold');
 }
 
 /// Phosphor fill weight.
@@ -299,4 +333,21 @@ class PhFill {
   static const IconData gear = IconData(0xe270, fontFamily: 'PhosphorFill');
   static const IconData downloadSimple = IconData(0xe20c, fontFamily: 'PhosphorFill');
   static const IconData arrowCircleDown = IconData(0xe028, fontFamily: 'PhosphorFill');
+
+  // Added for prayer times (v1.9.0) and bill capture. Codepoints taken from
+  // @phosphor-icons/web@2.1.1 and verified present in the bundled font.
+  static const IconData mosque = IconData(0xecee, fontFamily: 'PhosphorFill');
+  static const IconData sun = IconData(0xe472, fontFamily: 'PhosphorFill');
+  static const IconData sunHorizon = IconData(0xe5b6, fontFamily: 'PhosphorFill');
+  static const IconData sunDim = IconData(0xe474, fontFamily: 'PhosphorFill');
+  static const IconData moon = IconData(0xe330, fontFamily: 'PhosphorFill');
+  static const IconData moonStars = IconData(0xe58e, fontFamily: 'PhosphorFill');
+  static const IconData starAndCrescent = IconData(0xecf4, fontFamily: 'PhosphorFill');
+  static const IconData cloudSun = IconData(0xe540, fontFamily: 'PhosphorFill');
+  static const IconData mapPin = IconData(0xe316, fontFamily: 'PhosphorFill');
+  static const IconData camera = IconData(0xe10e, fontFamily: 'PhosphorFill');
+  static const IconData crosshair = IconData(0xe1d6, fontFamily: 'PhosphorFill');
+  static const IconData compass = IconData(0xe1c8, fontFamily: 'PhosphorFill');
+  static const IconData image = IconData(0xe2ca, fontFamily: 'PhosphorFill');
+  static const IconData sparkle = IconData(0xe6a2, fontFamily: 'PhosphorFill');
 }

@@ -10,6 +10,7 @@ import '../v3_nav.dart';
 import '../v3_state.dart';
 import '../widgets/v3_donut.dart';
 import '../widgets/v3_motion.dart';
+import '../widgets/prayer_card.dart';
 import '../widgets/v3_primitives.dart';
 
 /// Home, per `Family Spend Tracker v3.dc.html`.
@@ -45,7 +46,12 @@ class HomeV3 extends StatelessWidget {
             const _ScopeChips(),
             const SizedBox(height: 14),
             const _HeroCard(),
-            const SizedBox(height: 18),
+            // Renders nothing unless prayer times are on and set to show here.
+            const SizedBox(height: 14),
+            PrayerCard(
+              onTap: () => context.read<V3Nav>().goPage(V3Page.prayer),
+            ),
+            const SizedBox(height: 4),
             const _QuickActions(),
             if (s.sources.isNotEmpty) ...[
               V3SectionHeader(

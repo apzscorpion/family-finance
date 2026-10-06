@@ -2,7 +2,7 @@ name: family_finance
 description: "Family & Personal Finance Manager — track income, expenses, budgets and share with trusted family members."
 publish_to: 'none'
 
-version: 1.8.3+21
+version: 1.9.0+22
 
 environment:
   sdk: ^3.13.4
@@ -48,6 +48,22 @@ dependencies:
   # Scheduling is done in the device's own zone, so timezone ships with it.
   flutter_local_notifications: ^17.2.4
   timezone: ^0.9.4
+
+  # Prayer times. Pure Dart astronomy — no native code, no API key and no
+  # network call, so times are computed offline and cost nothing at rest.
+  adhan: ^2.0.0
+
+  # One-shot coarse fix behind the optional "Use my location" button. Never
+  # polled: the coordinates are resolved once and cached.
+  geolocator: ^13.0.2
+
+  # Bill capture hands off to the system camera app rather than embedding a
+  # preview, so there is no CAMERA permission and no GPU preview pipeline.
+  image_picker: ^1.1.2
+
+  # On-device receipt OCR. The Play-Services model variant is substituted in
+  # android/app/build.gradle.kts so the bundled 16MB model is not shipped.
+  google_mlkit_text_recognition: ^0.14.0
 
 dev_dependencies:
   flutter_test:

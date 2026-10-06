@@ -7,11 +7,13 @@ import '../../services/app_log.dart';
 import '../../services/update_service.dart';
 import '../../theme/nocturne.dart';
 import '../data/data_export.dart';
+import '../data/prayer/prayer_controller.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../sheets/update_sheet_v3.dart';
 import 'import_v3.dart';
 import '../v3_design.dart';
+import '../v3_nav.dart';
 import '../v3_state.dart';
 import 'sources_manager_v3.dart';
 import '../sheets/v3_sheets.dart';
@@ -130,6 +132,28 @@ class SettingsV3 extends StatelessWidget {
                 icon: PhRegular.pencilSimple,
                 label: 'Rename workspace (${s.family?.name ?? 'Family'})',
                 onTap: () => _showRenameFamilyDialog(context, s),
+              ),
+            ],
+          ),
+        ),
+
+        const _Kicker('Personal'),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Nocturne.surface,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            children: [
+              _DataRow(
+                icon: PhRegular.mosque,
+                label: context.watch<PrayerController>().enabled
+                    ? 'Prayer times (on)'
+                    : 'Prayer times',
+                onTap: () =>
+                    context.read<V3Nav>().goPage(V3Page.prayerSettings),
               ),
             ],
           ),
