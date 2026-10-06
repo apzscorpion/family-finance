@@ -48,24 +48,11 @@
             android:value="2" />
 
         <!--
-            Reads payment alerts already posted by banking and UPI apps.
-
-            This is deliberately used instead of READ_SMS: SMS permissions are
-            Restricted Permissions that Google Play grants only to apps whose
-            core purpose is messaging, so a finance app requesting them is
-            rejected. Notification access carries the same payment details, is
-            granted by the user in system settings, and the app stays fully
-            usable when it is declined.
+            The notification listener that reads bank and UPI payment alerts is
+            declared only in the `detect` flavour, in
+            src/detect/AndroidManifest.xml. Declaring it here would make every
+            build refuse to sideload — see the comment in app/build.gradle.kts.
         -->
-        <service
-            android:name=".TxnNotificationListenerService"
-            android:exported="false"
-            android:label="Detected payments"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService"/>
-            </intent-filter>
-        </service>
     </application>
 
     <queries>

@@ -23,6 +23,27 @@ android {
         versionName = flutter.versionName
     }
 
+    // Google's enhanced sideloading protection refuses to install an APK that
+    // declares BIND_NOTIFICATION_LISTENER_SERVICE when it comes from a browser
+    // or file manager, with "App blocked to protect your device". It is a
+    // blanket policy, not a malware verdict, so there is no way to allow it.
+    //
+    // The listener therefore lives only in the `detect` flavour. `standard`
+    // carries no trace of it and sideloads normally; `detect` keeps automatic
+    // payment detection and has to be installed over adb or from the Play
+    // Store, which are exempt.
+    flavorDimensions += "detection"
+
+    productFlavors {
+        create("standard") {
+            dimension = "detection"
+        }
+        create("detect") {
+            dimension = "detection"
+            versionNameSuffix = "-detect"
+        }
+    }
+
     signingConfigs {
         create("release") {
             keyAlias = "familyfinance"

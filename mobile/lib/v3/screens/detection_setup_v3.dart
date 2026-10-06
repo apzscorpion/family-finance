@@ -29,6 +29,7 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
     with WidgetsBindingObserver {
   bool _granted = false;
   bool _checking = true;
+  bool _available = true;
 
   @override
   void initState() {
@@ -51,9 +52,11 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
   }
 
   Future<void> _check() async {
-    final g = await NotificationBridge.isGranted();
+    final available = await NotificationBridge.isAvailable();
+    final g = available && await NotificationBridge.isGranted();
     if (!mounted) return;
     setState(() {
+      _available = available;
       _granted = g;
       _checking = false;
     });
@@ -204,6 +207,39 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                                   fontSize: 13,
                                   height: 1.45,
                                   color: NocturneSemantic.income),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (!_available)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Nocturne.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border:
+                            Border.all(color: Nocturne.neutral800, width: 1),
+                      ),
+                      child: const Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(PhRegular.info,
+                              size: 18, color: Nocturne.neutral400),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'This build cannot read notifications. Android '
+                              'refuses to install an app that asks for '
+                              'notification access unless it comes from the '
+                              'Play Store, so the feature is left out of the '
+                              'build you can download directly. Install the '
+                              'detection build over USB to use it.',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  height: 1.45,
+                                  color: Nocturne.neutral400),
                             ),
                           ),
                         ],

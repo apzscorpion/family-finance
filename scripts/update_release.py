@@ -25,8 +25,16 @@ PUBSPEC_PATH = MOBILE_DIR / "pubspec.yaml"
 UPDATE_SERVICE_PATH = MOBILE_DIR / "lib" / "services" / "update_service.dart"
 README_PATH = REPO_ROOT / "README.md"
 RELEASES_DIR = REPO_ROOT / "releases"
-BUILT_APK_PATH = MOBILE_DIR / "build" / "app" / "outputs" / "flutter-apk" / "app-release.apk"
+FLUTTER_APK_DIR = MOBILE_DIR / "build" / "app" / "outputs" / "flutter-apk"
+
+# Two flavours ship. `standard` carries no notification listener, which is what
+# lets it install from a browser or file manager: Android refuses to install an
+# APK that declares notification access unless it came from the Play Store.
+# `detect` keeps automatic payment detection and has to go on over adb.
+BUILT_APK_PATH = FLUTTER_APK_DIR / "app-standard-release.apk"
 TARGET_APK_PATH = RELEASES_DIR / "FamilySpendTracker-latest.apk"
+DETECT_APK_PATH = FLUTTER_APK_DIR / "app-detect-release.apk"
+DETECT_TARGET_PATH = RELEASES_DIR / "FamilySpendTracker-detect.apk"
 
 
 def main():
@@ -62,14 +70,18 @@ def main():
     env = os.environ.copy()
     env["PATH"] += f";C:\\src\\flutter\\bin"
 
-    result = subprocess.run([flutter_bin, "build", "apk", "--release"], cwd=MOBILE_DIR, env=env)
-    if result.returncode != 0:
-        print("Error: Flutter build failed!")
-        sys.exit(1)
-
-    if not BUILT_APK_PATH.exists():
-        print(f"Error: Built APK at {BUILT_APK_PATH} not found.")
-        sys.exit(1)
+    for flavor, path in (("standard", BUILT_APK_PATH), ("detect", DETECT_APK_PATH)):
+        print(f"  Building {flavor}...")
+        result = subprocess.run(
+            [flutter_bin, "build", "apk", "--release", "--flavor", flavor],
+            cwd=MOBILE_DIR, env=env,
+        )
+        if result.returncode != 0:
+            print(f"Error: Flutter build failed for flavour {flavor}!")
+            sys.exit(1)
+        if not path.exists():
+            print(f"Error: Built APK at {path} not found.")
+            sys.exit(1)
 
     # 2. Clean releases directory & copy latest APK
     print("[3/5] Cleaning old APKs in releases/ directory...")
@@ -79,6 +91,8 @@ def main():
 
     shutil.copy2(BUILT_APK_PATH, TARGET_APK_PATH)
     print(f"  Mapped latest build to {TARGET_APK_PATH}")
+    shutil.copy2(DETECT_APK_PATH, DETECT_TARGET_PATH)
+    print(f"  Mapped detection build to {DETECT_TARGET_PATH}")
 
     # 3. Update README.md
     print("[4/5] Auto-updating README.md...")
