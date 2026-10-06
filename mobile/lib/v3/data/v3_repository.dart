@@ -387,9 +387,13 @@ class V3Repository {
     String? sourceId,
     bool autoPost = true,
     int remindDays = 2,
+    String? ownerUserId,
   }) async {
     final payload = <String, dynamic>{
       'family_id': familyId,
+      // Defaults to the signed-in user so a charge always has an owner; the
+      // posting function relies on this to attribute the transaction.
+      'owner_user_id': ownerUserId ?? currentUserId,
       'title': title,
       'amount': amount,
       'cadence': cadence,

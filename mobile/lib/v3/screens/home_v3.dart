@@ -293,20 +293,12 @@ class _ScopeChips extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          V3Chip(
-            label: 'Family',
-            selected: s.isFamily,
-            onTap: () => s.setScope('family'),
-            leading: const V3Avatar(
-              initial: '',
-              color: Nocturne.accent700,
-              size: 26,
-              fontSize: 11.5,
-              icon: PhRegular.users,
-            ),
-          ),
+          // The household view is deliberately not a chip here: everything a
+          // member adds is their own, so the strip offers people, not the
+          // family. The family total is still available from the "View
+          // finances for" sheet and on the Family tab.
           for (final m in active) ...[
-            const SizedBox(width: 6),
+            if (m != active.first) const SizedBox(width: 6),
             V3Chip(
               label: m.userId == s.myId ? 'Me' : m.name,
               selected: s.scope == m.userId,
