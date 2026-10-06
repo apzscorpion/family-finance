@@ -534,17 +534,30 @@ class _V3AddSheetState extends State<V3AddSheet> {
       shares = {for (final p in people) p: each};
     }
 
-    final ok = await s.addTransaction(
-      title: _note.text.trim(),
-      amount: _value,
-      type: _type,
-      categoryKey: _catKey,
-      method: _method,
-      sourceId: _sourceId,
-      forUserId: _forUser,
-      paidBy: payer,
-      shares: shares,
-    );
+    final ok = widget.edit != null
+        ? await s.updateTransaction(
+            id: widget.edit!.id,
+            title: _note.text.trim(),
+            amount: _value,
+            type: _type,
+            categoryKey: _catKey,
+            method: _method,
+            sourceId: _sourceId,
+            forUserId: _forUser,
+            paidBy: payer,
+            shares: shares,
+          )
+        : await s.addTransaction(
+            title: _note.text.trim(),
+            amount: _value,
+            type: _type,
+            categoryKey: _catKey,
+            method: _method,
+            sourceId: _sourceId,
+            forUserId: _forUser,
+            paidBy: payer,
+            shares: shares,
+          );
 
     if (!mounted) return;
     setState(() => _saving = false);
@@ -569,10 +582,18 @@ class _V3AddSheetState extends State<V3AddSheet> {
         _type == 'expense' ? V3Design.expenseCats : V3Design.incomeCats;
     final members = s.members.where((m) => m.isActive).toList();
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+    // The save button is pinned beneath the scrolling body. It used to be the
+    // last item inside the scroll view, so on shorter screens it sat below the
+    // fold: tapping where the button appeared to be did nothing, which made
+    // saving look broken rather than merely out of view.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -931,7 +952,12 @@ class _V3AddSheetState extends State<V3AddSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          GestureDetector(
+            ],
+          ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        GestureDetector(
             onTap: _value > 0 ? _save : null,
             behavior: HitTestBehavior.opaque,
             child: Opacity(
@@ -954,7 +980,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                     : Text(
                         _value <= 0
                             ? 'Enter an amount'
-                            : 'Save ${_type == 'income' ? 'income' : 'expense'} · ${V3Design.inr(_value)}',
+                            : '${widget.edit == null ? 'Save' : 'Update'} ${_type == 'income' ? 'income' : 'expense'} · ${V3Design.inr(_value)}',
                         style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -963,8 +989,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
               ),
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 }

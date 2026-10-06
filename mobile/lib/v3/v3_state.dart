@@ -392,6 +392,43 @@ class V3State extends ChangeNotifier {
     return true;
   }
 
+  Future<bool> updateTransaction({
+    required String id,
+    required String title,
+    required double amount,
+    required String type,
+    required String categoryKey,
+    String method = 'UPI',
+    String? sourceId,
+    String? forUserId,
+    String? paidBy,
+    Map<String, double>? shares,
+    String? note,
+  }) async {
+    final cat = categoryByKey(categoryKey);
+    final patch = <String, dynamic>{
+      'title': title.isEmpty ? (cat?.name ?? 'Expense') : title,
+      'amount': amount,
+      'type': type,
+      'method': method,
+      'category_id': cat?.id,
+      'source_id': sourceId,
+      'user_id': forUserId ?? myId,
+      'paid_by': paidBy ?? myId,
+      'split_with':
+          shares == null || shares.isEmpty ? null : shares.keys.toList(),
+      'shares': shares,
+      'note': ?note,
+    };
+    final ok = await V3Repository.guard('updateTransaction', () async {
+      await _repo.updateTransaction(id, patch);
+      return true;
+    });
+    if (ok != true) return false;
+    await refresh();
+    return true;
+  }
+
   /// Every expense that involves both me and [otherUserId], newest first.
   List<TxnRow> ledgerWith(String otherUserId) {
     final me = myId;
@@ -448,6 +485,67 @@ class V3State extends ChangeNotifier {
         'deleteTransaction', () => _repo.deleteTransaction(id));
     txns = txns.where((t) => t.id != id).toList();
     notifyListeners();
+  }
+
+  Future<bool> removeMember(String userId) async {
+    final ok = await V3Repository.guard('removeMember', () async {
+      await _repo.removeMember(familyId, userId);
+      return true;
+    });
+    if (ok == true) {
+      members = members.where((m) => m.userId != userId).toList();
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> setMemberRole(String userId, String role) async {
+    await V3Repository.guard(
+      'setMemberRole',
+      () => _repo.setMemberRole(familyId, userId, role),
+    );
+    await refresh();
+  }
+
+  Future<void> setMemberStatus(String userId, String status) async {
+    await V3Repository.guard(
+      'setMemberStatus',
+      () => _repo.setMemberStatus(familyId, userId, status),
+    );
+    await refresh();
+  }
+
+  Future<bool> renameMe(String newName) async {
+    final ok = await V3Repository.guard('renameMe', () async {
+      await _repo.renameMe(newName);
+      return true;
+    });
+    if (ok == true) {
+      await refresh();
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> renameFamily(String newName) async {
+    final ok = await V3Repository.guard('renameFamily', () async {
+      await _repo.renameFamily(familyId, newName);
+      return true;
+    });
+    if (ok == true) {
+      await refresh();
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> deleteMyAccount() async {
+    final ok = await V3Repository.guard('deleteMyAccount', () async {
+      await _repo.deleteMyAccount();
+      return true;
+    });
+    return ok == true;
   }
 
   Future<void> settleDebt(String id) async {

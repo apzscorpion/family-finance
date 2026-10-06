@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../data/data_export.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
 import 'home_v3.dart' show V3TxnRow;
+import 'import_v3.dart';
 
 /// Activity: search, type segment, category chips, member filter, totals, and
 /// transactions grouped by day.
@@ -124,9 +126,93 @@ class _ActivityV3State extends State<ActivityV3> {
                     ],
                   ),
                 ),
-                Text('${items.length} entries',
-                    style: const TextStyle(
-                        fontSize: 12, color: Nocturne.neutral500)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('${items.length}',
+                        style: const TextStyle(
+                            fontSize: 12, color: Nocturne.neutral500)),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => ImportV3.open(context),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Nocturne.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: Nocturne.neutral800, width: 1),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(PhRegular.downloadSimple,
+                                size: 12, color: Nocturne.accent200),
+                            SizedBox(width: 4),
+                            Text('Import',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Nocturne.accent200)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        if (items.isEmpty) {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text('No transactions to export')));
+                          return;
+                        }
+                        final csv = DataExport.transactionsCsv(
+                          items,
+                          nameOf: s.memberName,
+                        );
+                        final now = DateTime.now();
+                        final stamp =
+                            '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+                        final ok = await DataExport.share(
+                          csv,
+                          'transactions-$stamp.csv',
+                          subject: 'Activity transactions',
+                        );
+                        if (!ok) {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text('Could not export transactions')));
+                        }
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Nocturne.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: Nocturne.neutral800, width: 1),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(PhRegular.shareNetwork,
+                                size: 12, color: Nocturne.neutral300),
+                            SizedBox(width: 4),
+                            Text('Export',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Nocturne.neutral300)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

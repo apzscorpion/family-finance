@@ -67,19 +67,49 @@ class V3Repository {
 
   Future<void> setMemberRole(
       String familyId, String userId, String role) async {
-    await _db
-        .from('family_memberships')
-        .update({'role': role})
-        .eq('family_id', familyId)
-        .eq('user_id', userId);
+    try {
+      await _db.rpc('set_member_role', params: {
+        'p_family': familyId,
+        'p_user': userId,
+        'p_role': role,
+      });
+    } catch (_) {
+      await _db
+          .from('family_memberships')
+          .update({'role': role})
+          .eq('family_id', familyId)
+          .eq('user_id', userId);
+    }
   }
 
   Future<void> removeMember(String familyId, String userId) async {
-    await _db
-        .from('family_memberships')
-        .delete()
-        .eq('family_id', familyId)
-        .eq('user_id', userId);
+    try {
+      await _db.rpc('remove_member', params: {
+        'p_family': familyId,
+        'p_user': userId,
+      });
+    } catch (_) {
+      await _db
+          .from('family_memberships')
+          .delete()
+          .eq('family_id', familyId)
+          .eq('user_id', userId);
+    }
+  }
+
+  Future<void> renameMe(String newName) async {
+    await _db.rpc('rename_me', params: {'p_name': newName});
+  }
+
+  Future<void> renameFamily(String familyId, String newName) async {
+    await _db.rpc('rename_family', params: {
+      'p_family': familyId,
+      'p_name': newName,
+    });
+  }
+
+  Future<void> deleteMyAccount() async {
+    await _db.rpc('delete_my_account');
   }
 
   // ── Reference data ────────────────────────────────────────────────────────
