@@ -113,6 +113,20 @@ class ExpenseImport {
     final categoryCol = _matchColumn(header, _categoryKeys);
     final typeCol = _matchColumn(header, _typeKeys);
 
+    // Does this file express direction with a minus sign? Decided across the
+    // whole file, because a single row tells you nothing: an export where
+    // every amount is positive is not signed, it is just all spending.
+    var usesSigns = false;
+    if (debitCol == null && creditCol == null && amountCol != null) {
+      for (var i = headerIndex + 1; i < table.length; i++) {
+        final a = _amountAt(table[i], amountCol);
+        if (a != null && a < 0) {
+          usesSigns = true;
+          break;
+        }
+      }
+    }
+
     final out = <ImportedExpense>[];
     for (var i = headerIndex + 1; i < table.length; i++) {
       final row = table[i];
@@ -136,21 +150,30 @@ class ExpenseImport {
       amount ??= _amountAt(row, amountCol);
       if (amount == null) continue;
 
-      // A single amount column may still be signed, or paired with a type.
+      final title = _cell(row, titleCol).trim();
+      final category = _cell(row, categoryCol);
+
+      // With one amount column the direction has to be inferred, in order of
+      // how trustworthy the signal is. Previously only the type column was
+      // consulted, so a row categorised "Salary" with no type column imported
+      // as a spend — which is how an income-heavy sheet ended up inflating
+      // the expense total.
       if (debitCol == null && creditCol == null) {
-        if (amount < 0) {
-          isIncome = false;
-        } else if (typeCol != null) {
-          isIncome = _looksIncome(_cell(row, typeCol));
+        final typeText = _cell(row, typeCol).trim();
+        if (typeText.isNotEmpty) {
+          isIncome = _looksIncome(typeText);
+        } else if (usesSigns) {
+          isIncome = amount > 0;
+        } else {
+          isIncome = _looksIncome(category) || _looksIncome(title);
         }
       }
 
-      final title = _cell(row, titleCol).trim();
       out.add(ImportedExpense(
         title: title.isEmpty ? 'Imported' : title,
         amount: amount.abs(),
         date: _parseDate(_cell(row, dateCol)),
-        category: _blankToNull(_cell(row, categoryCol)),
+        category: _blankToNull(category),
         isIncome: isIncome,
       ));
     }
@@ -188,11 +211,16 @@ class ExpenseImport {
       }
 
       if (amount == null) continue;
+      final title = words.isEmpty ? 'Imported' : words.join(' ');
       out.add(ImportedExpense(
-        title: words.isEmpty ? 'Imported' : words.join(' '),
+        title: title,
         amount: amount.abs(),
         date: date,
-        isIncome: amount > 0 && false,
+        // Without a header there is no type column to consult, so the
+        // description is the only signal. (This previously read
+        // `amount > 0 && false`, which is never true — every headerless row
+        // imported as a spend.)
+        isIncome: _looksIncome(title),
       ));
     }
     return out;
@@ -372,10 +400,22 @@ class ExpenseImport {
     }
     for (var i = 0; i < header.length; i++) {
       for (final k in keys) {
-        if (header[i].contains(k)) return i;
+        if (_headerMentions(header[i], k)) return i;
       }
     }
     return null;
+  }
+
+  /// Whether a header names [key] as a whole word.
+  ///
+  /// A plain `contains` was catastrophic for the two-letter keys: "description"
+  /// contains "cr", so on any file with a Description column the credit column
+  /// bound to the description, the debit/credit branch took over, and every
+  /// row's direction was decided by a column holding text rather than money.
+  /// That is why income rows imported as spending.
+  static bool _headerMentions(String header, String key) {
+    if (header == key) return true;
+    return RegExp('(^| )${RegExp.escape(key)}( |\$)').hasMatch(header);
   }
 
   static String _norm(String s) =>
@@ -390,16 +430,30 @@ class ExpenseImport {
   static String? _blankToNull(String s) =>
       s.trim().isEmpty ? null : s.trim();
 
+  static final _incomeWords = RegExp(
+      r'\b(income|credit|credited|deposit|received|receipt|salary|wages?|'
+      r'payroll|stipend|pension|bonus|refund|reimbursement|reimbursed|'
+      r'cashback|dividend|commission|payout|inflow|rental income|'
+      r'rent received)\b');
+
+  /// "Loan" cuts both ways: money borrowed is income, an EMI or a repayment
+  /// is a spend, and the same word appears in both. The outflow words decide.
+  static final _loanWord = RegExp(r'\bloans?\b');
+  static final _loanOutflow = RegExp(
+      r'\b(emi|repay\w*|instal?ments?|interest|premium|closure|payment|paid|'
+      r'processing)\b');
+
+  /// Whether a type, category or description reads as money coming in.
   static bool _looksIncome(String s) {
-    final v = s.toLowerCase();
-    return v.contains('credit') ||
-        v.contains('income') ||
-        v.contains('deposit') ||
-        v.contains('received') ||
-        v.contains('salary') ||
-        v.contains('refund') ||
-        v == 'cr' ||
-        v == 'in';
+    final v = s.toLowerCase().trim();
+    if (v.isEmpty) return false;
+
+    // Bank exports abbreviate the direction; these are unambiguous.
+    if (v == 'cr' || v == 'in' || v == 'credit') return true;
+    if (v == 'dr' || v == 'out' || v == 'debit') return false;
+
+    if (_loanWord.hasMatch(v)) return !_loanOutflow.hasMatch(v);
+    return _incomeWords.hasMatch(v);
   }
 
   /// Reads `1,240.50`, `₹1240`, `Rs. 1240`, `(1240)` and `1240 Dr`.
