@@ -24,36 +24,13 @@ class DetectedV3 extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
       children: [
-        GestureDetector(
-          onTap: () => DetectionSetupV3.open(context),
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Nocturne.accent900,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(PhRegular.bellRinging,
-                    size: 17, color: Nocturne.accent200),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Read from bank & UPI app notifications on this phone. '
-                    'Your SMS inbox is never accessed.',
-                    style: TextStyle(
-                        fontSize: 12, height: 1.45, color: Nocturne.accent200),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(PhRegular.caretRight,
-                    size: 14, color: Nocturne.accent300),
-              ],
-            ),
-          ),
+        // Only shown where the listener actually exists; in the standard
+        // build it would describe something the app cannot do.
+        FutureBuilder<bool>(
+          future: NotificationBridge.isAvailable(),
+          builder: (context, snap) => snap.data == true
+              ? const _DetectionBanner()
+              : const SizedBox.shrink(),
         ),
         const _DetectionStatus(),
         if (s.detected.isEmpty)
@@ -302,6 +279,42 @@ class _Action extends StatelessWidget {
 }
 
 
+/// Explains where detected payments come from, and opens the setup page.
+class _DetectionBanner extends StatelessWidget {
+  const _DetectionBanner();
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: () => DetectionSetupV3.open(context),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Nocturne.accent900,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(PhRegular.bellRinging, size: 17, color: Nocturne.accent200),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Read from bank & UPI app notifications on this phone. '
+                  'Your SMS inbox is never accessed.',
+                  style: TextStyle(
+                      fontSize: 12, height: 1.45, color: Nocturne.accent200),
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(PhRegular.caretRight, size: 14, color: Nocturne.accent300),
+            ],
+          ),
+        ),
+      );
+}
+
 /// Shows whether detection is on, and offers a manual sweep when it is.
 class _DetectionStatus extends StatefulWidget {
   const _DetectionStatus();
@@ -313,6 +326,7 @@ class _DetectionStatus extends StatefulWidget {
 class _DetectionStatusState extends State<_DetectionStatus>
     with WidgetsBindingObserver {
   bool? _granted;
+  bool _available = true;
   bool _busy = false;
 
   @override
@@ -336,6 +350,10 @@ class _DetectionStatusState extends State<_DetectionStatus>
   Future<void> _check() async {
     if (!NotificationBridge.isSupported) {
       if (mounted) setState(() => _granted = false);
+      return;
+    }
+    if (!await NotificationBridge.isAvailable()) {
+      if (mounted) setState(() => _available = false);
       return;
     }
     final g = await NotificationBridge.isGranted();
@@ -364,6 +382,37 @@ class _DetectionStatusState extends State<_DetectionStatus>
 
   @override
   Widget build(BuildContext context) {
+    // This build has no listener, so there is nothing to switch on. Say so
+    // rather than showing a "Turn on" button that could never succeed.
+    if (!_available) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Nocturne.neutral800, width: 1),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(PhRegular.info, size: 17, color: Nocturne.neutral400),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Automatic detection is not part of this build. Android blocks '
+                'installing an app that reads notifications unless it comes '
+                'from the Play Store. Add payments here by hand, or install '
+                'the detection build over USB.',
+                style: TextStyle(
+                    fontSize: 12.5, height: 1.45, color: Nocturne.neutral400),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (_granted == null) return const SizedBox.shrink();
 
     if (_granted == false) {

@@ -21,6 +21,30 @@ class NotificationBridge {
   /// Android only; the channel simply reports false elsewhere.
   static bool get isSupported => !kIsWeb && Platform.isAndroid;
 
+  static bool? _available;
+
+  /// Whether this build ships the notification listener at all.
+  ///
+  /// Only the `detect` flavour does. The `standard` flavour leaves it out so
+  /// that it can be installed from a browser or file manager, which Android
+  /// refuses for any app declaring notification access. The answer cannot
+  /// change while the app is running, so it is cached after the first call.
+  static Future<bool> isAvailable() async {
+    final cached = _available;
+    if (cached != null) return cached;
+    if (!isSupported) return _available = false;
+    try {
+      _available =
+          await _channel.invokeMethod<bool>('isDetectionAvailable') ?? false;
+    } on MissingPluginException {
+      _available = false;
+    } catch (err, stack) {
+      AppLog.error('NotificationBridge.isAvailable', err, stack);
+      _available = false;
+    }
+    return _available!;
+  }
+
   /// Whether the user has enabled notification access for this app.
   static Future<bool> isGranted() async {
     try {
