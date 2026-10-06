@@ -487,6 +487,72 @@ class V3State extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> addRecurring({
+    required String title,
+    required double amount,
+    required String cadence,
+    required DateTime nextDue,
+    String type = 'expense',
+    String? categoryKey,
+    String? sourceId,
+    bool autoPost = true,
+    int remindDays = 2,
+  }) async {
+    final cat = categoryByKey(
+        categoryKey ?? (type == 'income' ? 'salary' : 'bills'));
+    final created = await V3Repository.guard(
+      'addRecurring',
+      () => _repo.addRecurring(
+        familyId: familyId,
+        title: title.isEmpty ? (cat?.name ?? 'Recurring') : title,
+        amount: amount,
+        cadence: cadence,
+        nextDue: nextDue,
+        type: type,
+        categoryId: cat?.id,
+        sourceId: sourceId,
+        autoPost: autoPost,
+        remindDays: remindDays,
+      ),
+    );
+    if (created == null) return false;
+    recurring = [...recurring, created]
+      ..sort((a, b) => a.nextDue.compareTo(b.nextDue));
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> updateRecurring(String id, Map<String, dynamic> patch) async {
+    final ok = await V3Repository.guard('updateRecurring', () async {
+      await _repo.updateRecurring(id, patch);
+      return true;
+    });
+    if (ok != true) return false;
+    await refresh();
+    return true;
+  }
+
+  Future<bool> deleteRecurring(String id) async {
+    final ok = await V3Repository.guard('deleteRecurring', () async {
+      await _repo.deleteRecurring(id);
+      return true;
+    });
+    if (ok != true) return false;
+    recurring = recurring.where((r) => r.id != id).toList();
+    notifyListeners();
+    return true;
+  }
+
+  Future<int> postDueRecurring() async {
+    final count = await V3Repository.guard(
+            'postDueRecurring', () => _repo.postDueRecurring(familyId)) ??
+        0;
+    if (count > 0) {
+      await refresh();
+    }
+    return count;
+  }
+
   Future<bool> removeMember(String userId) async {
     final ok = await V3Repository.guard('removeMember', () async {
       await _repo.removeMember(familyId, userId);
