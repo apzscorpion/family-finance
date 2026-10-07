@@ -21,6 +21,16 @@ class V3RecurringSheet extends StatefulWidget {
 class _V3RecurringSheetState extends State<V3RecurringSheet> {
   String _filter = 'all'; // 'all' | 'income' | 'expense'
 
+  void _openEditor(BuildContext context, {RecurringRow? edit}) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: const Color(0xA306070E),
+      isScrollControlled: true,
+      builder: (_) => _AddRecurringDialog(edit: edit),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
@@ -29,6 +39,8 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
       if (_filter == 'expense') return r.isExpense;
       return true;
     }).toList();
+    final unownedCount =
+        s.recurring.where((r) => r.ownerUserId == null).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,13 +66,7 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
               ),
             ),
             GestureDetector(
-              onTap: () => showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                barrierColor: const Color(0xA306070E),
-                isScrollControlled: true,
-                builder: (_) => const _AddRecurringDialog(),
-              ),
+              onTap: () => _openEditor(context),
               behavior: HitTestBehavior.opaque,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -85,6 +91,32 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
           ],
         ),
         const SizedBox(height: 12),
+        if (unownedCount > 0) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: Nocturne.mix(NocturneSemantic.warning, 12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: Nocturne.mix(NocturneSemantic.warning, 40), width: 1),
+            ),
+            child: Row(
+              children: [
+                const Icon(PhRegular.warning,
+                    size: 16, color: NocturneSemantic.warning),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$unownedCount recurring ${unownedCount == 1 ? 'charge has' : 'charges have'} no owner — tap a row to assign who it belongs to.',
+                    style: const TextStyle(
+                        fontSize: 11.5, color: Nocturne.neutral200),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         Row(
           children: [
             _filterChip('All (${s.recurring.length})', 'all'),
@@ -149,93 +181,134 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                     : dueDays > 0
                         ? 'Due in $dueDays ${dueDays == 1 ? 'day' : 'days'}'
                         : 'Overdue by ${dueDays.abs()} days';
+                final owner = s.memberById(r.ownerUserId);
+                final ownerLabel = r.ownerUserId == null
+                    ? 'No owner'
+                    : (r.ownerUserId == s.myId
+                        ? 'You'
+                        : (owner?.name ?? 'Member'));
 
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Nocturne.bg,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Nocturne.neutral800, width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      V3IconTile(
-                        icon: style.icon,
-                        color: style.color,
-                        size: 38,
-                        radius: 11,
+                return GestureDetector(
+                  onTap: () => _openEditor(context, edit: r),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Nocturne.bg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: r.ownerUserId == null
+                            ? Nocturne.mix(NocturneSemantic.warning, 45)
+                            : Nocturne.neutral800,
+                        width: 1,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    r.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: Nocturne.text),
+                    ),
+                    child: Row(
+                      children: [
+                        V3IconTile(
+                          icon: style.icon,
+                          color: style.color,
+                          size: 38,
+                          radius: 11,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      r.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Nocturne.text),
+                                    ),
                                   ),
-                                ),
-                                if (r.autoPost) ...[
+                                  if (r.autoPost) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 5, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Nocturne.accent900,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text('Auto',
+                                          style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: Nocturne.accent200)),
+                                    ),
+                                  ],
                                   const SizedBox(width: 6),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 5, vertical: 2),
+                                        horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Nocturne.accent900,
-                                      borderRadius: BorderRadius.circular(4),
+                                      color: r.ownerUserId == null
+                                          ? Nocturne.mix(
+                                              NocturneSemantic.warning, 18)
+                                          : Nocturne.mix(
+                                              owner?.color ??
+                                                  Nocturne.accent600,
+                                              18),
+                                      borderRadius: BorderRadius.circular(5),
                                     ),
-                                    child: const Text('Auto',
-                                        style: TextStyle(
-                                            fontSize: 9.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: Nocturne.accent200)),
+                                    child: Text(
+                                      ownerLabel,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: r.ownerUserId == null
+                                            ? NocturneSemantic.warning
+                                            : (owner?.color ??
+                                                Nocturne.accent200),
+                                      ),
+                                    ),
                                   ),
                                 ],
-                              ],
-                            ),
-                            const SizedBox(height: 2),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${_daySuffix(r.nextDue.day)} of month · $dueText',
+                                style: const TextStyle(
+                                    fontSize: 11.5, color: Nocturne.neutral500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             Text(
-                              '${_daySuffix(r.nextDue.day)} of month · $dueText',
-                              style: const TextStyle(
-                                  fontSize: 11.5, color: Nocturne.neutral500),
+                              '${r.isIncome ? '+' : '-'} ${V3Design.inr(r.amount)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: r.isIncome
+                                    ? NocturneSemantic.income
+                                    : Nocturne.text,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () => _confirmDelete(context, s, r),
+                              behavior: HitTestBehavior.opaque,
+                              child: const Icon(PhRegular.trash,
+                                  size: 16, color: Nocturne.neutral500),
                             ),
                           ],
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${r.isIncome ? '+' : '-'} ${V3Design.inr(r.amount)}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: r.isIncome
-                                  ? NocturneSemantic.income
-                                  : Nocturne.text,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          GestureDetector(
-                            onTap: () => _confirmDelete(context, s, r),
-                            behavior: HitTestBehavior.opaque,
-                            child: const Icon(PhRegular.trash,
-                                size: 16, color: Nocturne.neutral500),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
@@ -313,7 +386,8 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
 }
 
 class _AddRecurringDialog extends StatefulWidget {
-  const _AddRecurringDialog();
+  final RecurringRow? edit;
+  const _AddRecurringDialog({this.edit});
 
   @override
   State<_AddRecurringDialog> createState() => _AddRecurringDialogState();
@@ -324,16 +398,30 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
   final _titleController = TextEditingController();
   String _expression = '';
   int _dayOfMonth = 1;
-  final String _cadence = 'monthly';
+  String _cadence = 'monthly';
   String _catKey = 'salary';
   String? _sourceId;
+  String? _ownerUserId;
   bool _autoPost = true;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _titleController.text = 'Monthly Salary';
+    final e = widget.edit;
+    if (e != null) {
+      _type = e.isIncome ? 'income' : 'expense';
+      _titleController.text = e.title;
+      _expression = CalcEngine.format(e.amount);
+      _dayOfMonth = e.nextDue.day.clamp(1, 31);
+      _cadence = e.cadence;
+      _catKey = e.categoryKey;
+      _sourceId = e.sourceId;
+      _ownerUserId = e.ownerUserId;
+      _autoPost = e.autoPost;
+    } else {
+      _titleController.text = 'Monthly Salary';
+    }
   }
 
   @override
@@ -391,17 +479,35 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
     final title = _titleController.text.trim().isEmpty
         ? (_type == 'income' ? 'Salary' : 'Monthly bill')
         : _titleController.text.trim();
+    final ownerId = _ownerUserId ?? s.myId;
 
-    final ok = await s.addRecurring(
-      title: title,
-      amount: val,
-      cadence: _cadence,
-      nextDue: nextDue,
-      type: _type,
-      categoryKey: _catKey,
-      sourceId: _sourceId,
-      autoPost: _autoPost,
-    );
+    final bool ok;
+    if (widget.edit != null) {
+      final cat = s.categoryByKey(_catKey);
+      ok = await s.updateRecurring(widget.edit!.id, {
+        'title': title,
+        'amount': val,
+        'cadence': _cadence,
+        'next_due': nextDue.toIso8601String().substring(0, 10),
+        'type': _type,
+        'category_id': cat?.id,
+        'source_id': _sourceId,
+        'auto_post': _autoPost,
+        'owner_user_id': ownerId,
+      });
+    } else {
+      ok = await s.addRecurring(
+        title: title,
+        amount: val,
+        cadence: _cadence,
+        nextDue: nextDue,
+        type: _type,
+        categoryKey: _catKey,
+        sourceId: _sourceId,
+        autoPost: _autoPost,
+        ownerUserId: ownerId,
+      );
+    }
 
     if (!mounted) return;
     setState(() => _saving = false);
@@ -417,6 +523,10 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final members = s.members.where((m) => m.isActive).toList();
+    final effectiveOwner = _ownerUserId ??
+        s.myId ??
+        (members.isNotEmpty ? members.first.userId : null);
     final catKeys =
         _type == 'income' ? V3Design.incomeCats : V3Design.expenseCats;
     final keys = const [
@@ -461,8 +571,11 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                 children: [
                   Row(
                     children: [
-                      const Text('Add recurring',
-                          style: TextStyle(
+                      Text(
+                          widget.edit == null
+                              ? 'Add recurring'
+                              : 'Edit recurring',
+                          style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: Nocturne.text)),
@@ -548,6 +661,85 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                       ],
                     ),
                   ),
+                  if (members.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const SizedBox(
+                          width: 52,
+                          child: Text('For',
+                              style: TextStyle(
+                                  fontSize: 11.5, color: Nocturne.neutral500)),
+                        ),
+                        Expanded(
+                          child: SizedBox(
+                            height: 32,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: members.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (_, i) {
+                                final m = members[i];
+                                final isMe = m.userId == s.myId;
+                                final sel = effectiveOwner == m.userId;
+                                return GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _ownerUserId = m.userId),
+                                  behavior: HitTestBehavior.opaque,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 150),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: sel
+                                          ? Nocturne.mix(m.color, 20)
+                                          : Nocturne.bg,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color:
+                                            sel ? m.color : Nocturne.neutral800,
+                                        width: 1.2,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        V3Avatar(
+                                          initial: m.initial,
+                                          color: m.color,
+                                          size: 22,
+                                          fontSize: 10,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          isMe ? 'You' : m.name,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: sel
+                                                ? FontWeight.w600
+                                                : FontWeight.w400,
+                                            color: sel
+                                                ? Nocturne.text
+                                                : Nocturne.neutral400,
+                                          ),
+                                        ),
+                                        if (sel) ...[
+                                          const SizedBox(width: 4),
+                                          Icon(PhBold.check,
+                                              size: 12, color: m.color),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   // Day of month selector
                   Row(

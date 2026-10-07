@@ -155,6 +155,12 @@ class SettingsV3 extends StatelessWidget {
                 onTap: () =>
                     context.read<V3Nav>().goPage(V3Page.prayerSettings),
               ),
+              const V3RowDivider(),
+              _DataRow(
+                icon: PhRegular.sparkle,
+                label: 'AI restructuring',
+                onTap: () => context.read<V3Nav>().goPage(V3Page.aiSettings),
+              ),
             ],
           ),
         ),
@@ -377,6 +383,27 @@ class SettingsV3 extends StatelessWidget {
                 icon: PhRegular.downloadSimple,
                 label: 'Import expenses (CSV, Excel, Markdown)',
                 onTap: () => ImportV3.open(context),
+              ),
+              const V3RowDivider(),
+              _DataRow(
+                icon: PhRegular.trash,
+                label: s.importedTxns.isEmpty
+                    ? 'Delete imported data'
+                    : 'Delete imported data (${s.importedTxns.length})',
+                color: s.importedTxns.isEmpty
+                    ? Nocturne.neutral400
+                    : NocturneSemantic.expense,
+                onTap: () {
+                  if (s.importedTxns.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('No imported transactions to delete'),
+                      ),
+                    );
+                    return;
+                  }
+                  ImportV3.openManageImported(context);
+                },
               ),
               const V3RowDivider(),
               _DataRow(

@@ -336,6 +336,42 @@ class V3Repository {
     await _db.from('transactions').delete().eq('id', id);
   }
 
+  /// Deletes multiple transactions in chunks so large batch selections never
+  /// exceed query-string limits. Returns the number of deleted rows.
+  Future<int> deleteTransactionsBulk(List<String> ids) async {
+    if (ids.isEmpty) return 0;
+    var removed = 0;
+    for (var i = 0; i < ids.length; i += 100) {
+      final end = (i + 100 < ids.length) ? i + 100 : ids.length;
+      final chunk = ids.sublist(i, end);
+      final rows = await _db
+          .from('transactions')
+          .delete()
+          .inFilter('id', chunk)
+          .select('id');
+      removed += (rows as List).length;
+    }
+    return removed;
+  }
+
+  /// Deletes all imported transactions (`origin = 'import'`) in [familyId],
+  /// optionally restricted to [userId]. Returns the number of deleted rows.
+  Future<int> deleteImportedTransactions(
+    String familyId, {
+    String? userId,
+  }) async {
+    var q = _db
+        .from('transactions')
+        .delete()
+        .eq('family_id', familyId)
+        .eq('origin', 'import');
+    if (userId != null) {
+      q = q.eq('user_id', userId);
+    }
+    final rows = await q.select('id');
+    return (rows as List).length;
+  }
+
   // ── Budgets, recurring, cards ─────────────────────────────────────────────
 
   Future<List<BudgetRow>> budgets(String familyId) async {
@@ -364,14 +400,29 @@ class V3Repository {
     }, onConflict: 'family_id,category_id,period');
   }
 
+  static const _recurringCols =
+      'id,family_id,owner_user_id,title,amount,type,cadence,next_due,category_id,source_id,card_id,active,auto_post,remind_days,categories(key)';
+  static const _recurringColsLegacy =
+      'id,family_id,title,amount,cadence,next_due,category_id,source_id,card_id,active,auto_post,remind_days,categories(key)';
+
   Future<List<RecurringRow>> recurring(String familyId) async {
-    final rows = await _db
-        .from('recurring_charges')
-        .select('id,family_id,title,amount,cadence,next_due,category_id,source_id,card_id,active,auto_post,remind_days,categories(key)')
-        .eq('family_id', familyId)
-        .eq('active', true)
-        .order('next_due');
-    return (rows as List)
+    List rows;
+    try {
+      rows = await _db
+          .from('recurring_charges')
+          .select(_recurringCols)
+          .eq('family_id', familyId)
+          .eq('active', true)
+          .order('next_due');
+    } catch (_) {
+      rows = await _db
+          .from('recurring_charges')
+          .select(_recurringColsLegacy)
+          .eq('family_id', familyId)
+          .eq('active', true)
+          .order('next_due');
+    }
+    return rows
         .map((r) => RecurringRow.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
   }
@@ -389,11 +440,12 @@ class V3Repository {
     int remindDays = 2,
     String? ownerUserId,
   }) async {
+    final resolvedOwner = ownerUserId ?? currentUserId;
     final payload = <String, dynamic>{
       'family_id': familyId,
       // Defaults to the signed-in user so a charge always has an owner; the
       // posting function relies on this to attribute the transaction.
-      'owner_user_id': ownerUserId ?? currentUserId,
+      'owner_user_id': resolvedOwner,
       'title': title,
       'amount': amount,
       'cadence': cadence,
@@ -411,18 +463,24 @@ class V3Repository {
       row = await _db
           .from('recurring_charges')
           .insert(payload)
-          .select('id,family_id,title,amount,cadence,next_due,category_id,source_id,card_id,active,auto_post,remind_days,categories(key)')
+          .select(_recurringCols)
           .single();
     } catch (_) {
-      // Fallback if 'type' column is not yet created in the database schema:
-      payload.remove('type');
+      // Fallback if 'type' or 'owner_user_id' column is not yet created:
+      payload
+        ..remove('type')
+        ..remove('owner_user_id');
       row = await _db
           .from('recurring_charges')
           .insert(payload)
-          .select('id,family_id,title,amount,cadence,next_due,category_id,source_id,card_id,active,auto_post,remind_days,categories(key)')
+          .select(_recurringColsLegacy)
           .single();
     }
-    return RecurringRow.fromJson({...row, 'type': type});
+    return RecurringRow.fromJson({
+      ...row,
+      'type': row['type'] ?? type,
+      'owner_user_id': row['owner_user_id'] ?? resolvedOwner,
+    });
   }
 
   Future<void> updateRecurring(String id, Map<String, dynamic> patch) async {

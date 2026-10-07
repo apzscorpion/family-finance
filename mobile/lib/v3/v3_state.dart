@@ -267,6 +267,16 @@ class V3State extends ChangeNotifier {
         return true;
       }).toList();
 
+  /// All imported transactions (`origin == 'import'`) in the current member
+  /// scope, regardless of the 7d/30d window so older bank exports are always
+  /// reachable for review or batch deletion.
+  List<TxnRow> get importedTxns => txns.where((t) {
+        if (t.origin != 'import') return false;
+        if (!isFamily && t.userId != scope) return false;
+        if (srcFilter != null && t.sourceId != srcFilter) return false;
+        return true;
+      }).toList();
+
   double get totalSpent =>
       scoped.where((t) => t.isExpense).fold(0.0, (s, t) => s + t.amount);
 
@@ -503,6 +513,39 @@ class V3State extends ChangeNotifier {
         'deleteTransaction', () => _repo.deleteTransaction(id));
     txns = txns.where((t) => t.id != id).toList();
     notifyListeners();
+  }
+
+  /// Deletes a batch of transactions by ID and removes them from in-memory
+  /// state immediately.
+  Future<int> deleteTransactions(Iterable<String> ids) async {
+    final idSet = ids.toSet();
+    if (idSet.isEmpty) return 0;
+    final removed = await V3Repository.guard(
+      'deleteTransactionsBulk',
+      () => _repo.deleteTransactionsBulk(idSet.toList()),
+    );
+    txns = txns.where((t) => !idSet.contains(t.id)).toList();
+    notifyListeners();
+    return removed ?? idSet.length;
+  }
+
+  /// Deletes all imported (`origin == 'import'`) transactions in the current
+  /// scope (or across the whole family when [allMembers] is true).
+  Future<int> deleteImportedTransactions({bool allMembers = false}) async {
+    if (familyId.isEmpty) return 0;
+    final targetUser = (allMembers || isFamily) ? null : scope;
+    final removed = await V3Repository.guard(
+      'deleteImportedTransactions',
+      () => _repo.deleteImportedTransactions(familyId, userId: targetUser),
+    );
+    final before = txns.length;
+    txns = txns.where((t) {
+      if (t.origin != 'import') return true;
+      if (targetUser != null && t.userId != targetUser) return true;
+      return false;
+    }).toList();
+    notifyListeners();
+    return removed ?? (before - txns.length);
   }
 
   Future<bool> addRecurring({

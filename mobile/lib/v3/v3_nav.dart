@@ -2,7 +2,16 @@ import 'package:flutter/foundation.dart';
 
 /// Full-screen pages that slide over the tab content, matching the design's
 /// `isPage` overlay rather than pushing a new route.
-enum V3Page { detected, cards, notifications, settings, notes, prayer, prayerSettings }
+enum V3Page {
+  detected,
+  cards,
+  notifications,
+  settings,
+  notes,
+  prayer,
+  prayerSettings,
+  aiSettings,
+}
 
 /// Shell navigation, kept separate from [V3State] so a screen can move the
 /// shell without the data layer knowing anything about navigation.
@@ -39,5 +48,6 @@ class V3Nav extends ChangeNotifier {
         V3Page.notes => 'Family notes',
         V3Page.prayer => 'Prayer times',
         V3Page.prayerSettings => 'Prayer settings',
+        V3Page.aiSettings => 'AI restructuring',
       };
 }

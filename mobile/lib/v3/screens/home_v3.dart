@@ -1154,113 +1154,164 @@ class _ComingUp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final unownedCount =
+        s.recurring.where((r) => r.ownerUserId == null).length;
 
-    return SizedBox(
-      height: 142,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: s.recurring.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (context, i) {
-          final r = s.recurring[i];
-          final style = s.catStyle(r.categoryKey);
-          final days = r.dueInDays;
-          final soon = days <= 3;
-
-          return GestureDetector(
-            onTap: () => V3Sheets.openRecurring(context),
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              width: 154,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Nocturne.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Nocturne.neutral900, width: 1),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (unownedCount > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: GestureDetector(
+              onTap: () => V3Sheets.openRecurring(context),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: Nocturne.mix(NocturneSemantic.warning, 12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Nocturne.mix(NocturneSemantic.warning, 35),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(PhRegular.warning,
+                        size: 15, color: NocturneSemantic.warning),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        unownedCount == 1
+                            ? '1 recurring rule has no owner — tap to assign'
+                            : '$unownedCount recurring rules have no owner — tap to assign',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Nocturne.neutral200,
+                        ),
+                      ),
+                    ),
+                    const Icon(PhBold.caretRight,
+                        size: 12, color: NocturneSemantic.warning),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ),
+          ),
+        SizedBox(
+          height: 142,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: s.recurring.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final r = s.recurring[i];
+              final style = s.catStyle(r.categoryKey);
+              final days = r.dueInDays;
+              final soon = days <= 3;
+
+              return GestureDetector(
+                onTap: () => V3Sheets.openRecurring(context),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  width: 154,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Nocturne.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Nocturne.neutral900, width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      V3IconTile(
-                          icon: style.icon,
-                          color: style.color,
-                          size: 32,
-                          radius: 10,
-                          iconSize: 16),
-                      Text(
-                        days <= 0 ? 'Due' : 'in ${days}d',
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          V3IconTile(
+                              icon: style.icon,
+                              color: style.color,
+                              size: 32,
+                              radius: 10,
+                              iconSize: 16),
+                          Text(
+                            days <= 0 ? 'Due' : 'in ${days}d',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight:
+                                  soon ? FontWeight.w600 : FontWeight.w400,
+                              color: soon
+                                  ? NocturneSemantic.warning
+                                  : Nocturne.neutral500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(r.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, color: Nocturne.text)),
+                      V3Num(
+                        '${r.isIncome ? '+' : ''}${s.money(r.amount)}',
                         style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: soon ? FontWeight.w600 : FontWeight.w400,
-                          color: soon
-                              ? NocturneSemantic.warning
-                              : Nocturne.neutral500,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: r.isIncome
+                              ? NocturneSemantic.income
+                              : Nocturne.text,
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => s.addTransaction(
+                          title: r.title,
+                          amount: r.amount,
+                          type: r.type,
+                          categoryKey: r.categoryKey,
+                          sourceId: r.sourceId,
+                          forUserId: r.ownerUserId,
+                          paidBy: r.ownerUserId,
+                        ),
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          height: 30,
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: r.isIncome
+                                ? Nocturne.mix(NocturneSemantic.income, 14)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                                color: r.isIncome
+                                    ? NocturneSemantic.income
+                                    : Nocturne.accent700,
+                                width: 1),
+                          ),
+                          child: Text(
+                            r.isIncome ? 'Record credit' : 'Mark paid',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: r.isIncome
+                                  ? NocturneSemantic.income
+                                  : Nocturne.accent200,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(r.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, color: Nocturne.text)),
-                  V3Num(
-                    '${r.isIncome ? '+' : ''}${s.money(r.amount)}',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: r.isIncome
-                          ? NocturneSemantic.income
-                          : Nocturne.text,
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => s.addTransaction(
-                      title: r.title,
-                      amount: r.amount,
-                      type: r.type,
-                      categoryKey: r.categoryKey,
-                      sourceId: r.sourceId,
-                    ),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      height: 30,
-                      width: double.infinity,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: r.isIncome
-                            ? Nocturne.mix(NocturneSemantic.income, 14)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(9),
-                        border: Border.all(
-                            color: r.isIncome
-                                ? NocturneSemantic.income
-                                : Nocturne.accent700,
-                            width: 1),
-                      ),
-                      child: Text(
-                        r.isIncome ? 'Record credit' : 'Mark paid',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: r.isIncome
-                              ? NocturneSemantic.income
-                              : Nocturne.accent200,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1469,21 +1520,63 @@ class _Recent extends StatelessWidget {
 /// A transaction row. Shared by Home's Recent list and the Activity screen.
 class V3TxnRow extends StatelessWidget {
   final TxnRow txn;
-  const V3TxnRow({super.key, required this.txn});
+  final bool selectable;
+  final bool selected;
+  final VoidCallback? onToggleSelect;
+  final VoidCallback? onLongPress;
+
+  const V3TxnRow({
+    super.key,
+    required this.txn,
+    this.selectable = false,
+    this.selected = false,
+    this.onToggleSelect,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
     final style = s.catStyle(txn.categoryKey);
     final who = s.memberById(txn.userId);
+    final isImported = txn.origin == 'import';
+
+    final originIcon = switch (txn.origin) {
+      'manual' => PhRegular.pencilSimple,
+      'import' => PhRegular.downloadSimple,
+      _ => PhFill.bellRinging,
+    };
 
     return GestureDetector(
-      onTap: () => V3Sheets.openDetail(context, txn),
+      onTap: selectable
+          ? onToggleSelect
+          : () => V3Sheets.openDetail(context, txn),
+      onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Container(
+        margin: selectable && selected
+            ? const EdgeInsets.symmetric(vertical: 2)
+            : EdgeInsets.zero,
+        padding: EdgeInsets.symmetric(
+          vertical: 10,
+          horizontal: selectable && selected ? 6 : 0,
+        ),
+        decoration: selectable && selected
+            ? BoxDecoration(
+                color: Nocturne.mix(Nocturne.accent, 12),
+                borderRadius: BorderRadius.circular(11),
+              )
+            : null,
         child: Row(
           children: [
+            if (selectable) ...[
+              Icon(
+                selected ? PhFill.checkCircle : PhRegular.circle,
+                size: 20,
+                color: selected ? Nocturne.accent : Nocturne.neutral500,
+              ),
+              const SizedBox(width: 10),
+            ],
             V3IconTile(icon: style.icon, color: style.color, size: 38),
             const SizedBox(width: 12),
             Expanded(
@@ -1491,17 +1584,40 @@ class V3TxnRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(txn.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(fontSize: 13.5, color: Nocturne.text)),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(txn.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 13.5, color: Nocturne.text)),
+                      ),
+                      if (isImported) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: Nocturne.accent900,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Imported',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: Nocturne.accent200,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                   Row(
                     children: [
                       Icon(
-                        txn.origin == 'manual'
-                            ? PhRegular.pencilSimple
-                            : PhFill.bellRinging,
+                        originIcon,
                         size: 11,
                         color: txn.origin == 'manual'
                             ? Nocturne.neutral600
