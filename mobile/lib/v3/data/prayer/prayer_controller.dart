@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../notifications_core.dart';
+import 'prayer_banner.dart';
 import 'prayer_cities.dart';
 import 'prayer_config.dart';
 import 'prayer_location.dart';
@@ -57,7 +58,28 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
     // Reconcile the alert window with whatever was restored from disk.
     if (_config.enabled) {
       await PrayerNotifier.sync(_config);
+      await _postBanner();
     }
+  }
+
+  /// Posts or clears the standing banner for the current state.
+  ///
+  /// [force] re-posts even when nothing the banner shows has changed, which is
+  /// what a settings change needs — the user expects to see their choice take
+  /// effect immediately.
+  Future<void> _postBanner({bool force = false}) async {
+    final day = _today;
+    final next = _next;
+    if (!_config.showBanner || day == null || next == null) {
+      await PrayerBanner.cancel();
+      return;
+    }
+    await PrayerBanner.post(
+      config: _config,
+      day: day,
+      next: next,
+      force: force,
+    );
   }
 
   /// Persists [next], recomputes and rebuilds the notification window.
@@ -71,9 +93,13 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
 
     if (!next.enabled) {
       if (wasEnabled) await PrayerNotifier.cancelAll();
+      await PrayerBanner.cancel();
       return;
     }
     await PrayerNotifier.sync(next);
+    // Forced: a settings change must be visible in the shade at once, even
+    // though the prayer it shows has not changed.
+    await _postBanner(force: true);
   }
 
   Future<void> setEnabled(bool on) => update(_config.copyWith(enabled: on));
@@ -94,6 +120,21 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> setHijriOffset(int days) =>
       update(_config.copyWith(hijriOffset: days.clamp(-2, 2)));
+
+  Future<void> setBannerEnabled(bool on) =>
+      update(_config.copyWith(bannerEnabled: on));
+
+  Future<void> setBannerContent(PrayerBannerContent content) =>
+      update(_config.copyWith(bannerContent: content));
+
+  Future<void> setBannerTheme(PrayerBannerTheme theme) =>
+      update(_config.copyWith(bannerTheme: theme));
+
+  Future<void> setBannerTint(bool on) =>
+      update(_config.copyWith(bannerTint: on));
+
+  Future<void> setBannerOnLockScreen(bool on) =>
+      update(_config.copyWith(bannerOnLockScreen: on));
 
   Future<void> setShowOnHome(bool on) =>
       update(_config.copyWith(showOnHome: on));
@@ -141,7 +182,12 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
       // The clock moved while we were away and the window may have drained.
       _recompute();
       notifyListeners();
-      if (_config.enabled) PrayerNotifier.sync(_config);
+      if (_config.enabled) {
+        PrayerNotifier.sync(_config);
+        // The prayer may well have rolled over while the app was away, and
+        // the banner is the one surface the user sees without opening the app.
+        _postBanner();
+      }
     } else {
       _stopTick();
     }
@@ -198,6 +244,13 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
       _today = PrayerService.day(_config, now);
     }
     notifyListeners();
+
+    // Only when the prayer actually rolled over. Android redraws the banner's
+    // countdown itself, so posting every minute would buy nothing and make the
+    // shade flicker.
+    if (previous != null && previous != _next!.next.slot) {
+      _postBanner();
+    }
   }
 
   void _stopTick() {

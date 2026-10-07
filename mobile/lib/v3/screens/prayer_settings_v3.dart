@@ -134,6 +134,63 @@ class PrayerSettingsV3 extends StatelessWidget {
             ),
           ),
 
+          const _Kicker('Banner'),
+          _Card(
+            child: Column(
+              children: [
+                _Row(
+                  icon: PhRegular.tray,
+                  label: 'Prayer banner',
+                  sub: 'A standing card in the notification shade',
+                  trailing: V3SettingsSwitch(
+                    value: config.bannerEnabled,
+                    onChanged: prayer.setBannerEnabled,
+                  ),
+                  last: !config.bannerEnabled,
+                ),
+                if (config.bannerEnabled) ...[
+                  _Row(
+                    icon: PhRegular.listBullets,
+                    label: 'Shows',
+                    sub: config.bannerContent.description,
+                    trailing: const Icon(PhRegular.caretRight,
+                        size: 14, color: Nocturne.neutral600),
+                    onTap: () => _pickBannerContent(context),
+                  ),
+                  _Row(
+                    icon: PhRegular.image,
+                    label: 'Background',
+                    sub: config.bannerTheme.label,
+                    trailing: const Icon(PhRegular.caretRight,
+                        size: 14, color: Nocturne.neutral600),
+                    onTap: () => _pickBannerTheme(context),
+                  ),
+                  _Row(
+                    icon: PhRegular.sparkle,
+                    label: 'Tint the banner',
+                    sub: 'Colour it by the prayer, shifting through the day',
+                    trailing: V3SettingsSwitch(
+                      value: config.bannerTint,
+                      onChanged: prayer.setBannerTint,
+                    ),
+                  ),
+                  _Row(
+                    icon: PhRegular.lockSimple,
+                    label: 'Show on lock screen',
+                    sub: config.bannerOnLockScreen
+                        ? 'Times are visible without unlocking'
+                        : 'Hidden until you unlock',
+                    trailing: V3SettingsSwitch(
+                      value: config.bannerOnLockScreen,
+                      onChanged: prayer.setBannerOnLockScreen,
+                    ),
+                    last: true,
+                  ),
+                ],
+              ],
+            ),
+          ),
+
           const _Kicker('Display'),
           _Card(
             child: Column(
@@ -252,6 +309,45 @@ class PrayerSettingsV3 extends StatelessWidget {
       builder: (_) => const _CityPicker(),
     );
     if (city != null) await prayer.setCity(city);
+  }
+
+  static Future<void> _pickBannerContent(BuildContext context) async {
+    final prayer = context.read<PrayerController>();
+    final picked = await showModalBottomSheet<PrayerBannerContent>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _OptionPicker<PrayerBannerContent>(
+        title: 'What the banner shows',
+        blurb: 'The countdown is drawn by Android, so none of these cost '
+            'battery.',
+        options: PrayerBannerContent.values,
+        current: prayer.config.bannerContent,
+        labelOf: (v) => v.label,
+        subOf: (v) => v.description,
+      ),
+    );
+    if (picked != null) await prayer.setBannerContent(picked);
+  }
+
+  static Future<void> _pickBannerTheme(BuildContext context) async {
+    final prayer = context.read<PrayerController>();
+    final picked = await showModalBottomSheet<PrayerBannerTheme>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _OptionPicker<PrayerBannerTheme>(
+        title: 'Banner background',
+        blurb: 'Android cannot blur your wallpaper behind a notification, so '
+            'the frosted look is drawn into the card itself.',
+        options: PrayerBannerTheme.values,
+        current: prayer.config.bannerTheme,
+        labelOf: (v) => v.label,
+        subOf: (v) =>
+            v.followsPrayer ? 'Follows the time of day' : null,
+      ),
+    );
+    if (picked != null) await prayer.setBannerTheme(picked);
   }
 
   static Future<void> _pickMethod(BuildContext context) async {
@@ -546,6 +642,121 @@ class _MethodPicker extends StatelessWidget {
                               ),
                             ),
                             if (m == current)
+                              const Icon(PhRegular.check,
+                                  size: 16, color: Nocturne.accent300),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      );
+}
+
+/// A generic single-choice sheet.
+///
+/// The method picker predates this and has its own copy; this one exists
+/// because the banner adds two more pickers and a third hand-rolled sheet
+/// would be the point at which they start drifting apart.
+class _OptionPicker<T> extends StatelessWidget {
+  final String title;
+  final String? blurb;
+  final List<T> options;
+  final T current;
+  final String Function(T) labelOf;
+  final String? Function(T)? subOf;
+
+  const _OptionPicker({
+    required this.title,
+    required this.options,
+    required this.current,
+    required this.labelOf,
+    this.blurb,
+    this.subOf,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+        constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.75),
+        decoration: const BoxDecoration(
+          color: Nocturne.bg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Nocturne.neutral700,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 2),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(title,
+                    style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: Nocturne.text)),
+              ),
+            ),
+            if (blurb != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(blurb!,
+                      style: const TextStyle(
+                          fontSize: 12, color: Nocturne.neutral600)),
+                ),
+              ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final option in options)
+                    InkWell(
+                      onTap: () => Navigator.pop(context, option),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 13),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    labelOf(option),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: option == current
+                                          ? Nocturne.accent300
+                                          : Nocturne.text,
+                                    ),
+                                  ),
+                                  if (subOf?.call(option) case final sub?) ...[
+                                    const SizedBox(height: 2),
+                                    Text(sub,
+                                        style: const TextStyle(
+                                            fontSize: 11.5,
+                                            color: Nocturne.neutral600)),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            if (option == current)
                               const Icon(PhRegular.check,
                                   size: 16, color: Nocturne.accent300),
                           ],

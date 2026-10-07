@@ -21,6 +21,7 @@ class AppNotifications {
   // ── Id ranges ─────────────────────────────────────────────────────────────
   // Kept apart so that rescheduling one kind never cancels another.
   static const cardBase = 100000;
+  static const prayerBannerId = 250001;
   static const recurringBase = 200000;
   static const prayerBase = 300000;
   static const liveId = 400001;
@@ -46,6 +47,21 @@ class AppNotifications {
     priority: Priority.high,
     category: AndroidNotificationCategory.reminder,
   );
+
+  /// The standing prayer banner.
+  ///
+  /// Deliberately a different channel from [prayer]: one is an alert that
+  /// should make a sound at the moment of a prayer, the other is a card that
+  /// sits in the shade all day. Sharing a channel would mean silencing one
+  /// silences the other.
+  ///
+  /// The per-post details (colour, countdown, style, visibility) are built in
+  /// `PrayerBanner` because they depend on the prayer and the user's theme;
+  /// only the channel identity is fixed here.
+  static const prayerBannerChannelId = 'ff_prayer_banner';
+  static const prayerBannerChannelName = 'Prayer banner';
+  static const prayerBannerChannelDescription =
+      'Ongoing card showing prayer times';
 
   /// The ongoing lock-screen card. Minimum importance and silent: it must
   /// never buzz, it is a surface to act from, not an alert.

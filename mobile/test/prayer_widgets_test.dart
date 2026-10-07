@@ -117,8 +117,24 @@ void main() {
       for (final slot in PrayerSlot.values) {
         expect(find.text(slot.label), findsWidgets);
       }
-      expect(find.text('Next'), findsOneWidget);
       expect(find.text('Today'), findsOneWidget);
+
+      // The "Next" badge marks a row in *today's* list, so it only exists
+      // while the upcoming prayer is still today. After Isha the next prayer
+      // is tomorrow's Fajr and no row should be badged — asserting the badge
+      // unconditionally made this test fail every evening.
+      final next = controller.next!;
+      final today = controller.today!.date;
+      final nextIsToday = next.next.time.day == today.day &&
+          next.next.time.month == today.month;
+
+      expect(
+        find.text('Next'),
+        nextIsToday ? findsOneWidget : findsNothing,
+        reason: nextIsToday
+            ? 'the upcoming prayer is today, so its row should be badged'
+            : 'the upcoming prayer is tomorrow, so no row today is next',
+      );
       expect(tester.takeException(), isNull);
     });
 

@@ -96,6 +96,61 @@ extension PrayerMethodLabel on PrayerMethod {
       };
 }
 
+/// What the ongoing banner shows.
+enum PrayerBannerContent {
+  /// Just the upcoming prayer and a live countdown.
+  nextOnly,
+
+  /// The upcoming prayer plus the one currently in.
+  nextAndCurrent,
+
+  /// Every prayer of the day, expanded.
+  allTimes,
+
+  /// Only when the current window closes.
+  currentEnds,
+}
+
+extension PrayerBannerContentInfo on PrayerBannerContent {
+  String get label => switch (this) {
+        PrayerBannerContent.nextOnly => 'Next prayer only',
+        PrayerBannerContent.nextAndCurrent => 'Next and current',
+        PrayerBannerContent.allTimes => 'All prayer times',
+        PrayerBannerContent.currentEnds => 'Current prayer ends at',
+      };
+
+  String get description => switch (this) {
+        PrayerBannerContent.nextOnly =>
+          'Which prayer is next, with a live countdown',
+        PrayerBannerContent.nextAndCurrent =>
+          'The next prayer and the one you are in',
+        PrayerBannerContent.allTimes =>
+          "All six of today's times when expanded",
+        PrayerBannerContent.currentEnds =>
+          'How long the current prayer window has left',
+      };
+}
+
+/// Background art for the expanded banner image.
+///
+/// Android cannot blur what sits behind a notification, so the frosted look is
+/// drawn into this image rather than sampled from the wallpaper.
+enum PrayerBannerTheme { aurora, dusk, emerald, midnight, sand, minimal }
+
+extension PrayerBannerThemeInfo on PrayerBannerTheme {
+  String get label => switch (this) {
+        PrayerBannerTheme.aurora => 'Aurora',
+        PrayerBannerTheme.dusk => 'Dusk',
+        PrayerBannerTheme.emerald => 'Emerald',
+        PrayerBannerTheme.midnight => 'Midnight',
+        PrayerBannerTheme.sand => 'Sand',
+        PrayerBannerTheme.minimal => 'Minimal',
+      };
+
+  /// Follows the time of day rather than a fixed palette.
+  bool get followsPrayer => this == PrayerBannerTheme.aurora;
+}
+
 /// Device-local prayer settings.
 ///
 /// Deliberately *not* stored in `user_preferences`: that table is family
@@ -137,6 +192,23 @@ class PrayerConfig {
   /// notifications but stays out of the finance view.
   final bool showOnHome;
 
+  /// Show the ongoing banner in the shade and on the lock screen.
+  final bool bannerEnabled;
+
+  /// What the banner shows.
+  final PrayerBannerContent bannerContent;
+
+  /// Background art for the expanded image.
+  final PrayerBannerTheme bannerTheme;
+
+  /// Tint the collapsed banner with the prayer's colour. Android only honours
+  /// this on ongoing notifications.
+  final bool bannerTint;
+
+  /// Show the banner's detail on the lock screen rather than hiding it behind
+  /// "contents hidden".
+  final bool bannerOnLockScreen;
+
   /// Days to add to the computed Hijri date, −2 to +2.
   ///
   /// The tabular calendar is arithmetic, so it routinely lands a day away from
@@ -165,6 +237,11 @@ class PrayerConfig {
     this.exactAlarms = false,
     this.showInLiveNotification = true,
     this.showOnHome = true,
+    this.bannerEnabled = true,
+    this.bannerContent = PrayerBannerContent.nextOnly,
+    this.bannerTheme = PrayerBannerTheme.aurora,
+    this.bannerTint = true,
+    this.bannerOnLockScreen = true,
     this.hijriOffset = 0,
   });
 
@@ -174,6 +251,9 @@ class PrayerConfig {
   /// True when at least one slot would produce an alert.
   bool get anyNotifications =>
       enabled && PrayerSlot.values.any((s) => notifyFor(s));
+
+  /// True when the ongoing banner should currently be posted.
+  bool get showBanner => enabled && bannerEnabled;
 
   PrayerConfig copyWith({
     bool? enabled,
@@ -190,6 +270,11 @@ class PrayerConfig {
     bool? exactAlarms,
     bool? showInLiveNotification,
     bool? showOnHome,
+    bool? bannerEnabled,
+    PrayerBannerContent? bannerContent,
+    PrayerBannerTheme? bannerTheme,
+    bool? bannerTint,
+    bool? bannerOnLockScreen,
     int? hijriOffset,
   }) =>
       PrayerConfig(
@@ -207,6 +292,11 @@ class PrayerConfig {
         showInLiveNotification:
             showInLiveNotification ?? this.showInLiveNotification,
         showOnHome: showOnHome ?? this.showOnHome,
+        bannerEnabled: bannerEnabled ?? this.bannerEnabled,
+        bannerContent: bannerContent ?? this.bannerContent,
+        bannerTheme: bannerTheme ?? this.bannerTheme,
+        bannerTint: bannerTint ?? this.bannerTint,
+        bannerOnLockScreen: bannerOnLockScreen ?? this.bannerOnLockScreen,
         hijriOffset: hijriOffset ?? this.hijriOffset,
       );
 
@@ -251,6 +341,11 @@ class PrayerConfig {
         'exact_alarms': exactAlarms,
         'live_notification': showInLiveNotification,
         'show_on_home': showOnHome,
+        'banner_enabled': bannerEnabled,
+        'banner_content': bannerContent.name,
+        'banner_theme': bannerTheme.name,
+        'banner_tint': bannerTint,
+        'banner_lock_screen': bannerOnLockScreen,
         'hijri_offset': hijriOffset,
       };
 
@@ -278,6 +373,14 @@ class PrayerConfig {
       exactAlarms: _bool(j['exact_alarms']) ?? false,
       showInLiveNotification: _bool(j['live_notification']) ?? true,
       showOnHome: _bool(j['show_on_home']) ?? true,
+      bannerEnabled: _bool(j['banner_enabled']) ?? true,
+      bannerContent:
+          _enumByName(PrayerBannerContent.values, j['banner_content']) ??
+              PrayerBannerContent.nextOnly,
+      bannerTheme: _enumByName(PrayerBannerTheme.values, j['banner_theme']) ??
+          PrayerBannerTheme.aurora,
+      bannerTint: _bool(j['banner_tint']) ?? true,
+      bannerOnLockScreen: _bool(j['banner_lock_screen']) ?? true,
       hijriOffset: (_int(j['hijri_offset']) ?? 0).clamp(-2, 2),
     );
   }
