@@ -195,36 +195,57 @@ class _ImportV3State extends State<ImportV3> {
     );
   }
 
+  void _handleBack() {
+    if (_parsed) {
+      setState(() {
+        _parsed = false;
+        _rows = [];
+      });
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final selected = _rows.where((r) => r.selected).length;
 
-    return Scaffold(
-      backgroundColor: Nocturne.bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 6, 16, 2),
-              child: Row(
-                children: [
-                  V3Press(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Icon(PhRegular.arrowLeft,
-                          size: 20, color: Nocturne.text),
+    return PopScope(
+      canPop: !_parsed,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _parsed) {
+          setState(() {
+            _parsed = false;
+            _rows = [];
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Nocturne.bg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 6, 16, 2),
+                child: Row(
+                  children: [
+                    V3Press(
+                      onTap: _handleBack,
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(PhRegular.arrowLeft,
+                            size: 20, color: Nocturne.text),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 2),
-                  const Text('Import expenses',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Nocturne.text)),
-                ],
+                    const SizedBox(width: 2),
+                    const Text('Import expenses',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Nocturne.text)),
+                  ],
+                ),
               ),
-            ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 28),
@@ -268,6 +289,7 @@ class _ImportV3State extends State<ImportV3> {
           ],
         ),
       ),
+    ),
     );
   }
 

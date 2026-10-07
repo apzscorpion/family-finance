@@ -666,15 +666,23 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
     final s = context.watch<V3State>();
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: Nocturne.bg,
-      resizeToAvoidBottomInset: false,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                _header(s),
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (_dirty) await _save();
+        if (!context.mounted) return;
+        Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        backgroundColor: Nocturne.bg,
+        resizeToAvoidBottomInset: false,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _header(s),
                 Expanded(
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(
@@ -827,6 +835,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
           ],
         ),
       ),
+    ),
     );
   }
 

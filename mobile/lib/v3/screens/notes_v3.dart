@@ -7,6 +7,7 @@ import '../data/note_blocks.dart';
 import '../data/notes_presence.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
+import '../v3_nav.dart';
 import '../v3_state.dart';
 import '../widgets/v3_motion.dart';
 import 'note_editor_v3.dart';
@@ -31,6 +32,7 @@ class _NotesV3State extends State<NotesV3> {
   String _filter = 'all'; // all | shared | private | checklists | tables
   bool _showFolders = false;
   String? _folderId;
+  V3Nav? _nav;
 
   @override
   void initState() {
@@ -48,7 +50,34 @@ class _NotesV3State extends State<NotesV3> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nav = Provider.of<V3Nav?>(context, listen: false);
+    if (_nav != nav) {
+      _nav?.unregisterBackHandler(_handleBack);
+      _nav = nav;
+      _nav?.registerBackHandler(_handleBack);
+    }
+  }
+
+  bool _handleBack() {
+    if (!mounted) return false;
+    final nav = _nav;
+    if (nav != null && nav.page != V3Page.notes) return false;
+    if (_fabOpen) {
+      setState(() => _fabOpen = false);
+      return true;
+    }
+    if (_folderId != null) {
+      setState(() => _folderId = null);
+      return true;
+    }
+    return false;
+  }
+
+  @override
   void dispose() {
+    _nav?.unregisterBackHandler(_handleBack);
     _search.dispose();
     super.dispose();
   }
