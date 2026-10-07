@@ -61,10 +61,6 @@ dependencies:
   # preview, so there is no CAMERA permission and no GPU preview pipeline.
   image_picker: ^1.1.2
 
-  # On-device receipt OCR. The Play-Services model variant is substituted in
-  # android/app/build.gradle.kts so the bundled 16MB model is not shipped.
-  google_mlkit_text_recognition: ^0.14.0
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
