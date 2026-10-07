@@ -9,6 +9,7 @@ import 'data/prayer/prayer_controller.dart';
 import 'data/v3_repository.dart';
 import 'phosphor_icons.dart';
 import 'screens/activity_v3.dart';
+import 'screens/ai_settings_v3.dart';
 import 'screens/auth_v3.dart';
 import 'screens/cards_v3.dart';
 import 'screens/detected_v3.dart';
@@ -236,6 +237,7 @@ class _PageOverlay extends StatelessWidget {
         V3Page.notes => const NotesV3(),
         V3Page.prayer => const PrayerV3(),
         V3Page.prayerSettings => const PrayerSettingsV3(),
+        V3Page.aiSettings => const AiSettingsV3(),
       };
 }
 

@@ -32,6 +32,16 @@ class ImportV3 extends StatefulWidget {
     ));
   }
 
+  /// Opens the batch-selection sheet for already-imported transactions.
+  static Future<void> openManageImported(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => const _ManageImportedSheet(),
+    );
+  }
+
   @override
   State<ImportV3> createState() => _ImportV3State();
 }
@@ -131,6 +141,60 @@ class _ImportV3State extends State<ImportV3> {
     if (n > 0) Navigator.of(context).pop();
   }
 
+  Future<void> _confirmDeleteAllImported(V3State s) async {
+    final count = s.importedTxns.length;
+    if (count == 0 || _busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Nocturne.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(
+          'Delete $count imported transaction${count == 1 ? '' : 's'}?',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Nocturne.text,
+          ),
+        ),
+        content: Text(
+          'This will permanently remove all $count imported transaction${count == 1 ? '' : 's'}. Manually added entries will not be touched.',
+          style: const TextStyle(fontSize: 13, color: Nocturne.neutral400),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: Nocturne.neutral400)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete all',
+              style: TextStyle(
+                color: NocturneSemantic.expense,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    final removed = await s.deleteImportedTransactions();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Deleted $removed imported transaction${removed == 1 ? '' : 's'}',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final selected = _rows.where((r) => r.selected).length;
@@ -207,76 +271,191 @@ class _ImportV3State extends State<ImportV3> {
     );
   }
 
-  List<Widget> _sourceChoices() => [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: Text(
-            'Bring in spending from a bank export, a spreadsheet, or a note '
-            'you already keep. Nothing is saved until you have seen what was '
-            'read.',
-            style: TextStyle(
-                fontSize: 12.5, height: 1.5, color: Nocturne.neutral400),
-          ),
+  List<Widget> _sourceChoices() {
+    final s = context.watch<V3State>();
+    final imported = s.importedTxns;
+
+    return [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+        child: Text(
+          'Bring in spending from a bank export, a spreadsheet, or a note '
+          'you already keep. Nothing is saved until you have seen what was '
+          'read.',
+          style: TextStyle(
+              fontSize: 12.5, height: 1.5, color: Nocturne.neutral400),
         ),
-        const SizedBox(height: 14),
-        _SourceTile(
-          icon: PhRegular.floppyDisk,
-          title: 'Choose a file',
-          subtitle: 'CSV, Excel, Markdown or text',
-          busy: _busy,
-          onTap: _pickFile,
-        ),
-        _SourceTile(
-          icon: PhRegular.note,
-          title: 'From a note',
-          subtitle: 'Read a table or list you already wrote',
-          onTap: _pickNote,
-        ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 18, 16, 6),
-          child: Text('Or paste a table',
-              style: TextStyle(fontSize: 12.5, color: Nocturne.neutral400)),
-        ),
+      ),
+      if (imported.isNotEmpty) ...[
+        const SizedBox(height: 12),
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Nocturne.surface,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Nocturne.neutral800, width: 1),
           ),
-          child: TextField(
-            controller: _paste,
-            maxLines: 7,
-            style: const TextStyle(fontSize: 13.5, color: Nocturne.text),
-            cursorColor: Nocturne.accent,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              hintText: 'Coffee 120\nGroceries 1,240\n\n'
-                  'or a | Date | Item | Amount | table',
-              hintStyle:
-                  TextStyle(fontSize: 13.5, color: Nocturne.neutral600),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-          child: V3Press(
-            onTap: _parsePaste,
-            child: Container(
-              height: 46,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(13),
-                border: Border.all(color: Nocturne.accent, width: 1),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(PhRegular.downloadSimple,
+                      size: 16, color: Nocturne.accent200),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${imported.length} imported transaction${imported.length == 1 ? '' : 's'} in workspace',
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: Nocturne.text,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              child: const Text('Read pasted text',
-                  style:
-                      TextStyle(fontSize: 14.5, color: Nocturne.accent200)),
-            ),
+              const SizedBox(height: 4),
+              const Text(
+                'Need to clean up a previous import? Batch-select specific rows or delete all imported transactions.',
+                style: TextStyle(
+                    fontSize: 12, height: 1.4, color: Nocturne.neutral400),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: V3Press(
+                      onTap: () => ImportV3.openManageImported(context),
+                      child: Container(
+                        height: 38,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Nocturne.bg,
+                          borderRadius: BorderRadius.circular(11),
+                          border: Border.all(
+                              color: Nocturne.neutral700, width: 1),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(PhRegular.listChecks,
+                                size: 15, color: Nocturne.accent200),
+                            SizedBox(width: 6),
+                            Text(
+                              'Batch select',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                                color: Nocturne.accent200,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: V3Press(
+                      onTap: _busy ? null : () => _confirmDeleteAllImported(s),
+                      child: Container(
+                        height: 38,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Nocturne.mix(NocturneSemantic.expense, 16),
+                          borderRadius: BorderRadius.circular(11),
+                          border: Border.all(
+                            color: Nocturne.mix(NocturneSemantic.expense, 45),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(PhRegular.trash,
+                                size: 15, color: NocturneSemantic.expense),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Delete all (${imported.length})',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: NocturneSemantic.expense,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-      ];
+      ],
+      const SizedBox(height: 14),
+      _SourceTile(
+        icon: PhRegular.floppyDisk,
+        title: 'Choose a file',
+        subtitle: 'CSV, Excel, Markdown or text',
+        busy: _busy,
+        onTap: _pickFile,
+      ),
+      _SourceTile(
+        icon: PhRegular.note,
+        title: 'From a note',
+        subtitle: 'Read a table or list you already wrote',
+        onTap: _pickNote,
+      ),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 18, 16, 6),
+        child: Text('Or paste a table',
+            style: TextStyle(fontSize: 12.5, color: Nocturne.neutral400)),
+      ),
+      Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Nocturne.neutral800, width: 1),
+        ),
+        child: TextField(
+          controller: _paste,
+          maxLines: 7,
+          style: const TextStyle(fontSize: 13.5, color: Nocturne.text),
+          cursorColor: Nocturne.accent,
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            hintText: 'Coffee 120\nGroceries 1,240\n\n'
+                'or a | Date | Item | Amount | table',
+            hintStyle:
+                TextStyle(fontSize: 13.5, color: Nocturne.neutral600),
+          ),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        child: V3Press(
+          onTap: _parsePaste,
+          child: Container(
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: Nocturne.accent, width: 1),
+            ),
+            child: const Text('Read pasted text',
+                style:
+                    TextStyle(fontSize: 14.5, color: Nocturne.accent200)),
+          ),
+        ),
+      ),
+    ];
+  }
 
   List<Widget> _preview() {
     if (_rows.isEmpty) {
@@ -329,6 +508,7 @@ class _ImportV3State extends State<ImportV3> {
     final total = _rows
         .where((r) => r.selected && !r.isIncome)
         .fold<double>(0, (a, r) => a + r.amount);
+    final allSelected = _rows.every((r) => r.selected);
 
     return [
       Container(
@@ -359,10 +539,38 @@ class _ImportV3State extends State<ImportV3> {
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
         child: Row(
           children: [
-            Text('Spending total',
-                style: const TextStyle(
-                    fontSize: 12.5, color: Nocturne.neutral400)),
+            GestureDetector(
+              onTap: () => setState(() {
+                final next = !allSelected;
+                for (final r in _rows) {
+                  r.selected = next;
+                }
+              }),
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    allSelected ? PhFill.checkCircle : PhRegular.circle,
+                    size: 16,
+                    color: allSelected ? Nocturne.accent : Nocturne.neutral500,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    allSelected ? 'Deselect all' : 'Select all',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: Nocturne.accent200,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const Spacer(),
+            const Text('Spending total · ',
+                style: TextStyle(
+                    fontSize: 12.5, color: Nocturne.neutral400)),
             Text(s.money(total),
                 style: const TextStyle(
                     fontSize: 13.5,
@@ -606,6 +814,272 @@ class _NotePicker extends StatelessWidget {
                 },
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ManageImportedSheet extends StatefulWidget {
+  const _ManageImportedSheet();
+
+  @override
+  State<_ManageImportedSheet> createState() => _ManageImportedSheetState();
+}
+
+class _ManageImportedSheetState extends State<_ManageImportedSheet> {
+  final Set<String> _selectedIds = <String>{};
+  bool _initialized = false;
+  bool _deleting = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final imported = context.read<V3State>().importedTxns;
+      _selectedIds.addAll(imported.map((t) => t.id));
+      _initialized = true;
+    }
+  }
+
+  Future<void> _deleteSelected(V3State s) async {
+    if (_selectedIds.isEmpty || _deleting) return;
+    setState(() => _deleting = true);
+    final ids = _selectedIds.toList();
+    final removed = await s.deleteTransactions(ids);
+    if (!mounted) return;
+    setState(() {
+      _deleting = false;
+      _selectedIds.clear();
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    if (s.importedTxns.isEmpty) {
+      Navigator.of(context).pop();
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Deleted $removed imported transaction${removed == 1 ? '' : 's'}',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<V3State>();
+    final rows = s.importedTxns;
+    final allSelected =
+        rows.isNotEmpty && rows.every((t) => _selectedIds.contains(t.id));
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      decoration: const BoxDecoration(
+        color: Nocturne.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(top: BorderSide(color: Nocturne.neutral700, width: 1)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        10,
+        16,
+        24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 38,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Nocturne.neutral700,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Imported transactions',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Nocturne.text,
+                  ),
+                ),
+              ),
+              if (rows.isNotEmpty)
+                GestureDetector(
+                  onTap: () => setState(() {
+                    if (allSelected) {
+                      _selectedIds.clear();
+                    } else {
+                      _selectedIds
+                        ..clear()
+                        ..addAll(rows.map((t) => t.id));
+                    }
+                  }),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Nocturne.bg,
+                      borderRadius: BorderRadius.circular(8),
+                      border:
+                          Border.all(color: Nocturne.neutral800, width: 1),
+                    ),
+                    child: Text(
+                      allSelected
+                          ? 'Deselect all'
+                          : 'Select all (${rows.length})',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Nocturne.accent200,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (rows.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 28),
+              child: Center(
+                child: Text(
+                  'No imported transactions in this workspace.',
+                  style: TextStyle(fontSize: 13, color: Nocturne.neutral500),
+                ),
+              ),
+            )
+          else ...[
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: rows.length,
+                separatorBuilder: (_, _) => const V3RowDivider(),
+                itemBuilder: (_, i) {
+                  final t = rows[i];
+                  final sel = _selectedIds.contains(t.id);
+                  final d = t.occurredAt;
+                  return GestureDetector(
+                    onTap: () => setState(() {
+                      if (!_selectedIds.remove(t.id)) {
+                        _selectedIds.add(t.id);
+                      }
+                    }),
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      child: Row(
+                        children: [
+                          Icon(
+                            sel ? PhFill.checkCircle : PhRegular.circle,
+                            size: 20,
+                            color:
+                                sel ? Nocturne.accent : Nocturne.neutral500,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  t.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    color: sel
+                                        ? Nocturne.text
+                                        : Nocturne.neutral400,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${d.day}/${d.month}/${d.year} · ${s.catStyle(t.categoryKey).name}',
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    color: Nocturne.neutral500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            '${t.isExpense ? '−' : '+'}${s.money(t.amount)}',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: t.isExpense
+                                  ? Nocturne.text
+                                  : NocturneSemantic.income,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            V3Press(
+              onTap: _selectedIds.isEmpty || _deleting
+                  ? null
+                  : () => _deleteSelected(s),
+              child: Container(
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _selectedIds.isEmpty
+                      ? Nocturne.neutral800
+                      : Nocturne.mix(NocturneSemantic.expense, 20),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: _selectedIds.isEmpty
+                        ? Nocturne.neutral700
+                        : NocturneSemantic.expense,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      PhRegular.trash,
+                      size: 16,
+                      color: _selectedIds.isEmpty
+                          ? Nocturne.neutral500
+                          : NocturneSemantic.expense,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _deleting
+                          ? 'Deleting…'
+                          : 'Delete ${_selectedIds.length} selected transaction${_selectedIds.length == 1 ? '' : 's'}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _selectedIds.isEmpty
+                            ? Nocturne.neutral500
+                            : NocturneSemantic.expense,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
