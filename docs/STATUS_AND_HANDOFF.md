@@ -24,7 +24,7 @@ In the order it was raised, with honest status.
 | 7 | Rebuild the notepad, Notion/Clover style | **Done by another agent** (`cfa81db`) |
 | 8 | Paste text → one checkbox per line, or a table | **Done** — parser + 32 tests |
 | 9 | AI for restructuring, configurable provider, Gemini | **Done** — provider layer + settings screen |
-| 10 | Recurring salary posts to family, should be personal | **Fixed in code. Migration NOT applied to the database** |
+| 10 | Recurring salary posts to family, should be personal | **Fixed and live** — migration applied, verified against the database |
 | 11 | Remove the "Family" option at the top | **Done, verified on device** |
 | 12 | CSV import files salary/loan as expenses | **Fixed** — 16 tests. Not verified against your actual file |
 | 13 | Prayer notification banner + customisation | **Done, verified on device** |
@@ -36,46 +36,32 @@ In the order it was raised, with honest status.
 
 ## 2. What is pending, in priority order
 
-### 2.1 Apply the database migrations — **blocking, do this first**
+### 2.1 Database migrations — APPLIED, verified
 
-The recurring-salary fix is **half-live**: the Dart side shipped, the schema
-change never did. Until this runs, a recurring salary is still credited to
-whichever family member opens the app first.
+Previously listed as blocking. Re-checked against the live database on
+2026-10-07; nothing to do here.
+
+```
+auto_post | last_posted | owner_user_id | type     -> all four columns present
+post_due_recurring()                              -> references owner_user_id
+recurring_charges                                 -> 0 rows, 0 without an owner
+```
+
+So the salary-attribution fix is live, and the backfill caveat is moot: there
+are no legacy recurring rows to repair. New rows get `owner_user_id` from
+`V3Repository.addRecurring`, which defaults it to the signed-in user.
+
+Re-verify with:
 
 ```bash
-cd /d/Repos/family_finance
-supabase db push
+supabase db query --linked "select column_name from information_schema.columns where table_name='recurring_charges' and column_name in ('type','owner_user_id','auto_post','last_posted');"
 ```
-
-The Supabase CLI is installed (`%LOCALAPPDATA%\supabase-cli`, v2.120.0) and the
-project `cmjirnwoyocfupgxuoeb` is already linked and authenticated.
-
-Pending or suspect:
-
-| Migration | Purpose |
-|---|---|
-| `20261006230000_recurring_income_support.sql` | `recurring_charges.type`; lets a recurring row be income |
-| `20261007090000_recurring_owner.sql` | `recurring_charges.owner_user_id`; fixes attribution |
-
-**Verify afterwards** — the income migration was found truncated to 0 bytes at
-one point, and a migration pushed while empty is recorded as applied forever:
-
-```sql
-select column_name from information_schema.columns
- where table_name = 'recurring_charges'
-   and column_name in ('type','owner_user_id','auto_post','last_posted');
-```
-
-Expect four rows. If `type` is missing, run that migration's body by hand.
-
-**Then** build the recurring owner picker — see §2.2.
 
 ### 2.2 Recurring owner picker
 
-The backfill in `20261007090000` deliberately only filled families with exactly
-one active member. **Your family has three**, so existing recurring rows have a
-null `owner_user_id` and still fall back to the old behaviour. There is no UI to
-set it, so the reported bug cannot actually be cleared by the user yet.
+Not a live bug any more (§2.1), but a real gap: a recurring charge is always
+owned by whoever created it, and there is no way to say "this is my wife's
+salary". That is the remaining half of the original request.
 
 - `RecurringRow.ownerUserId` and `V3State.addRecurring(ownerUserId:)` exist.
 - Add a member picker to `mobile/lib/v3/sheets/recurring_sheet_v3.dart`,
