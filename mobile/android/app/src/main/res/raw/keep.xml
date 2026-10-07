@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Flutter enables resource shrinking on release builds. ic_notification is
+  referenced only by the runtime string '@drawable/ic_notification' that is
+  handed to flutter_local_notifications, so the shrinker sees no reference to
+  it and strips it from the APK.
+
+  The failure is silent and total: plugin.initialize() then throws
+  PlatformException(invalid_icon, ...), AppNotifications never becomes ready,
+  and *every* notification the app posts is skipped — prayer alerts and the
+  banner alike — with nothing visible to the user.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notification" />

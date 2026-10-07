@@ -82,10 +82,18 @@ class PrayerBanner {
         usesChronometer: true,
         chronometerCountDown: true,
 
-        // `colorized` is only honoured on ongoing notifications, which is
-        // exactly what this is.
+        icon: '@drawable/ic_notification',
+
+        // `color` tints the small icon and the app name in the header, which
+        // is the only colour an ordinary notification gets to control.
+        //
+        // `colorized` — a filled background in the prayer's colour — is
+        // deliberately NOT set: Android honours it only for foreground-service
+        // and media notifications. Posting this as a foreground service to win
+        // a tinted background would mean a permanent "app is running" entry
+        // and a wakelock, which is a bad trade for a colour. The strong visual
+        // is the rendered image below instead.
         color: config.bannerTint ? PrayerVisuals.color(slot) : null,
-        colorized: config.bannerTint,
 
         visibility: config.bannerOnLockScreen
             ? NotificationVisibility.public

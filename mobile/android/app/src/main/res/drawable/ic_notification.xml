@@ -1,0 +1,21 @@
+<!--
+  Small icon for every notification the app posts.
+
+  Android draws the small icon as a silhouette: it keeps the alpha channel and
+  replaces every colour with its own. Passing @mipmap/ic_launcher, as this app
+  did, therefore renders the launcher artwork as a flat white blob — on the
+  emulator it showed up as the Flutter logo.
+
+  A crescent reads correctly at 24dp once flattened, and suits the prayer
+  notifications that are the main user of it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M15.2,2.4 a9.8,9.8 0 1,0 0,19.2 a7.9,7.9 0 1,1 0,-19.2 z" />
+</vector>

@@ -58,6 +58,14 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+            // Required: without these, R8 strips the generic signatures that
+            // flutter_local_notifications' Gson deserialisation depends on,
+            // and the boot receiver crashes the process on every app update.
+            // See proguard-rules.pro.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

@@ -101,7 +101,7 @@ class AppNotifications {
 
       await plugin.initialize(
         const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          android: AndroidInitializationSettings('@drawable/ic_notification'),
         ),
         onDidReceiveNotificationResponse: _onResponse,
         onDidReceiveBackgroundNotificationResponse: notificationBackgroundTap,

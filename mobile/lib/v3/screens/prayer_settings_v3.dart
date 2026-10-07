@@ -167,8 +167,9 @@ class PrayerSettingsV3 extends StatelessWidget {
                   ),
                   _Row(
                     icon: PhRegular.sparkle,
-                    label: 'Tint the banner',
-                    sub: 'Colour it by the prayer, shifting through the day',
+                    label: 'Tint by prayer',
+                    sub: 'Colours the icon and app name, shifting through '
+                        'the day',
                     trailing: V3SettingsSwitch(
                       value: config.bannerTint,
                       onChanged: prayer.setBannerTint,
