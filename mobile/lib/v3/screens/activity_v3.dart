@@ -7,6 +7,7 @@ import '../data/data_export.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
+import '../v3_nav.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
 import 'home_v3.dart' show V3TxnRow;
@@ -30,9 +31,33 @@ class _ActivityV3State extends State<ActivityV3> {
   bool _selecting = false;
   final Set<String> _selectedIds = <String>{};
   bool _deleting = false;
+  V3Nav? _nav;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nav = Provider.of<V3Nav?>(context, listen: false);
+    if (_nav != nav) {
+      _nav?.unregisterBackHandler(_handleBack);
+      _nav = nav;
+      _nav?.registerBackHandler(_handleBack);
+    }
+  }
+
+  bool _handleBack() {
+    if (!mounted) return false;
+    final nav = _nav;
+    if (nav != null && (nav.page != null || nav.tab != 1)) return false;
+    if (_selecting) {
+      _exitSelection();
+      return true;
+    }
+    return false;
+  }
 
   @override
   void dispose() {
+    _nav?.unregisterBackHandler(_handleBack);
     _search.dispose();
     super.dispose();
   }

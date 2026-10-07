@@ -146,27 +146,35 @@ class V3Shell extends StatelessWidget {
       statusBarIconBrightness: Brightness.light,
     ));
 
-    return Scaffold(
-      backgroundColor: Nocturne.bg,
-      body: Stack(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: IndexedStack(
-              index: nav.tab,
-              children: const [
-                HomeV3(),
-                ActivityV3(),
-                InsightsV3(),
-                FamilyV3(),
-              ],
+    return PopScope(
+      canPop: !nav.canGoBack,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          nav.handleBack();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Nocturne.bg,
+        body: Stack(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: IndexedStack(
+                index: nav.tab,
+                children: const [
+                  HomeV3(),
+                  ActivityV3(),
+                  InsightsV3(),
+                  FamilyV3(),
+                ],
+              ),
             ),
-          ),
-          if (nav.page != null)
-            Positioned.fill(child: _PageOverlay(page: nav.page!)),
-        ],
+            if (nav.page != null)
+              Positioned.fill(child: _PageOverlay(page: nav.page!)),
+          ],
+        ),
+        bottomNavigationBar: const _V3BottomBar(),
       ),
-      bottomNavigationBar: const _V3BottomBar(),
     );
   }
 }
