@@ -25,6 +25,7 @@ class AppNotifications {
   static const recurringBase = 200000;
   static const prayerBase = 300000;
   static const liveId = 400001;
+  static const dmBase = 500000;
 
   // ── Channels ──────────────────────────────────────────────────────────────
 
@@ -46,6 +47,20 @@ class AppNotifications {
     importance: Importance.high,
     priority: Priority.high,
     category: AndroidNotificationCategory.reminder,
+  );
+
+  /// High-priority channel for 1:1 Direct Messages and Pokes, visible on the
+  /// lock screen with heads-up banner, sound, and vibration.
+  static const dm = AndroidNotificationDetails(
+    'ff_dm',
+    'Direct messages & pokes',
+    channelDescription: 'Instant alerts for family direct messages and pokes',
+    importance: Importance.max,
+    priority: Priority.max,
+    playSound: true,
+    enableVibration: true,
+    visibility: NotificationVisibility.public,
+    category: AndroidNotificationCategory.message,
   );
 
   /// The standing prayer banner.
@@ -91,6 +106,9 @@ class AppNotifications {
   /// while the app is alive. Null in the background isolate.
   static void Function(PendingQuickAdd entry)? onQuickAdd;
 
+  /// Invoked when the user taps a Direct Message / Poke notification.
+  static void Function(String senderId)? onTapDirectMessage;
+
   static Future<void> ensureInit() async {
     if (_ready) return;
     try {
@@ -115,6 +133,14 @@ class AppNotifications {
   static bool get ready => _ready;
 
   static void _onResponse(NotificationResponse response) {
+    final payload = response.payload;
+    if (payload != null && payload.startsWith('dm:')) {
+      final senderId = payload.substring(3);
+      if (senderId.isNotEmpty) {
+        onTapDirectMessage?.call(senderId);
+      }
+      return;
+    }
     final entry = _quickAddFrom(response);
     if (entry == null) return;
     final handler = onQuickAdd;
@@ -124,6 +150,38 @@ class AppNotifications {
       // The app is running but nothing has claimed quick adds yet; queue it so
       // the entry is not lost between launch and provider setup.
       PendingQuickAddQueue.add(entry);
+    }
+  }
+
+  /// Shows an immediate heads-up + lock-screen notification for an incoming
+  /// direct message or poke.
+  static Future<void> showDirectMessage({
+    required String messageId,
+    required String senderId,
+    required String senderName,
+    required String body,
+    bool isPoke = false,
+  }) async {
+    if (kIsWeb) return;
+    await ensureInit();
+    if (!_ready) return;
+    try {
+      final id = dmBase + (messageId.hashCode.abs() % 90000);
+      final title = isPoke ? '👋 $senderName poked you!' : senderName;
+      final preview = isPoke
+          ? (body.isNotEmpty && body != '👋 Poked you!'
+              ? body
+              : 'Tap to open chat & reply')
+          : body;
+      await plugin.show(
+        id,
+        title,
+        preview,
+        const NotificationDetails(android: dm),
+        payload: 'dm:$senderId',
+      );
+    } catch (err, stack) {
+      AppLog.error('AppNotifications.showDirectMessage', err, stack);
     }
   }
 

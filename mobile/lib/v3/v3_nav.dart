@@ -21,10 +21,13 @@ class V3Nav extends ChangeNotifier {
   final List<int> _tabHistory = [];
   final List<V3Page> _pageStack = [];
   final List<bool Function()> _backHandlers = [];
+  String? _chatPartnerId;
+  bool _openedChatDirectlyToPartner = false;
 
   int get tab => _tab;
   V3Page? get page => _pageStack.isEmpty ? null : _pageStack.last;
   List<V3Page> get pageStack => List.unmodifiable(_pageStack);
+  String? get chatPartnerId => _chatPartnerId;
 
   /// Whether [V3Shell] should intercept the system back button/gesture instead
   /// of letting Android close the activity.
@@ -42,8 +45,11 @@ class V3Nav extends ChangeNotifier {
   }
 
   void goTab(int i) {
-    if (_tab == i && _pageStack.isEmpty) return;
+    final hadPages = _pageStack.isNotEmpty || _chatPartnerId != null;
     _pageStack.clear();
+    _chatPartnerId = null;
+    _openedChatDirectlyToPartner = false;
+    if (_tab == i && !hadPages) return;
     if (_tab != i) {
       if (i == 0) {
         _tabHistory.clear();
@@ -57,14 +63,55 @@ class V3Nav extends ChangeNotifier {
   }
 
   void goPage(V3Page p) {
-    if (_pageStack.isNotEmpty && _pageStack.last == p) return;
+    if (p != V3Page.chat) {
+      _chatPartnerId = null;
+      _openedChatDirectlyToPartner = false;
+    }
+    if (_pageStack.isNotEmpty && _pageStack.last == p) {
+      notifyListeners();
+      return;
+    }
     _pageStack.remove(p);
     _pageStack.add(p);
     notifyListeners();
   }
 
+  void openChat([String? partnerId]) {
+    final alreadyInChat = page == V3Page.chat;
+    if (partnerId != null && !alreadyInChat) {
+      _openedChatDirectlyToPartner = true;
+    } else if (partnerId == null) {
+      _openedChatDirectlyToPartner = false;
+    }
+    _chatPartnerId = partnerId;
+    if (!alreadyInChat) {
+      _pageStack.remove(V3Page.chat);
+      _pageStack.add(V3Page.chat);
+    }
+    notifyListeners();
+  }
+
+  void closeChatThread() {
+    if (_openedChatDirectlyToPartner) {
+      _chatPartnerId = null;
+      _openedChatDirectlyToPartner = false;
+      if (_pageStack.isNotEmpty && _pageStack.last == V3Page.chat) {
+        _pageStack.removeLast();
+      }
+    } else {
+      _chatPartnerId = null;
+    }
+    notifyListeners();
+  }
+
   void closePage() {
     if (_pageStack.isEmpty) return;
+    if (_pageStack.last == V3Page.chat && _chatPartnerId != null) {
+      closeChatThread();
+      return;
+    }
+    _chatPartnerId = null;
+    _openedChatDirectlyToPartner = false;
     _pageStack.removeLast();
     notifyListeners();
   }
@@ -77,7 +124,15 @@ class V3Nav extends ChangeNotifier {
         return true;
       }
     }
+    if (_pageStack.isNotEmpty &&
+        _pageStack.last == V3Page.chat &&
+        _chatPartnerId != null) {
+      closeChatThread();
+      return true;
+    }
     if (_pageStack.isNotEmpty) {
+      _chatPartnerId = null;
+      _openedChatDirectlyToPartner = false;
       _pageStack.removeLast();
       notifyListeners();
       return true;

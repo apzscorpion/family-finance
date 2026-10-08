@@ -10,7 +10,6 @@ import '../v3_design.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
-import 'chat_thread_v3.dart';
 
 /// Family: members with roles and spend, pending approvals, open settlements,
 /// and the workspace's invite code.
@@ -518,15 +517,33 @@ class _MemberRowTile extends StatelessWidget {
               ],
             ),
           ),
-          if (!isMe && m.isActive)
+          if (!isMe && m.isActive) ...[
             GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => ChatThreadV3(partner: m),
-                  ),
+              onTap: () async {
+                final chat = context.read<ChatController?>();
+                if (chat == null) return;
+                chat.syncContext(
+                  familyId: s.familyId,
+                  myId: s.myId,
+                  members: s.members,
                 );
+                await chat.pokeMember(m.userId);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('👋 Poked ${m.name}!')),
+                  );
+                }
               },
+              behavior: HitTestBehavior.opaque,
+              child: const SizedBox(
+                width: 34,
+                height: 34,
+                child: Icon(PhRegular.bellRinging,
+                    size: 17, color: NocturneSemantic.warning),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => context.read<V3Nav>().openChat(m.userId),
               behavior: HitTestBehavior.opaque,
               child: const SizedBox(
                 width: 34,
@@ -535,6 +552,7 @@ class _MemberRowTile extends StatelessWidget {
                     size: 18, color: Nocturne.accent300),
               ),
             ),
+          ],
           if (canManage)
             GestureDetector(
               onTap: () => _manage(context, s, index),

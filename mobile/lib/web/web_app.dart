@@ -1,10 +1,13 @@
-﻿import 'package:flutter/material.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/nocturne.dart';
 import '../v3/data/chat_controller.dart';
 import '../v3/data/notes_presence.dart';
+import '../v3/data/v3_models.dart';
 import '../v3/data/v3_repository.dart';
 import '../v3/phosphor_icons.dart';
 import '../v3/screens/activity_v3.dart';
@@ -24,7 +27,7 @@ import '../v3/v3_state.dart';
 /// `PrayerController`.
 ///
 /// Money screens (`HomeV3`, `ActivityV3`, `InsightsV3`) run in read-only mode,
-/// while `NotesV3` and `ChatListV3` are fully editable.
+/// while `NotesV3` and `ChatListV3` are fully editable with live WebSockets.
 class WebApp extends StatelessWidget {
   const WebApp({super.key});
 
@@ -134,7 +137,7 @@ class WebRoot extends StatelessWidget {
 }
 
 /// Responsive web shell with a side navigation rail on desktop/tablet and a
-/// max-width content column.
+/// max-width content column, plus live incoming DM toast alerts.
 ///
 /// Tabs:
 /// - 0: Overview (`HomeV3`, read-only)
@@ -150,20 +153,60 @@ class WebShell extends StatefulWidget {
 }
 
 class _WebShellState extends State<WebShell> {
+  StreamSubscription<DirectMessageRow>? _alertSub;
+  DirectMessageRow? _activeToast;
+  Timer? _toastTimer;
+
   @override
   void initState() {
     super.initState();
     V3Sheets.readOnly = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final s = context.read<V3State>();
+      _syncRealtimeControllers();
       final chat = context.read<ChatController?>();
-      if (chat != null &&
-          s.familyId.isNotEmpty &&
-          (s.myId?.isNotEmpty ?? false)) {
-        chat.ensureJoined(familyId: s.familyId, myId: s.myId);
+      if (chat != null) {
+        _alertSub = chat.incomingAlerts.listen(_onIncomingAlert);
       }
     });
+  }
+
+  void _syncRealtimeControllers() {
+    if (!mounted) return;
+    final s = context.read<V3State>();
+    final nav = context.read<V3Nav>();
+    final chat = context.read<ChatController?>();
+    final presence = context.read<NotesPresenceService?>();
+    if (s.familyId.isNotEmpty && (s.myId?.isNotEmpty ?? false)) {
+      chat?.syncContext(
+        familyId: s.familyId,
+        myId: s.myId,
+        members: s.members,
+        onTapSender: (senderId) => nav.openChat(senderId),
+      );
+      presence?.connect(
+        familyId: s.familyId,
+        selfName: s.me?.name ?? 'Member',
+      );
+    }
+  }
+
+  void _onIncomingAlert(DirectMessageRow row) {
+    if (!mounted) return;
+    _toastTimer?.cancel();
+    setState(() => _activeToast = row);
+    _toastTimer = Timer(const Duration(seconds: 6), () {
+      if (mounted) {
+        setState(() => _activeToast = null);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _alertSub?.cancel();
+    _toastTimer?.cancel();
+    super.dispose();
   }
 
   int _effectiveTab(V3Nav nav) {
@@ -182,34 +225,66 @@ class _WebShellState extends State<WebShell> {
     V3Sheets.readOnly = true;
     final nav = context.watch<V3Nav>();
     final s = context.watch<V3State>();
-    final unreadDm = context.watch<ChatController?>()?.totalUnread ?? 0;
+    final chat = context.watch<ChatController?>();
+    final unreadDm = chat?.totalUnread ?? 0;
+    final wsConnected = chat?.isRealtimeConnected ?? false;
+    final onlinePeers = chat?.onlinePeersCount(s.members) ?? 0;
     final activeIdx = _effectiveTab(nav);
     final isMoneyTab = activeIdx <= 2;
+
+    if (s.family != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _syncRealtimeControllers();
+      });
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 760;
 
-        final content = Column(
+        final content = Stack(
           children: [
-            if (isMoneyTab) const _ReadOnlyMoneyBanner(),
-            Expanded(
-              child: Center(
+            Column(
+              children: [
+                if (isMoneyTab) const _ReadOnlyMoneyBanner(),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 920),
+                      child: IndexedStack(
+                        index: activeIdx,
+                        children: const [
+                          HomeV3(),
+                          ActivityV3(),
+                          InsightsV3(),
+                          NotesV3(),
+                          ChatListV3(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_activeToast != null)
+              Positioned(
+                top: 12,
+                right: 16,
+                left: wide ? null : 16,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 920),
-                  child: IndexedStack(
-                    index: activeIdx,
-                    children: const [
-                      HomeV3(),
-                      ActivityV3(),
-                      InsightsV3(),
-                      NotesV3(),
-                      ChatListV3(),
-                    ],
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: _IncomingMessageToast(
+                    message: _activeToast!,
+                    sender: s.memberById(_activeToast!.senderId),
+                    onOpen: () {
+                      final senderId = _activeToast!.senderId;
+                      setState(() => _activeToast = null);
+                      nav.openChat(senderId);
+                    },
+                    onDismiss: () => setState(() => _activeToast = null),
                   ),
                 ),
               ),
-            ),
           ],
         );
 
@@ -223,7 +298,13 @@ class _WebShellState extends State<WebShell> {
                   memberName: s.me?.name ?? '',
                   activeIdx: activeIdx,
                   unreadDm: unreadDm,
+                  wsConnected: wsConnected,
+                  onlinePeers: onlinePeers,
+                  members: s.members,
+                  myId: s.myId ?? '',
+                  chat: chat,
                   onSelect: (i) => _selectSection(nav, i),
+                  onQuickChat: (partnerId) => nav.openChat(partnerId),
                 ),
                 Expanded(child: content),
               ],
@@ -241,6 +322,127 @@ class _WebShellState extends State<WebShell> {
           ),
         );
       },
+    );
+  }
+}
+
+class _IncomingMessageToast extends StatelessWidget {
+  final DirectMessageRow message;
+  final MemberRow? sender;
+  final VoidCallback onOpen;
+  final VoidCallback onDismiss;
+
+  const _IncomingMessageToast({
+    required this.message,
+    required this.sender,
+    required this.onOpen,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final senderName = sender?.name ?? 'Family member';
+    final initial =
+        sender?.initial ?? (senderName.isEmpty ? '?' : senderName[0]);
+    final avatarColor = sender?.color ?? Nocturne.accent600;
+    final preview = message.isPoke
+        ? '👋 Poked you!'
+        : (message.isImage ? '📷 Sent a photo' : message.body);
+
+    return Material(
+      color: Colors.transparent,
+      child: GestureDetector(
+        onTap: onOpen,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: Nocturne.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: message.isPoke
+                  ? NocturneSemantic.warning
+                  : Nocturne.accent500,
+              width: 1,
+            ),
+            boxShadow: Nocturne.shadowMd,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AvatarWithOnlineDot(
+                initial: initial,
+                color: avatarColor,
+                size: 36,
+                fontSize: 13,
+                isOnline: true,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      message.isPoke
+                          ? '$senderName poked you!'
+                          : 'New message · $senderName',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Nocturne.text,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      preview,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Nocturne.neutral300,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Nocturne.accent700,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Text(
+                  'Reply',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Nocturne.accent100,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: onDismiss,
+                behavior: HitTestBehavior.opaque,
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(
+                    PhRegular.x,
+                    size: 14,
+                    color: Nocturne.neutral400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -282,20 +484,34 @@ class _WebSideNav extends StatelessWidget {
   final String memberName;
   final int activeIdx;
   final int unreadDm;
+  final bool wsConnected;
+  final int onlinePeers;
+  final List<MemberRow> members;
+  final String myId;
+  final ChatController? chat;
   final ValueChanged<int> onSelect;
+  final ValueChanged<String> onQuickChat;
 
   const _WebSideNav({
     required this.familyName,
     required this.memberName,
     required this.activeIdx,
     required this.unreadDm,
+    required this.wsConnected,
+    required this.onlinePeers,
+    required this.members,
+    required this.myId,
+    required this.chat,
     required this.onSelect,
+    required this.onQuickChat,
   });
 
   @override
   Widget build(BuildContext context) {
+    final peers = members.where((m) => m.isActive && m.userId != myId).toList();
+
     return Container(
-      width: 240,
+      width: 248,
       decoration: const BoxDecoration(
         color: Nocturne.surface,
         border: Border(
@@ -321,18 +537,35 @@ class _WebSideNav extends StatelessWidget {
                     color: Nocturne.text,
                   ),
                 ),
-                if (memberName.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    memberName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Nocturne.neutral500,
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: wsConnected
+                            ? NocturneSemantic.income
+                            : NocturneSemantic.warning,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        memberName.isNotEmpty
+                            ? '$memberName · ${wsConnected ? 'Live' : 'Syncing'}'
+                            : (wsConnected ? 'Live connected' : 'Syncing'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Nocturne.neutral400,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -371,16 +604,45 @@ class _WebSideNav extends StatelessWidget {
             onTap: () => onSelect(2),
           ),
           const SizedBox(height: 16),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Text(
-              'COLLABORATION (LIVE)',
-              style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 0.8,
-                fontWeight: FontWeight.w600,
-                color: Nocturne.accent300,
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'COLLABORATION (LIVE)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 0.8,
+                      fontWeight: FontWeight.w600,
+                      color: Nocturne.accent300,
+                    ),
+                  ),
+                ),
+                if (onlinePeers > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Nocturne.mix(NocturneSemantic.income, 18),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$onlinePeers online',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                        color: NocturneSemantic.income,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           _NavTile(
@@ -398,7 +660,94 @@ class _WebSideNav extends StatelessWidget {
             badgeCount: unreadDm,
             onTap: () => onSelect(4),
           ),
+          if (peers.isNotEmpty) ...[
+            const Spacer(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Text(
+                'FAMILY MEMBERS',
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w600,
+                  color: Nocturne.neutral500,
+                ),
+              ),
+            ),
+            for (final m in peers.take(5))
+              _SidebarMemberRow(
+                member: m,
+                isOnline: chat?.isUserOnline(m.userId) ?? false,
+                unread: chat?.unreadFrom(m.userId) ?? 0,
+                onTap: () => onQuickChat(m.userId),
+              ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _SidebarMemberRow extends StatelessWidget {
+  final MemberRow member;
+  final bool isOnline;
+  final int unread;
+  final VoidCallback onTap;
+
+  const _SidebarMemberRow({
+    required this.member,
+    required this.isOnline,
+    required this.unread,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        child: Row(
+          children: [
+            AvatarWithOnlineDot(
+              initial: member.initial,
+              color: member.color,
+              size: 26,
+              fontSize: 10.5,
+              isOnline: isOnline,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                member.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: isOnline ? FontWeight.w500 : FontWeight.w400,
+                  color: isOnline ? Nocturne.text : Nocturne.neutral400,
+                ),
+              ),
+            ),
+            if (unread > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Nocturne.accent600,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$unread',
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: Nocturne.accent100,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -518,12 +867,44 @@ class _WebBottomBar extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      items[i].$1,
-                      size: 20,
-                      color: activeIdx == i
-                          ? Nocturne.accent300
-                          : Nocturne.neutral600,
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          items[i].$1,
+                          size: 20,
+                          color: activeIdx == i
+                              ? Nocturne.accent300
+                              : Nocturne.neutral600,
+                        ),
+                        if (i == 4 && unreadDm > 0)
+                          Positioned(
+                            right: -7,
+                            top: -3,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4.5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Nocturne.accent600,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Nocturne.bg,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Text(
+                                unreadDm > 9 ? '9+' : '$unreadDm',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  color: Nocturne.accent100,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 3),
                     Text(

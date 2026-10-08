@@ -1,8 +1,8 @@
 # Family Spend Tracker — status and handoff
 
-Branch: `main` · Version `1.9.3+25`
-Tests: **205 passing** (`cd mobile && flutter test`)
-Published: v1.9.3 on GitHub, tagged `v1.9.3`
+Branch: `main` · Version `1.9.4+26`
+Tests: **207 passing** (`cd mobile && flutter test`)
+Published: v1.9.4 on GitHub, tagged `v1.9.4`
 
 Supersedes `docs/V1.9.0_HANDOFF.md` for anything they disagree on. That file
 still holds the detailed root-cause write-ups for the earlier bugs.

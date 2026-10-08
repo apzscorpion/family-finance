@@ -693,7 +693,8 @@ class V3Repository {
     if (uid == null) return const [];
     final rows = await _db
         .from('direct_messages')
-        .select('id,family_id,sender_id,recipient_id,body,created_at,read_at')
+        .select(
+            'id,family_id,sender_id,recipient_id,body,kind,image_data,created_at,read_at')
         .eq('family_id', familyId)
         .or('sender_id.eq.$uid,recipient_id.eq.$uid')
         .order('created_at', ascending: true)
@@ -708,6 +709,8 @@ class V3Repository {
     required String familyId,
     required String recipientId,
     required String body,
+    String kind = 'text',
+    String? imageData,
   }) async {
     final uid = currentUserId!;
     final row = await _db
@@ -717,10 +720,43 @@ class V3Repository {
           'sender_id': uid,
           'recipient_id': recipientId,
           'body': body.trim(),
+          'kind': kind,
+          'image_data': ?imageData,
         })
-        .select('id,family_id,sender_id,recipient_id,body,created_at,read_at')
+        .select(
+            'id,family_id,sender_id,recipient_id,body,kind,image_data,created_at,read_at')
         .single();
     return DirectMessageRow.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  Future<void> deleteDirectMessage(String messageId) async {
+    try {
+      await _db.rpc('delete_direct_message', params: {
+        'p_message_id': messageId,
+      });
+    } catch (_) {
+      await _db.from('direct_messages').delete().eq('id', messageId);
+    }
+  }
+
+  Future<void> clearDirectThread({
+    required String familyId,
+    required String partnerId,
+  }) async {
+    try {
+      await _db.rpc('clear_direct_thread', params: {
+        'p_family_id': familyId,
+        'p_partner_id': partnerId,
+      });
+    } catch (_) {
+      final uid = currentUserId;
+      if (uid == null) return;
+      await _db
+          .from('direct_messages')
+          .delete()
+          .eq('family_id', familyId)
+          .or('and(sender_id.eq.$uid,recipient_id.eq.$partnerId),and(sender_id.eq.$partnerId,recipient_id.eq.$uid)');
+    }
   }
 
   Future<void> markDirectMessagesRead({

@@ -157,6 +157,12 @@ class NotesPresenceService extends ChangeNotifier {
     return '${DateTime.now().microsecondsSinceEpoch}_$bits';
   }
 
+  /// Alias for [connect].
+  Future<void> ensureChannel({
+    required String familyId,
+    required String selfName,
+  }) => connect(familyId: familyId, selfName: selfName);
+
   /// Joins the family's notes channel. Safe to call repeatedly.
   Future<void> connect({
     required String familyId,

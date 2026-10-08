@@ -146,6 +146,19 @@ class V3Shell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nav = context.watch<V3Nav>();
+    final s = context.watch<V3State>();
+    final chat = context.read<ChatController?>();
+
+    if (chat != null && s.family != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        chat.syncContext(
+          familyId: s.familyId,
+          myId: s.myId,
+          members: s.members,
+          onTapSender: (senderId) => nav.openChat(senderId),
+        );
+      });
+    }
 
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -191,7 +204,8 @@ class _PageOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nav = context.read<V3Nav>();
+    final nav = context.watch<V3Nav>();
+    final hideOuterBar = page == V3Page.chat && nav.chatPartnerId != null;
 
     // The design slides pages in over the tab content rather than pushing a
     // route: `animation:ftIn .24s cubic-bezier(.2,.8,.2,1)`.
@@ -211,30 +225,31 @@ class _PageOverlay extends StatelessWidget {
           bottom: false,
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 6, 16, 2),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: nav.closePage,
-                      behavior: HitTestBehavior.opaque,
-                      child: const SizedBox(
-                        width: 42,
-                        height: 42,
-                        child: Icon(PhRegular.arrowLeft,
-                            size: 22, color: Nocturne.text),
+              if (!hideOuterBar)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 6, 16, 2),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: nav.closePage,
+                        behavior: HitTestBehavior.opaque,
+                        child: const SizedBox(
+                          width: 42,
+                          height: 42,
+                          child: Icon(PhRegular.arrowLeft,
+                              size: 22, color: Nocturne.text),
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: Text(nav.titleFor(page),
-                          style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
-                              color: Nocturne.text)),
-                    ),
-                  ],
+                      Expanded(
+                        child: Text(nav.titleFor(page),
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Nocturne.text)),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
               Expanded(child: _pageBody(page)),
             ],
           ),

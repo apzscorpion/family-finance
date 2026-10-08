@@ -36,6 +36,8 @@ class _TestRepo extends V3Repository {
 
   final List<DirectMessageRow> sentMessages = [];
   final List<String> markedReadSenders = [];
+  final List<String> deletedMessageIds = [];
+  final List<String> clearedPartnerIds = [];
 
   @override
   Future<NoteSaveResult> saveNoteConditional({
@@ -84,6 +86,8 @@ class _TestRepo extends V3Repository {
     required String familyId,
     required String recipientId,
     required String body,
+    String kind = 'text',
+    String? imageData,
   }) async {
     final row = DirectMessageRow(
       id: 'dm-${sentMessages.length + 1}',
@@ -91,10 +95,31 @@ class _TestRepo extends V3Repository {
       senderId: 'user-asif',
       recipientId: recipientId,
       body: body,
+      kind: kind,
+      imageData: imageData,
       createdAt: DateTime.now(),
     );
     sentMessages.add(row);
     return row;
+  }
+
+  @override
+  Future<void> deleteDirectMessage(String messageId) async {
+    deletedMessageIds.add(messageId);
+    sentMessages.removeWhere((m) => m.id == messageId);
+  }
+
+  @override
+  Future<void> clearDirectThread({
+    required String familyId,
+    required String partnerId,
+  }) async {
+    clearedPartnerIds.add(partnerId);
+    sentMessages.removeWhere(
+      (m) =>
+          (m.senderId == 'user-asif' && m.recipientId == partnerId) ||
+          (m.senderId == partnerId && m.recipientId == 'user-asif'),
+    );
   }
 
   @override
@@ -119,6 +144,9 @@ class _TestPresence extends NotesPresenceService {
   final List<NoteBlock> broadcastedBlocks = [];
   String? activeNoteId;
   String? activeBlockId;
+
+  @override
+  Future<void> connect({required String familyId, required String selfName}) async {}
 
   @override
   Future<void> ensureChannel({
@@ -523,7 +551,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Sara'), findsOneWidget);
+      expect(find.text('Sara'), findsWidgets);
       expect(find.text('Hello from Sara'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('chat_thread_tile_user-sara')));
@@ -540,11 +568,152 @@ void main() {
       expect(find.text('Checking in!'), findsOneWidget);
       expect(repo.sentMessages.last.body, 'Checking in!');
     });
+
+    test(
+      'ChatController supports online presence, typing state, pokeMember, sendImage, deleteMessage, and clearThread',
+      () async {
+        final repo = _TestRepo();
+        final chat = ChatController(repo);
+        chat.seedForTest(
+          familyId: 'fam-1',
+          myId: 'user-asif',
+          onlineUserIds: const ['user-sara'],
+        );
+
+        expect(chat.isUserOnline('user-sara'), isTrue);
+        expect(chat.isPartnerTyping('user-sara'), isFalse);
+
+        chat.debugSetPartnerTyping('user-sara', true);
+        expect(chat.isPartnerTyping('user-sara'), isTrue);
+        chat.debugSetPartnerTyping('user-sara', false);
+
+        // 1. Poke member
+        await chat.pokeMember('user-sara');
+        expect(chat.threadWith('user-sara').length, 1);
+        expect(chat.threadWith('user-sara').first.isPoke, isTrue);
+
+        // 2. Send image message
+        await chat.sendImage(
+          recipientId: 'user-sara',
+          base64Data:
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+          caption: 'Receipt photo',
+        );
+        final afterImg = chat.threadWith('user-sara');
+        expect(afterImg.length, 2);
+        expect(afterImg.last.isImage, isTrue);
+        expect(afterImg.last.body, 'Receipt photo');
+
+        // 3. Delete single message
+        final firstId = afterImg.first.id;
+        await chat.deleteMessage(firstId);
+        expect(repo.deletedMessageIds, contains(firstId));
+        expect(chat.threadWith('user-sara').length, 1);
+
+        // 4. Clear entire thread
+        await chat.clearThread('user-sara');
+        expect(repo.clearedPartnerIds, contains('user-sara'));
+        expect(chat.threadWith('user-sara'), isEmpty);
+      },
+    );
+
+    testWidgets(
+      'ChatListV3 & ChatThreadV3 render online dots, typing status, Poke, Delete message, and Clear chat',
+      (tester) async {
+        final repo = _TestRepo();
+        final msg = DirectMessageRow(
+          id: 'dm-55',
+          familyId: 'fam-1',
+          senderId: 'user-sara',
+          recipientId: 'user-asif',
+          body: 'Message to delete',
+          createdAt: DateTime(2026, 10, 8, 9, 30),
+        );
+        repo.sentMessages.add(msg);
+
+        final state = _buildSeededState(repo);
+        final chat = ChatController(repo);
+        chat.seedForTest(
+          familyId: 'fam-1',
+          myId: 'user-asif',
+          messages: [msg],
+          onlineUserIds: const ['user-sara'],
+        );
+        final nav = V3Nav();
+
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<V3State>.value(value: state),
+              ChangeNotifierProvider<ChatController>.value(value: chat),
+              ChangeNotifierProvider<V3Nav>.value(value: nav),
+            ],
+            child: MaterialApp(
+              theme: ThemeData.dark(),
+              home: const Scaffold(body: ChatListV3()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Online dot and badge are shown on the thread list
+        expect(
+          find.byKey(const ValueKey('chat_online_dot_user-sara')),
+          findsOneWidget,
+        );
+        expect(find.text('Online'), findsOneWidget);
+
+        // Open thread via V3Nav.openChat('user-sara')
+        nav.openChat('user-sara');
+        await tester.pumpAndSettle();
+        expect(find.byType(ChatThreadV3), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('chat_header_online_dot_user-sara')),
+          findsOneWidget,
+        );
+        expect(find.text('Online now · Live'), findsOneWidget);
+        expect(find.text('Message to delete'), findsOneWidget);
+
+        // Tap Poke button in thread header
+        await tester.tap(find.byKey(const ValueKey('chat_poke_button')));
+        await tester.pumpAndSettle();
+        expect(repo.sentMessages.any((m) => m.isPoke), isTrue);
+
+        // Delete single message via options button
+        await tester.tap(find.byKey(const ValueKey('chat_msg_options_dm-55')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('chat_delete_message_action')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Message to delete'), findsNothing);
+        expect(repo.deletedMessageIds, contains('dm-55'));
+
+        // Clear entire thread via header button
+        await tester.tap(find.byKey(const ValueKey('chat_clear_button')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('chat_confirm_clear_button')),
+        );
+        await tester.pumpAndSettle();
+        expect(repo.clearedPartnerIds, contains('user-sara'));
+        expect(chat.threadWith('user-sara'), isEmpty);
+
+        // Navigate back and switch tabs cleanly
+        nav.closeChatThread();
+        await tester.pumpAndSettle();
+        expect(nav.chatPartnerId, isNull);
+
+        nav.goTab(0);
+        expect(nav.tab, 0);
+        expect(nav.page, isNull);
+      },
+    );
   });
 
   group('Phase 4 — Web Shell (Read-Only Finance + Editable Notes & Chat)', () {
     testWidgets(
-      'WebShell sets V3Sheets.readOnly, shows read-only banner on money tabs, and navigates to Notes & Chat',
+      'WebShell sets V3Sheets.readOnly, shows online dots, surfaces live incoming message toast, and navigates to Notes & Chat',
       (tester) async {
         tester.view.physicalSize = const Size(1280, 800);
         tester.view.devicePixelRatio = 1.0;
@@ -555,7 +724,11 @@ void main() {
         final state = _buildSeededState(repo);
         final presence = _TestPresence();
         final chat = ChatController(repo);
-        chat.seedForTest(familyId: 'fam-1', myId: 'user-asif');
+        chat.seedForTest(
+          familyId: 'fam-1',
+          myId: 'user-asif',
+          onlineUserIds: const ['user-sara'],
+        );
 
         await tester.pumpWidget(
           MultiProvider(
@@ -577,6 +750,25 @@ void main() {
 
         expect(V3Sheets.readOnly, isTrue);
         expect(find.byKey(const ValueKey('web_readonly_banner')), findsOneWidget);
+        expect(find.text('1 online'), findsOneWidget);
+
+        // Inject a live incoming message while user is on the Overview tab -> toast appears!
+        chat.injectMessageForTest(
+          DirectMessageRow(
+            id: 'dm-live-99',
+            familyId: 'fam-1',
+            senderId: 'user-sara',
+            recipientId: 'user-asif',
+            body: 'Hey from web live!',
+            createdAt: DateTime.now(),
+          ),
+        );
+        await tester.pump();
+        expect(find.text('Hey from web live!'), findsOneWidget);
+        expect(find.text('Reply'), findsOneWidget);
+
+        // Flush the 6-second toast auto-dismiss timer.
+        await tester.pump(const Duration(seconds: 7));
 
         // Switch to Family notes tab -> read-only banner disappears.
         await tester.tap(find.byKey(const ValueKey('web_nav_notes')));
@@ -587,7 +779,7 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('web_nav_chat')));
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('web_readonly_banner')), findsNothing);
-        expect(find.text('Sara'), findsOneWidget);
+        expect(find.text('Sara'), findsWidgets);
       },
     );
   });

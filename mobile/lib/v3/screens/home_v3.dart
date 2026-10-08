@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../data/chat_controller.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
@@ -143,6 +144,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final unreadDm = context.watch<ChatController?>()?.totalUnread ?? 0;
     final member = s.scopeMember;
     final greetingName = s.me?.name ?? '';
 
@@ -208,6 +210,12 @@ class _Header extends StatelessWidget {
           _HeaderButton(
             icon: s.hidden ? PhRegular.eyeSlash : PhRegular.eye,
             onTap: s.toggleHidden,
+          ),
+          const SizedBox(width: 8),
+          _HeaderButton(
+            icon: PhRegular.envelopeSimple,
+            onTap: () => context.read<V3Nav>().openChat(),
+            showDot: unreadDm > 0,
           ),
           const SizedBox(width: 8),
           _HeaderButton(
@@ -637,7 +645,12 @@ class _QuickActions extends StatelessWidget {
         const Color(0xFF64C897),
         () => nav.goPage(V3Page.notes)
       ),
-      (PhRegular.users, 'Family', const Color(0xFFDE82B7), () => nav.goTab(3)),
+      (
+        PhRegular.envelopeSimple,
+        'Chat',
+        const Color(0xFFDE82B7),
+        () => nav.openChat()
+      ),
     ];
 
     return Padding(

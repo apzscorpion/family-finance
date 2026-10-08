@@ -468,6 +468,8 @@ class DirectMessageRow {
   final String senderId;
   final String recipientId;
   final String body;
+  final String kind;
+  final String? imageData;
   final DateTime createdAt;
   final DateTime? readAt;
 
@@ -478,10 +480,15 @@ class DirectMessageRow {
     required this.recipientId,
     required this.body,
     required this.createdAt,
+    this.kind = 'text',
+    this.imageData,
     this.readAt,
   });
 
   bool get isRead => readAt != null;
+  bool get isPoke => kind == 'poke';
+  bool get isImage =>
+      kind == 'image' && imageData != null && imageData!.isNotEmpty;
 
   factory DirectMessageRow.fromJson(Map<String, dynamic> j) => DirectMessageRow(
         id: j['id'].toString(),
@@ -489,9 +496,23 @@ class DirectMessageRow {
         senderId: j['sender_id']?.toString() ?? '',
         recipientId: j['recipient_id']?.toString() ?? '',
         body: j['body']?.toString() ?? '',
+        kind: j['kind']?.toString() ?? 'text',
+        imageData: j['image_data']?.toString(),
         createdAt: _ts(j['created_at']),
         readAt: j['read_at'] == null ? null : _ts(j['read_at']),
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'family_id': familyId,
+        'sender_id': senderId,
+        'recipient_id': recipientId,
+        'body': body,
+        'kind': kind,
+        if (imageData != null) 'image_data': imageData,
+        'created_at': createdAt.toUtc().toIso8601String(),
+        'read_at': readAt?.toUtc().toIso8601String(),
+      };
 
   DirectMessageRow copyWith({DateTime? readAt}) => DirectMessageRow(
         id: id,
@@ -499,6 +520,8 @@ class DirectMessageRow {
         senderId: senderId,
         recipientId: recipientId,
         body: body,
+        kind: kind,
+        imageData: imageData,
         createdAt: createdAt,
         readAt: readAt ?? this.readAt,
       );
