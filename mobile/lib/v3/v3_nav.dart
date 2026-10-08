@@ -11,6 +11,7 @@ enum V3Page {
   prayer,
   prayerSettings,
   aiSettings,
+  chat,
 }
 
 /// Shell navigation, kept separate from [V3State] so a screen can move the
@@ -103,5 +104,6 @@ class V3Nav extends ChangeNotifier {
         V3Page.prayer => 'Prayer times',
         V3Page.prayerSettings => 'Prayer settings',
         V3Page.aiSettings => 'AI restructuring',
+        V3Page.chat => 'Direct messages',
       };
 }

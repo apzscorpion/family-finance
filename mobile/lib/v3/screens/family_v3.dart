@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../data/chat_controller.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
 import '../v3_design.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
+import 'chat_thread_v3.dart';
 
 /// Family: members with roles and spend, pending approvals, open settlements,
 /// and the workspace's invite code.
@@ -18,6 +20,8 @@ class FamilyV3 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final chat = context.watch<ChatController?>();
+    final unreadTotal = chat?.totalUnread ?? 0;
     final spendByMember = {for (final e in s.byMember) e.key.userId: e.value};
 
     return RefreshIndicator(
@@ -151,6 +155,82 @@ class FamilyV3 extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Direct Messages card
+          GestureDetector(
+            onTap: () => context.read<V3Nav>().goPage(V3Page.chat),
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              decoration: BoxDecoration(
+                color: Nocturne.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: unreadTotal > 0 ? Nocturne.accent700 : Nocturne.neutral800,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const V3IconTile(
+                    icon: PhRegular.envelopeSimple,
+                    color: Nocturne.accent300,
+                    size: 36,
+                    radius: 11,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Direct messages',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w500,
+                            color: Nocturne.text,
+                          ),
+                        ),
+                        Text(
+                          unreadTotal > 0
+                              ? '$unreadTotal unread message${unreadTotal == 1 ? '' : 's'}'
+                              : 'Private 1:1 chats with family members',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: unreadTotal > 0
+                                ? Nocturne.accent200
+                                : Nocturne.neutral500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (unreadTotal > 0) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Nocturne.accent,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        unreadTotal > 9 ? '9+' : '$unreadTotal',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: Nocturne.bg,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  const Icon(PhRegular.caretRight,
+                      size: 14, color: Nocturne.neutral600),
+                ],
+              ),
             ),
           ),
 
@@ -438,6 +518,23 @@ class _MemberRowTile extends StatelessWidget {
               ],
             ),
           ),
+          if (!isMe && m.isActive)
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ChatThreadV3(partner: m),
+                  ),
+                );
+              },
+              behavior: HitTestBehavior.opaque,
+              child: const SizedBox(
+                width: 34,
+                height: 34,
+                child: Icon(PhRegular.envelopeSimple,
+                    size: 18, color: Nocturne.accent300),
+              ),
+            ),
           if (canManage)
             GestureDetector(
               onTap: () => _manage(context, s, index),

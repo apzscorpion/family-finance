@@ -2,12 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import '../notifications_core.dart';
-import 'prayer_banner.dart';
 import 'prayer_cities.dart';
 import 'prayer_config.dart';
 import 'prayer_location.dart';
-import 'prayer_notifier.dart';
+import 'prayer_platform_io.dart'
+    if (dart.library.js_interop) 'prayer_platform_web.dart' as prayer_platform;
 import 'prayer_service.dart';
 
 /// Holds the prayer configuration and the derived "what is next" state.
@@ -57,7 +56,7 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     // Reconcile the alert window with whatever was restored from disk.
     if (_config.enabled) {
-      await PrayerNotifier.sync(_config);
+      await prayer_platform.syncPrayerNotifications(_config);
       await _postBanner();
     }
   }
@@ -71,10 +70,10 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
     final day = _today;
     final next = _next;
     if (!_config.showBanner || day == null || next == null) {
-      await PrayerBanner.cancel();
+      await prayer_platform.cancelPrayerBanner();
       return;
     }
-    await PrayerBanner.post(
+    await prayer_platform.postPrayerBanner(
       config: _config,
       day: day,
       next: next,
@@ -92,11 +91,11 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
     await PrayerConfigStore.save(next);
 
     if (!next.enabled) {
-      if (wasEnabled) await PrayerNotifier.cancelAll();
-      await PrayerBanner.cancel();
+      if (wasEnabled) await prayer_platform.cancelAllPrayerNotifications();
+      await prayer_platform.cancelPrayerBanner();
       return;
     }
-    await PrayerNotifier.sync(next);
+    await prayer_platform.syncPrayerNotifications(next);
     // Forced: a settings change must be visible in the shade at once, even
     // though the prayer it shows has not changed.
     await _postBanner(force: true);
@@ -149,7 +148,7 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
       await update(_config.copyWith(exactAlarms: false));
       return false;
     }
-    final granted = await AppNotifications.requestExactAlarms();
+    final granted = await prayer_platform.requestExactPrayerAlarms();
     await update(_config.copyWith(exactAlarms: granted));
     return granted;
   }
@@ -183,7 +182,7 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
       _recompute();
       notifyListeners();
       if (_config.enabled) {
-        PrayerNotifier.sync(_config);
+        prayer_platform.syncPrayerNotifications(_config);
         // The prayer may well have rolled over while the app was away, and
         // the banner is the one surface the user sees without opening the app.
         _postBanner();

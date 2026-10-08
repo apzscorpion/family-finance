@@ -530,14 +530,29 @@ class V3Repository {
 
   // ── Notes ─────────────────────────────────────────────────────────────────
 
+  static const _noteCols =
+      'id,title,content,blocks,pinned,visibility,created_by,updated_by,folder_id,updated_at,version';
+  static const _noteColsLegacy =
+      'id,title,content,blocks,pinned,visibility,created_by,updated_by,folder_id,updated_at';
+
   Future<List<NoteRow>> notes(String familyId) async {
-    final rows = await _db
-        .from('notes')
-        .select('id,title,content,blocks,pinned,visibility,created_by,updated_by,folder_id,updated_at')
-        .eq('family_id', familyId)
-        .order('pinned', ascending: false)
-        .order('updated_at', ascending: false);
-    return (rows as List)
+    List rows;
+    try {
+      rows = await _db
+          .from('notes')
+          .select(_noteCols)
+          .eq('family_id', familyId)
+          .order('pinned', ascending: false)
+          .order('updated_at', ascending: false);
+    } catch (_) {
+      rows = await _db
+          .from('notes')
+          .select(_noteColsLegacy)
+          .eq('family_id', familyId)
+          .order('pinned', ascending: false)
+          .order('updated_at', ascending: false);
+    }
+    return rows
         .map((r) => NoteRow.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
   }
@@ -552,6 +567,57 @@ class V3Repository {
     String visibility = 'family',
     String? folderId,
   }) async {
+    final res = await saveNoteConditional(
+      familyId: familyId,
+      id: id,
+      title: title,
+      content: content,
+      blocks: blocks,
+      pinned: pinned,
+      visibility: visibility,
+      folderId: folderId,
+    );
+    return res.row;
+  }
+
+  /// Conditional note save using `save_note_v2` RPC when available, falling
+  /// back to direct table insert/update if the RPC is not present.
+  ///
+  /// When [expectedVersion] is provided and another writer saved first, returns
+  /// `NoteSaveResult(ok: false, row: <winning server row>)`.
+  Future<NoteSaveResult> saveNoteConditional({
+    required String familyId,
+    String? id,
+    required String title,
+    required String content,
+    required List<Map<String, dynamic>> blocks,
+    bool pinned = false,
+    String visibility = 'family',
+    String? folderId,
+    int? expectedVersion,
+  }) async {
+    try {
+      final raw = await _db.rpc('save_note_v2', params: {
+        'p_family_id': familyId,
+        'p_id': id,
+        'p_title': title,
+        'p_content': content,
+        'p_blocks': blocks,
+        'p_pinned': pinned,
+        'p_visibility': visibility,
+        'p_folder_id': folderId,
+        'p_expected_version': expectedVersion,
+      });
+      if (raw is Map) {
+        final map = Map<String, dynamic>.from(raw);
+        final ok = (map['ok'] as bool?) ?? true;
+        final rowMap = Map<String, dynamic>.from(map['row'] as Map);
+        return NoteSaveResult(ok: ok, row: NoteRow.fromJson(rowMap));
+      }
+    } catch (_) {
+      // Fallback to direct table access if RPC is unavailable
+    }
+
     final payload = {
       'family_id': familyId,
       'title': title,
@@ -565,8 +631,16 @@ class V3Repository {
     };
     final row = id == null
         ? await _db.from('notes').insert(payload).select().single()
-        : await _db.from('notes').update(payload).eq('id', id).select().single();
-    return NoteRow.fromJson(Map<String, dynamic>.from(row));
+        : await _db
+            .from('notes')
+            .update(payload)
+            .eq('id', id)
+            .select()
+            .single();
+    return NoteSaveResult(
+      ok: true,
+      row: NoteRow.fromJson(Map<String, dynamic>.from(row)),
+    );
   }
 
   Future<void> deleteNote(String id) async {
@@ -607,6 +681,61 @@ class V3Repository {
 
   Future<void> deleteFolder(String id) async {
     await _db.from('note_folders').delete().eq('id', id);
+  }
+
+  // ── Direct messages ───────────────────────────────────────────────────────
+
+  Future<List<DirectMessageRow>> directMessages(
+    String familyId, {
+    int limit = 300,
+  }) async {
+    final uid = currentUserId;
+    if (uid == null) return const [];
+    final rows = await _db
+        .from('direct_messages')
+        .select('id,family_id,sender_id,recipient_id,body,created_at,read_at')
+        .eq('family_id', familyId)
+        .or('sender_id.eq.$uid,recipient_id.eq.$uid')
+        .order('created_at', ascending: true)
+        .limit(limit);
+    return (rows as List)
+        .map((r) =>
+            DirectMessageRow.fromJson(Map<String, dynamic>.from(r as Map)))
+        .toList();
+  }
+
+  Future<DirectMessageRow> sendDirectMessage({
+    required String familyId,
+    required String recipientId,
+    required String body,
+  }) async {
+    final uid = currentUserId!;
+    final row = await _db
+        .from('direct_messages')
+        .insert({
+          'family_id': familyId,
+          'sender_id': uid,
+          'recipient_id': recipientId,
+          'body': body.trim(),
+        })
+        .select('id,family_id,sender_id,recipient_id,body,created_at,read_at')
+        .single();
+    return DirectMessageRow.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  Future<void> markDirectMessagesRead({
+    required String familyId,
+    required String senderId,
+  }) async {
+    final uid = currentUserId;
+    if (uid == null) return;
+    await _db
+        .from('direct_messages')
+        .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('family_id', familyId)
+        .eq('sender_id', senderId)
+        .eq('recipient_id', uid)
+        .isFilter('read_at', null);
   }
 
   // ── Settlements, approvals, detected ──────────────────────────────────────

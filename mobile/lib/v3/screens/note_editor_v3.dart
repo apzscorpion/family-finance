@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -16,31 +19,41 @@ import 'notes_widgets.dart';
 
 /// Clover / Notion-inspired block editor for Family Notes.
 ///
-/// Keeps the existing [NoteBlock] data model and Supabase sync while
-/// presenting a clean, low-chrome page:
-/// - Large bold title (~30px w700)
-/// - Borderless block rows with a subtle grip handle (tap or long-press for
-///   conversions via [NoteStructure.toTable], [NoteStructure.toTodo],
-///   [NoteStructure.toParagraph], reorder, duplicate, or delete)
-/// - Slash-command menu on `/` at the start of an empty paragraph
-/// - Automatic multi-line paste structuring with one-tap Undo and optional
-///   "Restructure with AI" when [AiConfig.isConfigured]
-/// - Keyboard-docked formatting bar
+/// Supports real-time collaborative block-level sync:
+/// - Autosave (debounced by payload size: 1.2s <8KB, 3s <30KB, 5s >=30KB)
+/// - Conditional concurrency via `save_note_v2` (`notes.version`)
+/// - Broadcast `block_delta` (~300ms debounce) + `postgres_changes` fallback
+/// - Contested block detection when another member edits the locally focused block
+/// - Tappable presence avatars to follow another editor's cursor
+/// - Coalesced Undo/Redo (100-entry cap, deep-copied snapshots, rebased on remote edits)
 class NoteEditorV3 extends StatefulWidget {
   final NoteRow? note;
   final List<NoteBlock>? initialBlocks;
+  final String? initialFollowUserId;
+  final String? initialFocusBlockId;
 
-  const NoteEditorV3({super.key, this.note, this.initialBlocks});
+  const NoteEditorV3({
+    super.key,
+    this.note,
+    this.initialBlocks,
+    this.initialFollowUserId,
+    this.initialFocusBlockId,
+  });
 
   @override
   State<NoteEditorV3> createState() => _NoteEditorV3State();
 }
 
-class _NoteEditorV3State extends State<NoteEditorV3> {
+class _NoteEditorV3State extends State<NoteEditorV3>
+    with WidgetsBindingObserver {
   late final TextEditingController _title;
   late List<NoteBlock> _blocks;
   late bool _pinned;
   late bool _private;
+
+  String? _noteId;
+  int _localVersion = 0;
+  String? _lastUpdatedBy;
 
   String? _focusedBlock;
   bool _dirty = false;
@@ -50,32 +63,68 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
 
   AiConfig _aiConfig = const AiConfig();
 
-  /// Linear history for Undo / Redo.
+  /// Linear history for Undo / Redo (cap 100, deep-copied).
+  static const int _historyCap = 100;
   final List<List<NoteBlock>> _history = [];
   int _historyAt = -1;
+  Timer? _undoCoalesceTimer;
+  bool _pendingTextHistory = false;
+
+  /// Autosave & broadcast timers.
+  Timer? _autosaveTimer;
+  Timer? _deltaBroadcastTimer;
+  String? _pendingDeltaBlockId;
+
+  /// Contested blocks: blockId -> name of remote editor contesting it.
+  final Map<String, String> _contestedBy = {};
+  final Map<String, Timer> _contestedTimers = {};
+
+  /// Follow-user state & block GlobalKeys for scrolling.
+  String? _followingUserId;
+  final Map<String, GlobalKey> _blockKeys = {};
 
   NotesPresenceService? _presence;
+  StreamSubscription<NoteBlockDelta>? _deltaSub;
+  StreamSubscription<NoteRow>? _rowSub;
   DateTime? _lastTyping;
+
+  GlobalKey _keyForBlock(String id) =>
+      _blockKeys.putIfAbsent(id, () => GlobalKey());
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final n = widget.note;
+    _noteId = n?.id;
+    _localVersion = n?.version ?? 0;
+    _lastUpdatedBy = n?.updatedBy;
     _title = TextEditingController(text: n?.title ?? '');
     _blocks = n != null && n.blocks.isNotEmpty
-        ? List.of(n.blocks)
-        : List.of(widget.initialBlocks ?? [NoteBlock.paragraph()]);
+        ? n.blocks.map((b) => b.deepCopy()).toList()
+        : (widget.initialBlocks ?? [NoteBlock.paragraph()])
+            .map((b) => b.deepCopy())
+            .toList();
     _pinned = n?.pinned ?? false;
     _private = n?.isPrivate ?? false;
-    _pushHistory();
+    _followingUserId = widget.initialFollowUserId;
+    if (widget.initialFocusBlockId != null) {
+      _focusedBlock = widget.initialFocusBlockId;
+    }
+    _pushHistoryImmediate();
     _loadAiConfig();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<NotesPresenceService>().setActiveNote(
-            widget.note?.id ?? 'new',
-            title: _title.text.isEmpty ? 'a new note' : _title.text,
-          );
+      final p = context.read<NotesPresenceService>();
+      p.setActiveNote(
+        _noteId ?? 'new',
+        title: _title.text.isEmpty ? 'a new note' : _title.text,
+        blockId: _focusedBlock,
+      );
+      if (widget.initialFocusBlockId != null) {
+        _scrollToBlock(widget.initialFocusBlockId!);
+      }
     });
   }
 
@@ -88,87 +137,468 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _presence = context.read<NotesPresenceService>();
+    final nextPresence = context.read<NotesPresenceService>();
+    if (_presence != nextPresence) {
+      _presence?.removeListener(_onPresenceChanged);
+      _deltaSub?.cancel();
+      _rowSub?.cancel();
+      _presence = nextPresence;
+      _presence!.addListener(_onPresenceChanged);
+      _deltaSub = _presence!.blockDeltas.listen(_onRemoteBlockDelta);
+      _rowSub = _presence!.remoteNoteRows.listen(_onRemoteNoteRow);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (_dirty) {
+        _save(pruneEmpty: false);
+      }
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autosaveTimer?.cancel();
+    _deltaBroadcastTimer?.cancel();
+    _undoCoalesceTimer?.cancel();
+    for (final t in _contestedTimers.values) {
+      t.cancel();
+    }
+    _deltaSub?.cancel();
+    _rowSub?.cancel();
+    _presence?.removeListener(_onPresenceChanged);
     _presence?.setActiveNote(null);
     _title.dispose();
     super.dispose();
   }
 
-  void _typed() {
+  void _onPresenceChanged() {
+    if (!mounted) return;
+    final p = _presence;
+    if (p == null) return;
+
+    // Clear contested indicators if the remote user moved off that block.
+    final activeId = _noteId;
+    if (activeId != null && _contestedBy.isNotEmpty) {
+      final viewers = p.viewersOf(activeId);
+      final removed = <String>[];
+      _contestedBy.forEach((blockId, _) {
+        final stillOnBlock = viewers.any((v) => v.blockId == blockId);
+        if (!stillOnBlock) {
+          removed.add(blockId);
+        }
+      });
+      if (removed.isNotEmpty) {
+        setState(() {
+          for (final bId in removed) {
+            _contestedBy.remove(bId);
+            _contestedTimers.remove(bId)?.cancel();
+          }
+        });
+      }
+    }
+
+    // If following someone in this note:
+    final followId = _followingUserId;
+    if (followId != null && activeId != null) {
+      final viewers = p.viewersOf(activeId);
+      NotePresence? target;
+      for (final v in viewers) {
+        if (v.userId == followId) {
+          target = v;
+          break;
+        }
+      }
+      if (target == null) {
+        final s = context.read<V3State>();
+        final name = s.memberById(followId)?.name ?? 'Member';
+        setState(() => _followingUserId = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 2),
+            content: Text('$name left this note'),
+          ),
+        );
+      } else if (target.blockId != null) {
+        _scrollToBlock(target.blockId!);
+      }
+    }
+  }
+
+  void _scrollToBlock(String blockId) {
+    final key = _blockKeys[blockId];
+    final ctx = key?.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        alignment: 0.3,
+      );
+    }
+  }
+
+  void _focusBlock(String blockId) {
+    if (_focusedBlock == blockId) return;
+    setState(() => _focusedBlock = blockId);
+    _presence?.setFocusedBlock(blockId);
+  }
+
+  Duration _autosaveDebounceDuration() {
+    final approxBytes = utf8
+        .encode(jsonEncode(_blocks.map((b) => b.toJson()).toList()))
+        .length;
+    if (approxBytes < 8 * 1024) {
+      return const Duration(milliseconds: 1200);
+    } else if (approxBytes < 30 * 1024) {
+      return const Duration(seconds: 3);
+    }
+    return const Duration(seconds: 5);
+  }
+
+  void _scheduleAutosave() {
+    _autosaveTimer?.cancel();
+    _autosaveTimer = Timer(_autosaveDebounceDuration(), () {
+      if (mounted && _dirty) {
+        // Trap #1: Do NOT prune empty blocks on autosave!
+        _save(pruneEmpty: false);
+      }
+    });
+  }
+
+  void _scheduleBlockDelta(String blockId) {
+    final id = _noteId;
+    if (id == null) return;
+    _pendingDeltaBlockId = blockId;
+    _deltaBroadcastTimer?.cancel();
+    _deltaBroadcastTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final targetId = _pendingDeltaBlockId;
+      if (targetId == null) return;
+      NoteBlock? found;
+      for (final b in _blocks) {
+        if (b.id == targetId) {
+          found = b;
+          break;
+        }
+      }
+      _presence?.sendBlockDelta(
+        noteId: id,
+        blockId: targetId,
+        block: found,
+        deleted: found == null,
+        title: _title.text.trim(),
+      );
+    });
+  }
+
+  void _typed({String? blockId}) {
     _dirty = true;
-    final id = widget.note?.id ?? 'new';
+    final id = _noteId ?? 'new';
     final now = DateTime.now();
     if (_lastTyping == null ||
         now.difference(_lastTyping!) > const Duration(milliseconds: 900)) {
       _lastTyping = now;
-      _presence?.sendTyping(id);
+      _presence?.sendTyping(id, blockId: blockId ?? _focusedBlock);
     }
+    if (blockId != null) {
+      _scheduleBlockDelta(blockId);
+    }
+    _scheduleAutosave();
   }
 
-  void _pushHistory() {
+  List<NoteBlock> _deepCopyBlocks(List<NoteBlock> src) =>
+      src.map((b) => b.deepCopy()).toList();
+
+  void _pushHistoryImmediate() {
+    _undoCoalesceTimer?.cancel();
+    _pendingTextHistory = false;
     if (_historyAt < _history.length - 1) {
       _history.removeRange(_historyAt + 1, _history.length);
     }
-    _history.add(_blocks.map((b) => b.copyWith()).toList());
+    _history.add(_deepCopyBlocks(_blocks));
     _historyAt = _history.length - 1;
-    if (_history.length > 50) {
+    if (_history.length > _historyCap) {
       _history.removeAt(0);
       _historyAt--;
     }
   }
 
-  void _mutate(void Function() change) {
-    setState(() {
-      change();
-      _typed();
+  void _scheduleTextHistory({bool wordBoundary = false}) {
+    if (wordBoundary) {
+      _pushHistoryImmediate();
+      return;
+    }
+    _pendingTextHistory = true;
+    _undoCoalesceTimer?.cancel();
+    _undoCoalesceTimer = Timer(const Duration(milliseconds: 600), () {
+      if (!mounted || !_pendingTextHistory) return;
+      _pushHistoryImmediate();
+      setState(() {});
     });
-    _pushHistory();
   }
 
-  bool get _canUndo => _historyAt > 0;
+  /// Immediate structural change (adding/removing/converting/moving blocks,
+  /// toggling a checkbox, paste structuring).
+  void _mutateStructural(void Function() change, {String? deltaBlockId}) {
+    if (_pendingTextHistory) {
+      _pushHistoryImmediate();
+    }
+    setState(() {
+      change();
+      _typed(blockId: deltaBlockId ?? _focusedBlock);
+    });
+    _pushHistoryImmediate();
+  }
+
+  /// Coalesced text change inside a block (pushes history on word boundary or
+  /// after 600ms idle, rather than every keystroke).
+  void _mutateText(
+    void Function() change, {
+    String? blockId,
+    String? newText,
+  }) {
+    final isBoundary = newText != null &&
+        newText.isNotEmpty &&
+        (newText.endsWith(' ') ||
+            newText.endsWith('.') ||
+            newText.endsWith(',') ||
+            newText.endsWith('!') ||
+            newText.endsWith('?'));
+    setState(() {
+      change();
+      _typed(blockId: blockId ?? _focusedBlock);
+    });
+    _scheduleTextHistory(wordBoundary: isBoundary);
+  }
+
+  /// Trap #4: Rebase every undo history snapshot when a remote edit updates or
+  /// deletes a block, so local Undo never reverts another member's typing.
+  void _rebaseHistoryForBlock(String blockId, NoteBlock? remoteBlock) {
+    for (var h = 0; h < _history.length; h++) {
+      final snap = _history[h];
+      final idx = snap.indexWhere((b) => b.id == blockId);
+      if (remoteBlock == null) {
+        if (idx != -1 && snap.length > 1) {
+          snap.removeAt(idx);
+        }
+      } else {
+        if (idx != -1) {
+          snap[idx] = remoteBlock.deepCopy();
+        } else {
+          snap.add(remoteBlock.deepCopy());
+        }
+      }
+    }
+  }
+
+  void _markBlockContested(String blockId, String whoName) {
+    setState(() {
+      _contestedBy[blockId] = whoName;
+    });
+    _contestedTimers[blockId]?.cancel();
+    _contestedTimers[blockId] = Timer(const Duration(seconds: 5), () {
+      if (!mounted) return;
+      setState(() {
+        _contestedBy.remove(blockId);
+        _contestedTimers.remove(blockId);
+      });
+    });
+  }
+
+  void _onRemoteBlockDelta(NoteBlockDelta delta) {
+    if (!mounted) return;
+    if (_noteId == null || delta.noteId != _noteId) return;
+
+    // If the delta targets the block we currently have focused, do NOT clobber
+    // our active typing; surface the conflict indicator instead.
+    if (_focusedBlock != null && delta.blockId == _focusedBlock) {
+      _markBlockContested(delta.blockId, delta.fromName);
+      return;
+    }
+
+    setState(() {
+      if (delta.title != null && delta.title!.isNotEmpty && !_dirty) {
+        _title.text = delta.title!;
+      }
+      if (delta.deleted) {
+        _blocks.removeWhere((b) => b.id == delta.blockId);
+        if (_blocks.isEmpty) {
+          _blocks.add(NoteBlock.paragraph());
+        }
+        _rebaseHistoryForBlock(delta.blockId, null);
+      } else if (delta.block != null) {
+        final idx = _blocks.indexWhere((b) => b.id == delta.blockId);
+        if (idx != -1) {
+          _blocks[idx] = delta.block!.deepCopy();
+        } else {
+          _blocks.add(delta.block!.deepCopy());
+        }
+        _rebaseHistoryForBlock(delta.blockId, delta.block);
+      }
+    });
+  }
+
+  void _onRemoteNoteRow(NoteRow row) {
+    if (!mounted) return;
+    if (_noteId == null || row.id != _noteId) return;
+    final s = context.read<V3State>();
+
+    // Trap #2: Suppress postgres_changes self-echo!
+    if (row.updatedBy == s.myId && row.version <= _localVersion) {
+      return;
+    }
+    if (row.version < _localVersion) {
+      return;
+    }
+
+    _applyAuthoritativeRemoteRow(row);
+  }
+
+  void _applyAuthoritativeRemoteRow(NoteRow row) {
+    final s = context.read<V3State>();
+    final whoName = s.memberById(row.updatedBy)?.name ?? 'Someone';
+    setState(() {
+      _localVersion = row.version;
+      _lastUpdatedBy = row.updatedBy;
+      _pinned = row.pinned;
+      _private = row.isPrivate;
+      if (!_dirty && row.title != _title.text) {
+        _title.text = row.title;
+      }
+
+      // Merge every block except the locally focused one if we have unsaved edits.
+      final remoteById = {for (final b in row.blocks) b.id: b};
+      final nextBlocks = <NoteBlock>[];
+
+      for (final remoteBlock in row.blocks) {
+        if (_focusedBlock == remoteBlock.id && _dirty) {
+          final localIdx = _blocks.indexWhere((b) => b.id == remoteBlock.id);
+          if (localIdx != -1) {
+            final localBlock = _blocks[localIdx];
+            nextBlocks.add(localBlock);
+            if (jsonEncode(localBlock.toJson()) !=
+                jsonEncode(remoteBlock.toJson())) {
+              _markBlockContested(remoteBlock.id, whoName);
+            }
+            continue;
+          }
+        }
+        nextBlocks.add(remoteBlock.deepCopy());
+        _rebaseHistoryForBlock(remoteBlock.id, remoteBlock);
+      }
+
+      // Preserve any newly added local focused block that hasn't been saved yet.
+      if (_focusedBlock != null &&
+          _dirty &&
+          !remoteById.containsKey(_focusedBlock)) {
+        final localIdx = _blocks.indexWhere((b) => b.id == _focusedBlock);
+        if (localIdx != -1) {
+          nextBlocks.add(_blocks[localIdx]);
+        }
+      }
+
+      if (nextBlocks.isNotEmpty) {
+        _blocks = nextBlocks;
+      }
+    });
+  }
+
+  bool get _canUndo => _historyAt > 0 || _pendingTextHistory;
   bool get _canRedo => _historyAt < _history.length - 1;
 
   void _undo() {
-    if (!_canUndo) return;
+    if (_pendingTextHistory) {
+      _pushHistoryImmediate();
+    }
+    if (_historyAt <= 0) return;
     setState(() {
       _historyAt--;
-      _blocks = _history[_historyAt].map((b) => b.copyWith()).toList();
+      _blocks = _deepCopyBlocks(_history[_historyAt]);
       _dirty = true;
     });
+    _scheduleAutosave();
   }
 
   void _redo() {
     if (!_canRedo) return;
     setState(() {
       _historyAt++;
-      _blocks = _history[_historyAt].map((b) => b.copyWith()).toList();
+      _blocks = _deepCopyBlocks(_history[_historyAt]);
       _dirty = true;
     });
+    _scheduleAutosave();
   }
 
-  Future<void> _save() async {
+  /// Saves the note.
+  ///
+  /// Trap #1: When [pruneEmpty] is false (used by background autosave), empty
+  /// blocks are preserved so a block the user just added and paused in is never
+  /// deleted under their cursor. Only final flush on close sets `pruneEmpty: true`.
+  Future<void> _save({bool pruneEmpty = false}) async {
     if (_saving) return;
+    _autosaveTimer?.cancel();
     final s = context.read<V3State>();
     setState(() => _saving = true);
 
-    final kept = _blocks.where((b) => !b.isEmpty).toList();
-    final ok = await s.saveNote(
-      id: widget.note?.id,
+    final blocksToSave =
+        pruneEmpty ? _blocks.where((b) => !b.isEmpty).toList() : _blocks;
+    final payloadBlocks =
+        blocksToSave.isEmpty ? [NoteBlock.paragraph()] : blocksToSave;
+
+    var res = await s.saveNoteConditional(
+      id: _noteId,
       title: _title.text.trim(),
-      blocks: kept.isEmpty ? [NoteBlock.paragraph()] : kept,
+      blocks: payloadBlocks,
       pinned: _pinned,
       isPrivate: _private,
+      folderId: widget.note?.folderId,
+      expectedVersion: _noteId == null ? null : _localVersion,
     );
 
+    // If conditional update failed due to a concurrent writer (`res.ok == false`),
+    // merge the winning server row (preserving our focused block) and retry once.
+    if (res != null && !res.ok) {
+      _applyAuthoritativeRemoteRow(res.row);
+      final mergedBlocks =
+          pruneEmpty ? _blocks.where((b) => !b.isEmpty).toList() : _blocks;
+      res = await s.saveNoteConditional(
+        id: _noteId,
+        title: _title.text.trim(),
+        blocks: mergedBlocks.isEmpty ? [NoteBlock.paragraph()] : mergedBlocks,
+        pinned: _pinned,
+        isPrivate: _private,
+        folderId: widget.note?.folderId,
+        expectedVersion: _localVersion,
+      );
+    }
+
     if (!mounted) return;
+    final savedRow = res != null && res.ok ? res.row : null;
+    final ok = savedRow != null;
     setState(() {
       _saving = false;
-      _dirty = !ok;
-      if (ok) _savedAt = DateTime.now();
+      if (savedRow != null) {
+        final wasNew = _noteId == null;
+        _noteId = savedRow.id;
+        _localVersion = savedRow.version;
+        _lastUpdatedBy = savedRow.updatedBy;
+        _dirty = false;
+        _savedAt = DateTime.now();
+        if (wasNew) {
+          _presence?.setActiveNote(
+            _noteId,
+            title: _title.text.isEmpty ? 'a new note' : _title.text,
+            blockId: _focusedBlock,
+          );
+        }
+      } else {
+        _dirty = true;
+      }
     });
 
     if (!ok) {
@@ -179,7 +609,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
   }
 
   Future<void> _delete() async {
-    final id = widget.note?.id;
+    final id = _noteId;
     if (id == null) {
       if (mounted) Navigator.pop(context);
       return;
@@ -212,7 +642,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
   Future<void> _shareNote() async {
     final title = _title.text.trim().isEmpty ? 'Note' : _title.text.trim();
     final md = DataExport.noteMarkdown(NoteRow(
-      id: widget.note?.id ?? 'temp',
+      id: _noteId ?? 'temp',
       title: title,
       content: blocksToPlainText(_blocks),
       pinned: _pinned,
@@ -250,9 +680,9 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
     if (trimmed.isEmpty) return;
 
     final parsed = NoteStructure.parse(trimmed);
-    final beforeBlocks = _blocks.map((b) => b.copyWith()).toList();
+    final beforeBlocks = _deepCopyBlocks(_blocks);
 
-    _mutate(() {
+    _mutateStructural(() {
       if (targetBlockId != null) {
         final idx = _blocks.indexWhere((b) => b.id == targetBlockId);
         if (idx != -1) {
@@ -269,7 +699,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
       final keep = _blocks.where((b) => !b.isEmpty).toList();
       _blocks = [...keep, ...parsed];
       _focusedBlock = _blocks.last.id;
-    });
+    }, deltaBlockId: parsed.last.id);
 
     if (!mounted) return;
     final itemCount = _countStructuredItems(parsed);
@@ -327,10 +757,10 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
           label: 'Undo',
           textColor: Nocturne.accent200,
           onPressed: () {
-            _mutate(() {
+            _mutateStructural(() {
               // Restore the previous blocks, placing the raw text as a single
               // paragraph so nothing pasted is lost.
-              final restored = beforeBlocks.map((b) => b.copyWith()).toList();
+              final restored = _deepCopyBlocks(beforeBlocks);
               final rawBlock = NoteBlock.paragraph(trimmed);
               if (targetBlockId != null) {
                 final idx = restored.indexWhere((b) => b.id == targetBlockId);
@@ -389,7 +819,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
     }
 
     final aiBlocks = result.blocks!;
-    _mutate(() {
+    _mutateStructural(() {
       if (replaceIds != null && replaceIds.isNotEmpty) {
         final firstIdx =
             _blocks.indexWhere((b) => replaceIds.contains(b.id));
@@ -402,7 +832,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
       }
       _blocks = aiBlocks;
       _focusedBlock = aiBlocks.last.id;
-    });
+    }, deltaBlockId: aiBlocks.last.id);
 
     final count = _countStructuredItems(aiBlocks);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -465,7 +895,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
     }
   }
 
-  void _add(NoteBlock b, {int? afterIndex}) => _mutate(() {
+  void _add(NoteBlock b, {int? afterIndex}) => _mutateStructural(() {
         if (afterIndex != null &&
             afterIndex >= 0 &&
             afterIndex < _blocks.length) {
@@ -483,20 +913,20 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
           }
         }
         _focusedBlock = b.id;
-      });
+      }, deltaBlockId: b.id);
 
-  void _replaceBlock(String blockId, NoteBlock next) => _mutate(() {
+  void _replaceBlock(String blockId, NoteBlock next) => _mutateStructural(() {
         final i = _blocks.indexWhere((x) => x.id == blockId);
         if (i != -1) {
           _blocks[i] = next;
           _focusedBlock = next.id;
         }
-      });
+      }, deltaBlockId: next.id);
 
   void _moveBlock(int index, int delta) {
     final target = index + delta;
     if (target < 0 || target >= _blocks.length) return;
-    _mutate(() {
+    _mutateStructural(() {
       final item = _blocks.removeAt(index);
       _blocks.insert(target, item);
       _focusedBlock = item.id;
@@ -514,20 +944,20 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
       head: [...b.head],
       rows: [for (final r in b.rows) [...r]],
     );
-    _mutate(() {
+    _mutateStructural(() {
       _blocks.insert(index + 1, copy);
       _focusedBlock = copy.id;
-    });
+    }, deltaBlockId: copy.id);
   }
 
-  void _deleteBlock(String blockId) => _mutate(() {
+  void _deleteBlock(String blockId) => _mutateStructural(() {
         _blocks.removeWhere((x) => x.id == blockId);
         if (_blocks.isEmpty) {
           final p = NoteBlock.paragraph();
           _blocks.add(p);
           _focusedBlock = p.id;
         }
-      });
+      }, deltaBlockId: blockId);
 
   Future<void> _openBlockMenu(int index) async {
     if (index < 0 || index >= _blocks.length) return;
@@ -670,7 +1100,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
       canPop: !_dirty,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        if (_dirty) await _save();
+        if (_dirty) await _save(pruneEmpty: true);
         if (!context.mounted) return;
         Navigator.of(context).pop();
       },
@@ -683,160 +1113,204 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
               Column(
                 children: [
                   _header(s),
-                Expanded(
-                  child: ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      8,
-                      20,
-                      bottomInset + 100,
-                    ),
-                    children: [
-                      // Clean Clover-style metadata row
-                      Row(
-                        children: [
-                          Text(
-                            _dateLine(),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Nocturne.neutral500,
-                            ),
-                          ),
-                          const Spacer(),
-                          _MetaChip(
-                            icon: _private
-                                ? PhRegular.lockSimple
-                                : PhRegular.users,
-                            label: _private
-                                ? 'Private'
-                                : (s.family?.name ?? 'Family'),
-                            background: _private
-                                ? Nocturne.neutral900
-                                : Nocturne.accent900,
-                            color: _private
-                                ? Nocturne.neutral300
-                                : Nocturne.accent200,
-                            onTap: () => setState(() {
-                              _private = !_private;
-                              _dirty = true;
-                            }),
-                          ),
-                          const SizedBox(width: 6),
-                          _MetaChip(
-                            icon:
-                                _pinned ? PhFill.pushPin : PhRegular.pushPin,
-                            label: _pinned ? 'Pinned' : 'Pin',
-                            background: Nocturne.neutral900,
-                            color: _pinned
-                                ? Nocturne.accent200
-                                : Nocturne.neutral400,
-                            onTap: () => setState(() {
-                              _pinned = !_pinned;
-                              _dirty = true;
-                            }),
-                          ),
-                        ],
+                  Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        8,
+                        20,
+                        bottomInset + 100,
                       ),
-                      const SizedBox(height: 18),
-                      // Large Clover-style title field (~30px, w700)
-                      TextField(
-                        controller: _title,
-                        onChanged: (_) => setState(_typed),
-                        maxLines: null,
-                        textInputAction: TextInputAction.next,
-                        style: const TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                          letterSpacing: -0.6,
-                          color: Nocturne.text,
+                      children: [
+                        // Clean Clover-style metadata row
+                        Row(
+                          children: [
+                            Text(
+                              _dateLine(),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Nocturne.neutral500,
+                              ),
+                            ),
+                            const Spacer(),
+                            _MetaChip(
+                              icon: _private
+                                  ? PhRegular.lockSimple
+                                  : PhRegular.users,
+                              label: _private
+                                  ? 'Private'
+                                  : (s.family?.name ?? 'Family'),
+                              background: _private
+                                  ? Nocturne.neutral900
+                                  : Nocturne.accent900,
+                              color: _private
+                                  ? Nocturne.neutral300
+                                  : Nocturne.accent200,
+                              onTap: () {
+                                setState(() {
+                                  _private = !_private;
+                                  _dirty = true;
+                                });
+                                _scheduleAutosave();
+                              },
+                            ),
+                            const SizedBox(width: 6),
+                            _MetaChip(
+                              icon:
+                                  _pinned ? PhFill.pushPin : PhRegular.pushPin,
+                              label: _pinned ? 'Pinned' : 'Pin',
+                              background: Nocturne.neutral900,
+                              color: _pinned
+                                  ? Nocturne.accent200
+                                  : Nocturne.neutral400,
+                              onTap: () {
+                                setState(() {
+                                  _pinned = !_pinned;
+                                  _dirty = true;
+                                });
+                                _scheduleAutosave();
+                              },
+                            ),
+                          ],
                         ),
-                        cursorColor: Nocturne.accent,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                          border: InputBorder.none,
-                          hintText: 'Untitled',
-                          hintStyle: TextStyle(
+                        const SizedBox(height: 18),
+                        // Large Clover-style title field (~30px, w700)
+                        TextField(
+                          controller: _title,
+                          onChanged: (v) {
+                            setState(() => _typed());
+                            _presence?.setActiveNote(
+                              _noteId ?? 'new',
+                              title: v.trim().isEmpty ? 'a new note' : v.trim(),
+                              blockId: _focusedBlock,
+                            );
+                          },
+                          maxLines: null,
+                          textInputAction: TextInputAction.next,
+                          style: const TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.w700,
                             height: 1.2,
                             letterSpacing: -0.6,
-                            color: Nocturne.neutral700,
+                            color: Nocturne.text,
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _syncLine(s),
-                      const SizedBox(height: 22),
-                      for (var i = 0; i < _blocks.length; i++)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _BlockRow(
-                            key: ValueKey(_blocks[i].id),
-                            block: _blocks[i],
-                            focused: _focusedBlock == _blocks[i].id,
-                            aiConfigured: _aiConfig.isConfigured,
-                            onFocus: () =>
-                                setState(() => _focusedBlock = _blocks[i].id),
-                            onOpenMenu: () => _openBlockMenu(i),
-                            onChanged: (next) => _mutate(() {
-                              final idx = _blocks
-                                  .indexWhere((x) => x.id == _blocks[i].id);
-                              if (idx != -1) _blocks[idx] = next;
-                            }),
-                            onReplaceBlock: (next) =>
-                                _replaceBlock(_blocks[i].id, next),
-                            onDelete: () => _deleteBlock(_blocks[i].id),
-                            onMultilinePaste: (raw) => _applyStructuredPaste(
-                              raw,
-                              targetBlockId: _blocks[i].id,
+                          cursorColor: Nocturne.accent,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                            border: InputBorder.none,
+                            hintText: 'Untitled',
+                            hintStyle: TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                              letterSpacing: -0.6,
+                              color: Nocturne.neutral700,
                             ),
-                            onSlashPaste: _pasteFromToolbar,
-                            onSlashAi: _restructureNoteOrBlockWithAi,
                           ),
                         ),
-                      GestureDetector(
-                        onTap: () => _add(NoteBlock.paragraph()),
-                        behavior: HitTestBehavior.opaque,
-                        child: const SizedBox(
-                          height: 52,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Tap to keep writing, or type / for blocks…',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Nocturne.neutral600,
+                        const SizedBox(height: 8),
+                        _syncLine(s),
+                        const SizedBox(height: 22),
+                        for (var i = 0; i < _blocks.length; i++)
+                          Padding(
+                            key: _keyForBlock(_blocks[i].id),
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _BlockRow(
+                              key: ValueKey(_blocks[i].id),
+                              block: _blocks[i],
+                              focused: _focusedBlock == _blocks[i].id,
+                              contestedBy: _contestedBy[_blocks[i].id],
+                              aiConfigured: _aiConfig.isConfigured,
+                              onFocus: () => _focusBlock(_blocks[i].id),
+                              onOpenMenu: () => _openBlockMenu(i),
+                              onChanged: (next) {
+                                final prev = _blocks[i];
+                                final isStructural = prev.kind != next.kind ||
+                                    prev.items.length != next.items.length ||
+                                    prev.head.length != next.head.length ||
+                                    prev.rows.length != next.rows.length ||
+                                    (prev.kind == NoteBlockKind.todo &&
+                                        _todoDoneChanged(
+                                            prev.items, next.items));
+                                if (isStructural) {
+                                  _mutateStructural(() {
+                                    final idx = _blocks.indexWhere(
+                                        (x) => x.id == prev.id);
+                                    if (idx != -1) _blocks[idx] = next;
+                                  }, deltaBlockId: prev.id);
+                                } else {
+                                  _mutateText(
+                                    () {
+                                      final idx = _blocks.indexWhere(
+                                          (x) => x.id == prev.id);
+                                      if (idx != -1) _blocks[idx] = next;
+                                    },
+                                    blockId: prev.id,
+                                    newText: next.plain,
+                                  );
+                                }
+                              },
+                              onReplaceBlock: (next) =>
+                                  _replaceBlock(_blocks[i].id, next),
+                              onDelete: () => _deleteBlock(_blocks[i].id),
+                              onMultilinePaste: (raw) => _applyStructuredPaste(
+                                raw,
+                                targetBlockId: _blocks[i].id,
+                              ),
+                              onSlashPaste: _pasteFromToolbar,
+                              onSlashAi: _restructureNoteOrBlockWithAi,
+                            ),
+                          ),
+                        GestureDetector(
+                          onTap: () => _add(NoteBlock.paragraph()),
+                          behavior: HitTestBehavior.opaque,
+                          child: const SizedBox(
+                            height: 52,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Tap to keep writing, or type / for blocks…',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Nocturne.neutral600,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            // Keyboard-docked formatting bar
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: AnimatedPadding(
-                duration: const Duration(milliseconds: 160),
-                curve: Curves.easeOut,
-                padding: EdgeInsets.only(
-                  bottom: bottomInset > 0 ? bottomInset + 8 : 14,
-                ),
-                child: Center(child: _toolbar()),
+                ],
               ),
-            ),
-          ],
+              // Keyboard-docked formatting bar
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: AnimatedPadding(
+                  duration: const Duration(milliseconds: 160),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.only(
+                    bottom: bottomInset > 0 ? bottomInset + 8 : 14,
+                  ),
+                  child: Center(child: _toolbar()),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
+  }
+
+  static bool _todoDoneChanged(List<TodoItem> a, List<TodoItem> b) {
+    if (a.length != b.length) return true;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].done != b[i].done) return true;
+    }
+    return false;
   }
 
   Widget _header(V3State s) => Padding(
@@ -845,7 +1319,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
           children: [
             GestureDetector(
               onTap: () async {
-                if (_dirty) await _save();
+                if (_dirty) await _save(pruneEmpty: true);
                 if (mounted) Navigator.pop(context);
               },
               behavior: HitTestBehavior.opaque,
@@ -857,7 +1331,22 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
               ),
             ),
             const Spacer(),
-            const _PresenceStrip(),
+            _PresenceStrip(
+              noteId: _noteId,
+              followingUserId: _followingUserId,
+              onTapPresence: (p) {
+                setState(() {
+                  if (_followingUserId == p.userId) {
+                    _followingUserId = null;
+                  } else {
+                    _followingUserId = p.userId;
+                  }
+                });
+                if (p.blockId != null) {
+                  _scrollToBlock(p.blockId!);
+                }
+              },
+            ),
             _IconBtn(
                 icon: PhRegular.arrowCounterClockwise,
                 enabled: _canUndo,
@@ -872,7 +1361,7 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
                 onTap: _shareNote),
             _IconBtn(icon: PhRegular.trash, enabled: true, onTap: _delete),
             GestureDetector(
-              onTap: _dirty ? _save : null,
+              onTap: _dirty ? () => _save(pruneEmpty: false) : null,
               behavior: HitTestBehavior.opaque,
               child: Container(
                 height: 36,
@@ -906,20 +1395,25 @@ class _NoteEditorV3State extends State<NoteEditorV3> {
       );
 
   Widget _syncLine(V3State s) {
-    final who = widget.note?.updatedBy == null
-        ? null
-        : s.memberById(widget.note!.updatedBy)?.name;
-    final synced = !_dirty;
+    final updatedBy = _lastUpdatedBy ?? widget.note?.updatedBy;
+    final who = updatedBy == null ? null : s.memberById(updatedBy)?.name;
+    final synced = !_dirty && !_saving;
     return Row(
       children: [
-        Icon(synced ? PhFill.checkCircle : PhRegular.clock,
-            size: 12,
-            color: synced ? NocturneSemantic.income : Nocturne.neutral500),
+        Icon(
+          _saving
+              ? PhRegular.arrowsClockwise
+              : (synced ? PhFill.checkCircle : PhRegular.clock),
+          size: 12,
+          color: synced ? NocturneSemantic.income : Nocturne.neutral500,
+        ),
         const SizedBox(width: 5),
         Text(
-          synced
-              ? (_savedAt != null ? 'Saved' : 'All changes saved')
-              : 'Unsaved changes',
+          _saving
+              ? 'Saving…'
+              : (synced
+                  ? (_savedAt != null ? 'Saved' : 'All changes saved')
+                  : 'Autosaving…'),
           style: TextStyle(
               fontSize: 11.5,
               color: synced ? NocturneSemantic.income : Nocturne.neutral400),
@@ -1195,6 +1689,7 @@ class _MetaChip extends StatelessWidget {
 class _BlockRow extends StatelessWidget {
   final NoteBlock block;
   final bool focused;
+  final String? contestedBy;
   final bool aiConfigured;
   final VoidCallback onFocus;
   final VoidCallback onOpenMenu;
@@ -1209,6 +1704,7 @@ class _BlockRow extends StatelessWidget {
     super.key,
     required this.block,
     required this.focused,
+    this.contestedBy,
     required this.aiConfigured,
     required this.onFocus,
     required this.onOpenMenu,
@@ -1231,146 +1727,181 @@ class _BlockRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final slashQuery =
         _showSlashMenu ? block.text.substring(1).trim().toLowerCase() : '';
+    final isContested = contestedBy != null;
 
     return GestureDetector(
       onLongPress: onOpenMenu,
       behavior: HitTestBehavior.translucent,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: switch (block.kind) {
-                  NoteBlockKind.heading => _HeadingBlock(
-                      block: block,
-                      onFocus: onFocus,
-                      onChanged: onChanged,
-                      onMultilinePaste: onMultilinePaste,
+      child: Container(
+        padding: isContested
+            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
+            : EdgeInsets.zero,
+        decoration: isContested
+            ? BoxDecoration(
+                color: Nocturne.mix(NocturneSemantic.warning, 10),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: Nocturne.mix(NocturneSemantic.warning, 50),
+                  width: 1,
+                ),
+              )
+            : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isContested)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    const Icon(PhRegular.warning,
+                        size: 12, color: NocturneSemantic.warning),
+                    const SizedBox(width: 5),
+                    Text(
+                      '$contestedBy is editing this line',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: NocturneSemantic.warning,
+                      ),
                     ),
-                  NoteBlockKind.paragraph => _ParagraphBlock(
-                      block: block,
-                      onFocus: onFocus,
-                      onChanged: onChanged,
-                      onMultilinePaste: onMultilinePaste,
-                    ),
-                  NoteBlockKind.todo => _TodoBlock(
-                      block: block,
-                      onFocus: onFocus,
-                      onChanged: onChanged,
-                    ),
-                  NoteBlockKind.table => _TableBlock(
-                      block: block,
-                      onFocus: onFocus,
-                      onChanged: onChanged,
-                    ),
-                },
+                  ],
+                ),
               ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: onOpenMenu,
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 140),
-                  opacity: focused ? 0.9 : 0.25,
-                  child: const Padding(
-                    padding: EdgeInsets.only(top: 4, left: 4, bottom: 4),
-                    child: Icon(
-                      PhRegular.dotsThreeVertical,
-                      size: 16,
-                      color: Nocturne.neutral400,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: switch (block.kind) {
+                    NoteBlockKind.heading => _HeadingBlock(
+                        block: block,
+                        onFocus: onFocus,
+                        onChanged: onChanged,
+                        onMultilinePaste: onMultilinePaste,
+                      ),
+                    NoteBlockKind.paragraph => _ParagraphBlock(
+                        block: block,
+                        onFocus: onFocus,
+                        onChanged: onChanged,
+                        onMultilinePaste: onMultilinePaste,
+                      ),
+                    NoteBlockKind.todo => _TodoBlock(
+                        block: block,
+                        onFocus: onFocus,
+                        onChanged: onChanged,
+                      ),
+                    NoteBlockKind.table => _TableBlock(
+                        block: block,
+                        onFocus: onFocus,
+                        onChanged: onChanged,
+                      ),
+                  },
+                ),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: onOpenMenu,
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 140),
+                    opacity: focused ? 0.9 : 0.25,
+                    child: const Padding(
+                      padding: EdgeInsets.only(top: 4, left: 4, bottom: 4),
+                      child: Icon(
+                        PhRegular.dotsThreeVertical,
+                        size: 16,
+                        color: Nocturne.neutral400,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          // Slash-command menu when typing `/` at the start of a paragraph
-          if (_showSlashMenu)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: _SlashCommandMenu(
-                query: slashQuery,
-                aiConfigured: aiConfigured,
-                onSelectBlock: onReplaceBlock,
-                onPaste: () {
-                  onChanged(block.copyWith(text: ''));
-                  onSlashPaste();
-                },
-                onAi: () {
-                  onChanged(block.copyWith(text: ''));
-                  onSlashAi();
-                },
-              ),
+              ],
             ),
-          // Focused inline quick-conversion & table/todo controls
-          if (focused && !_showSlashMenu)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  if (block.kind == NoteBlockKind.todo)
+            // Slash-command menu when typing `/` at the start of a paragraph
+            if (_showSlashMenu)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: _SlashCommandMenu(
+                  query: slashQuery,
+                  aiConfigured: aiConfigured,
+                  onSelectBlock: onReplaceBlock,
+                  onPaste: () {
+                    onChanged(block.copyWith(text: ''));
+                    onSlashPaste();
+                  },
+                  onAi: () {
+                    onChanged(block.copyWith(text: ''));
+                    onSlashAi();
+                  },
+                ),
+              ),
+            // Focused inline quick-conversion & table/todo controls
+            if (focused && !_showSlashMenu)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (block.kind == NoteBlockKind.todo)
+                      _QuickPill(
+                        icon: PhRegular.chartBar,
+                        label: 'To table',
+                        onTap: () =>
+                            onReplaceBlock(NoteStructure.toTable(block)),
+                      ),
+                    if (block.kind == NoteBlockKind.todo &&
+                        block.items.any((i) => i.done))
+                      _QuickPill(
+                        icon: PhRegular.checks,
+                        label: 'Clear done',
+                        onTap: () => onChanged(block.copyWith(
+                          items: block.items.where((i) => !i.done).toList(),
+                        )),
+                      ),
+                    if (block.kind == NoteBlockKind.table) ...[
+                      _QuickPill(
+                        icon: PhRegular.plus,
+                        label: 'Row',
+                        onTap: () => onChanged(block.copyWith(
+                          rows: [
+                            ...block.rows,
+                            List.filled(block.head.length, '')
+                          ],
+                        )),
+                      ),
+                      _QuickPill(
+                        icon: PhRegular.plus,
+                        label: 'Column',
+                        onTap: () => onChanged(block.copyWith(
+                          head: [...block.head, ''],
+                          rows: block.rows.map((r) => [...r, '']).toList(),
+                        )),
+                      ),
+                      _QuickPill(
+                        icon: PhRegular.listChecks,
+                        label: 'To checklist',
+                        onTap: () =>
+                            onReplaceBlock(NoteStructure.toTodo(block)),
+                      ),
+                    ],
+                    if (block.kind == NoteBlockKind.paragraph &&
+                        block.text.trim().isNotEmpty)
+                      _QuickPill(
+                        icon: PhRegular.listChecks,
+                        label: 'To checklist',
+                        onTap: () =>
+                            onReplaceBlock(NoteStructure.toTodo(block)),
+                      ),
                     _QuickPill(
-                      icon: PhRegular.chartBar,
-                      label: 'To table',
-                      onTap: () =>
-                          onReplaceBlock(NoteStructure.toTable(block)),
-                    ),
-                  if (block.kind == NoteBlockKind.todo &&
-                      block.items.any((i) => i.done))
-                    _QuickPill(
-                      icon: PhRegular.checks,
-                      label: 'Clear done',
-                      onTap: () => onChanged(block.copyWith(
-                        items: block.items.where((i) => !i.done).toList(),
-                      )),
-                    ),
-                  if (block.kind == NoteBlockKind.table) ...[
-                    _QuickPill(
-                      icon: PhRegular.plus,
-                      label: 'Row',
-                      onTap: () => onChanged(block.copyWith(
-                        rows: [
-                          ...block.rows,
-                          List.filled(block.head.length, '')
-                        ],
-                      )),
-                    ),
-                    _QuickPill(
-                      icon: PhRegular.plus,
-                      label: 'Column',
-                      onTap: () => onChanged(block.copyWith(
-                        head: [...block.head, ''],
-                        rows: block.rows.map((r) => [...r, '']).toList(),
-                      )),
-                    ),
-                    _QuickPill(
-                      icon: PhRegular.listChecks,
-                      label: 'To checklist',
-                      onTap: () =>
-                          onReplaceBlock(NoteStructure.toTodo(block)),
+                      icon: PhRegular.dotsThree,
+                      label: 'More',
+                      onTap: onOpenMenu,
                     ),
                   ],
-                  if (block.kind == NoteBlockKind.paragraph &&
-                      block.text.trim().isNotEmpty)
-                    _QuickPill(
-                      icon: PhRegular.listChecks,
-                      label: 'To checklist',
-                      onTap: () =>
-                          onReplaceBlock(NoteStructure.toTodo(block)),
-                    ),
-                  _QuickPill(
-                    icon: PhRegular.dotsThree,
-                    label: 'More',
-                    onTap: onOpenMenu,
-                  ),
-                ],
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -2096,13 +2627,23 @@ class _CellState extends State<_Cell> {
 }
 
 class _PresenceStrip extends StatelessWidget {
-  const _PresenceStrip();
+  final String? noteId;
+  final String? followingUserId;
+  final ValueChanged<NotePresence> onTapPresence;
+
+  const _PresenceStrip({
+    required this.noteId,
+    required this.followingUserId,
+    required this.onTapPresence,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final id = noteId;
+    if (id == null) return const SizedBox.shrink();
     final presence = context.watch<NotesPresenceService>();
     final s = context.read<V3State>();
-    final here = presence.others.where((p) => p.noteId != null).toList();
+    final here = presence.viewersOf(id);
     if (here.isEmpty) return const SizedBox.shrink();
 
     return Padding(
@@ -2113,10 +2654,22 @@ class _PresenceStrip extends StatelessWidget {
           for (final p in here.take(3))
             Padding(
               padding: const EdgeInsets.only(left: 2),
-              child: PulsingAvatar(
-                initial: p.initial,
-                color: s.memberById(p.userId)?.color ?? Nocturne.accent600,
-                size: 26,
+              child: GestureDetector(
+                onTap: () => onTapPresence(p),
+                child: Container(
+                  padding: const EdgeInsets.all(1.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: followingUserId == p.userId
+                        ? Border.all(color: Nocturne.accent, width: 1.5)
+                        : null,
+                  ),
+                  child: PulsingAvatar(
+                    initial: p.initial,
+                    color: s.memberById(p.userId)?.color ?? Nocturne.accent600,
+                    size: 26,
+                  ),
+                ),
               ),
             ),
         ],
@@ -2124,3 +2677,4 @@ class _PresenceStrip extends StatelessWidget {
     );
   }
 }
+

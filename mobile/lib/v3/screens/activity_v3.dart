@@ -341,86 +341,88 @@ class _ActivityV3State extends State<ActivityV3> {
                     Text('${items.length}',
                         style: const TextStyle(
                             fontSize: 12, color: Nocturne.neutral500)),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        if (_selecting) {
-                          _exitSelection();
-                        } else {
-                          setState(() => _selecting = true);
-                        }
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _selecting
-                              ? Nocturne.accent900
-                              : Nocturne.surface,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
+                    if (!V3Sheets.readOnly) ...[
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          if (_selecting) {
+                            _exitSelection();
+                          } else {
+                            setState(() => _selecting = true);
+                          }
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
                             color: _selecting
-                                ? Nocturne.accent600
-                                : Nocturne.neutral800,
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _selecting
-                                  ? PhBold.x
-                                  : PhRegular.listChecks,
-                              size: 12,
+                                ? Nocturne.accent900
+                                : Nocturne.surface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
                               color: _selecting
-                                  ? Nocturne.accent100
-                                  : Nocturne.neutral300,
+                                  ? Nocturne.accent600
+                                  : Nocturne.neutral800,
+                              width: 1,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _selecting ? 'Done' : 'Select',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _selecting
+                                    ? PhBold.x
+                                    : PhRegular.listChecks,
+                                size: 12,
                                 color: _selecting
                                     ? Nocturne.accent100
                                     : Nocturne.neutral300,
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: () => ImportV3.open(context),
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Nocturne.surface,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: Nocturne.neutral800, width: 1),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(PhRegular.downloadSimple,
-                                size: 12, color: Nocturne.accent200),
-                            SizedBox(width: 4),
-                            Text('Import',
+                              const SizedBox(width: 4),
+                              Text(
+                                _selecting ? 'Done' : 'Select',
                                 style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: Nocturne.accent200)),
-                          ],
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: _selecting
+                                      ? Nocturne.accent100
+                                      : Nocturne.neutral300,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () => ImportV3.open(context),
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Nocturne.surface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: Nocturne.neutral800, width: 1),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(PhRegular.downloadSimple,
+                                  size: 12, color: Nocturne.accent200),
+                              SizedBox(width: 4),
+                              Text('Import',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: Nocturne.accent200)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(width: 6),
                     GestureDetector(
                       onTap: () async {

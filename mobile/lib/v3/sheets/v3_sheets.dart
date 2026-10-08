@@ -19,6 +19,20 @@ import 'recurring_sheet_v3.dart';
 class V3Sheets {
   V3Sheets._();
 
+  /// When true (set by the web shell), mutating money sheets are suppressed
+  /// and transaction details render without Edit/Delete actions.
+  static bool readOnly = false;
+
+  static Future<void> _notifyReadOnly(BuildContext context) async {
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Expenses are read-only on web — use the mobile app to add or edit.',
+        ),
+      ),
+    );
+  }
+
   static Future<T?> _show<T>(BuildContext context, Widget child) {
     return showModalBottomSheet<T>(
       context: context,
@@ -33,23 +47,29 @@ class V3Sheets {
   static Future<void> openScope(BuildContext context) =>
       _show(context, const V3ScopeSheet());
 
-  static Future<void> openSources(BuildContext context) =>
-      _show(context, const V3SourceSheet());
+  static Future<void> openSources(BuildContext context) => readOnly
+      ? _notifyReadOnly(context)
+      : _show(context, const V3SourceSheet());
 
-  static Future<void> openAdd(BuildContext context, {TxnRow? edit}) =>
-      _show(context, V3AddSheet(edit: edit));
+  static Future<void> openAdd(BuildContext context, {TxnRow? edit}) => readOnly
+      ? _notifyReadOnly(context)
+      : _show(context, V3AddSheet(edit: edit));
 
   static Future<void> openDetail(BuildContext context, TxnRow txn) =>
       _show(context, V3DetailSheet(txn: txn));
 
-  static Future<void> openInvite(BuildContext context) =>
-      _show(context, const V3InviteSheet());
+  static Future<void> openInvite(BuildContext context) => readOnly
+      ? _notifyReadOnly(context)
+      : _show(context, const V3InviteSheet());
 
   static Future<void> openApproval(BuildContext context, ApprovalRow a) =>
-      _show(context, V3ApprovalSheet(approval: a));
+      readOnly
+          ? _notifyReadOnly(context)
+          : _show(context, V3ApprovalSheet(approval: a));
 
-  static Future<void> openRecurring(BuildContext context) =>
-      _show(context, const V3RecurringSheet());
+  static Future<void> openRecurring(BuildContext context) => readOnly
+      ? _notifyReadOnly(context)
+      : _show(context, const V3RecurringSheet());
 }
 
 class _SheetShell extends StatelessWidget {
@@ -1514,50 +1534,51 @@ class V3DetailSheet extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 14),
-          Row(
-            children: [
-              _DetailAction(
-                icon: PhRegular.pencilSimple,
-                label: 'Edit',
-                onTap: () {
-                  Navigator.pop(context);
-                  V3Sheets.openAdd(context, edit: txn);
-                },
-              ),
-              _DetailAction(
-                icon: PhRegular.usersThree,
-                label: 'Split',
-                onTap: () {
-                  Navigator.pop(context);
-                  V3Sheets.openAdd(context, edit: txn);
-                },
-              ),
-              _DetailAction(
-                icon: PhRegular.copy,
-                label: 'Duplicate',
-                onTap: () {
-                  s.addTransaction(
-                    title: txn.title,
-                    amount: txn.amount,
-                    type: txn.type,
-                    categoryKey: txn.categoryKey,
-                    method: txn.method,
-                    sourceId: txn.sourceId,
-                  );
-                  Navigator.pop(context);
-                },
-              ),
-              _DetailAction(
-                icon: PhRegular.trash,
-                label: 'Delete',
-                color: NocturneSemantic.expense,
-                onTap: () {
-                  s.deleteTransaction(txn.id);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
+          if (!V3Sheets.readOnly)
+            Row(
+              children: [
+                _DetailAction(
+                  icon: PhRegular.pencilSimple,
+                  label: 'Edit',
+                  onTap: () {
+                    Navigator.pop(context);
+                    V3Sheets.openAdd(context, edit: txn);
+                  },
+                ),
+                _DetailAction(
+                  icon: PhRegular.usersThree,
+                  label: 'Split',
+                  onTap: () {
+                    Navigator.pop(context);
+                    V3Sheets.openAdd(context, edit: txn);
+                  },
+                ),
+                _DetailAction(
+                  icon: PhRegular.copy,
+                  label: 'Duplicate',
+                  onTap: () {
+                    s.addTransaction(
+                      title: txn.title,
+                      amount: txn.amount,
+                      type: txn.type,
+                      categoryKey: txn.categoryKey,
+                      method: txn.method,
+                      sourceId: txn.sourceId,
+                    );
+                    Navigator.pop(context);
+                  },
+                ),
+                _DetailAction(
+                  icon: PhRegular.trash,
+                  label: 'Delete',
+                  color: NocturneSemantic.expense,
+                  onTap: () {
+                    s.deleteTransaction(txn.id);
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
         ],
       ),
     );

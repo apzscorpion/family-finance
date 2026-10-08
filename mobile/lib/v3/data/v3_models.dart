@@ -414,6 +414,7 @@ class NoteRow {
   final String? updatedBy;
   final String? folderId;
   final DateTime updatedAt;
+  final int version;
 
   /// Structured content. `content` is the flattened mirror used for previews
   /// and search, so it is not the source of truth.
@@ -429,6 +430,7 @@ class NoteRow {
     this.updatedBy,
     this.folderId,
     required this.updatedAt,
+    this.version = 0,
     this.blocks = const [],
   });
 
@@ -444,11 +446,61 @@ class NoteRow {
         updatedBy: j['updated_by']?.toString(),
         folderId: j['folder_id']?.toString(),
         updatedAt: _ts(j['updated_at']),
+        version: (j['version'] as num?)?.toInt() ?? 0,
         blocks: (j['blocks'] as List?)
                 ?.whereType<Map>()
                 .map((e) => NoteBlock.fromJson(Map<String, dynamic>.from(e)))
                 .toList() ??
             const [],
+      );
+}
+
+class NoteSaveResult {
+  final bool ok;
+  final NoteRow row;
+
+  const NoteSaveResult({required this.ok, required this.row});
+}
+
+class DirectMessageRow {
+  final String id;
+  final String familyId;
+  final String senderId;
+  final String recipientId;
+  final String body;
+  final DateTime createdAt;
+  final DateTime? readAt;
+
+  const DirectMessageRow({
+    required this.id,
+    required this.familyId,
+    required this.senderId,
+    required this.recipientId,
+    required this.body,
+    required this.createdAt,
+    this.readAt,
+  });
+
+  bool get isRead => readAt != null;
+
+  factory DirectMessageRow.fromJson(Map<String, dynamic> j) => DirectMessageRow(
+        id: j['id'].toString(),
+        familyId: j['family_id']?.toString() ?? '',
+        senderId: j['sender_id']?.toString() ?? '',
+        recipientId: j['recipient_id']?.toString() ?? '',
+        body: j['body']?.toString() ?? '',
+        createdAt: _ts(j['created_at']),
+        readAt: j['read_at'] == null ? null : _ts(j['read_at']),
+      );
+
+  DirectMessageRow copyWith({DateTime? readAt}) => DirectMessageRow(
+        id: id,
+        familyId: familyId,
+        senderId: senderId,
+        recipientId: recipientId,
+        body: body,
+        createdAt: createdAt,
+        readAt: readAt ?? this.readAt,
       );
 }
 

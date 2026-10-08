@@ -843,9 +843,32 @@ class V3State extends ChangeNotifier {
     bool isPrivate = false,
     String? folderId,
   }) async {
-    final saved = await V3Repository.guard(
-      'saveNote',
-      () => _repo.saveNote(
+    final res = await saveNoteConditional(
+      id: id,
+      title: title,
+      blocks: blocks,
+      pinned: pinned,
+      isPrivate: isPrivate,
+      folderId: folderId,
+    );
+    return res != null && res.ok;
+  }
+
+  /// Saves a note conditionally with [expectedVersion] when editing an existing
+  /// note. Updates in-memory `notes` with whichever row the server returned
+  /// (either our newly saved row, or the winning server row on version conflict).
+  Future<NoteSaveResult?> saveNoteConditional({
+    String? id,
+    required String title,
+    required List<NoteBlock> blocks,
+    bool pinned = false,
+    bool isPrivate = false,
+    String? folderId,
+    int? expectedVersion,
+  }) async {
+    final res = await V3Repository.guard(
+      'saveNoteConditional',
+      () => _repo.saveNoteConditional(
         familyId: familyId,
         id: id,
         title: title,
@@ -854,14 +877,33 @@ class V3State extends ChangeNotifier {
         pinned: pinned,
         visibility: isPrivate ? 'private' : 'family',
         folderId: folderId,
+        expectedVersion: expectedVersion,
       ),
     );
-    if (saved == null) return false;
-    final i = notes.indexWhere((n) => n.id == saved.id);
-    notes = i == -1 ? [saved, ...notes] : [...notes]
-      ..[i == -1 ? 0 : i] = saved;
+    if (res == null) return null;
+    applyRemoteNoteRow(res.row);
+    return res;
+  }
+
+  /// Applies an authoritative [NoteRow] (from save or realtime postgres_changes)
+  /// to the in-memory `notes` list.
+  void applyRemoteNoteRow(NoteRow row) {
+    final i = notes.indexWhere((n) => n.id == row.id);
+    if (i == -1) {
+      notes = [row, ...notes];
+    } else {
+      notes = [...notes]..[i] = row;
+    }
     notifyListeners();
-    return true;
+  }
+
+  /// Removes a deleted note id from in-memory `notes`.
+  void removeRemoteNoteRow(String id) {
+    final next = notes.where((n) => n.id != id).toList();
+    if (next.length != notes.length) {
+      notes = next;
+      notifyListeners();
+    }
   }
 
   Future<bool> createFolder(String name) async {

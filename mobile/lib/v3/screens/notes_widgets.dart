@@ -10,7 +10,9 @@ import '../v3_state.dart';
 
 /// "Sara is editing Diwali shopping" — shown when someone else has a note open.
 class LiveBanner extends StatelessWidget {
-  const LiveBanner({super.key});
+  final ValueChanged<NotePresence>? onTap;
+
+  const LiveBanner({super.key, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -21,63 +23,78 @@ class LiveBanner extends StatelessWidget {
     final s = context.read<V3State>();
     final colour = s.memberById(who.userId)?.color ?? Nocturne.accent600;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Nocturne.accent800, width: 1),
-        gradient: LinearGradient(
-          colors: [
-            Color.alphaBlend(
-                Nocturne.mix(Nocturne.accent, 14), Nocturne.surface),
-            Nocturne.surface,
-          ],
+    return GestureDetector(
+      onTap: onTap == null ? null : () => onTap!(who),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Nocturne.accent800, width: 1),
+          gradient: LinearGradient(
+            colors: [
+              Color.alphaBlend(
+                  Nocturne.mix(Nocturne.accent, 14), Nocturne.surface),
+              Nocturne.surface,
+            ],
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          PulsingAvatar(initial: who.initial, color: colour),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                RichText(
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  text: TextSpan(
-                    style: const TextStyle(
-                        fontSize: 13,
-                        color: Nocturne.text,
-                        fontFamily: Nocturne.fontFamily),
-                    children: [
-                      TextSpan(
-                          text: who.name,
-                          style: const TextStyle(fontWeight: FontWeight.w500)),
-                      TextSpan(text: who.typing ? ' is typing' : ' is editing'),
-                    ],
-                  ),
-                ),
-                Text(who.noteTitle ?? 'a note',
+        child: Row(
+          children: [
+            PulsingAvatar(initial: who.initial, color: colour),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RichText(
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 11.5, color: Nocturne.neutral400)),
-              ],
+                    text: TextSpan(
+                      style: const TextStyle(
+                          fontSize: 13,
+                          color: Nocturne.text,
+                          fontFamily: Nocturne.fontFamily),
+                      children: [
+                        TextSpan(
+                            text: who.name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w500)),
+                        TextSpan(
+                            text: who.typing ? ' is typing' : ' is editing'),
+                      ],
+                    ),
+                  ),
+                  Text(who.noteTitle ?? 'a note',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 11.5, color: Nocturne.neutral400)),
+                ],
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: Nocturne.accent900,
-              borderRadius: BorderRadius.circular(7),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Nocturne.accent900,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Follow',
+                      style:
+                          TextStyle(fontSize: 11, color: Nocturne.accent200)),
+                  SizedBox(width: 4),
+                  Icon(PhRegular.caretRight,
+                      size: 11, color: Nocturne.accent200),
+                ],
+              ),
             ),
-            child: const Text('Live',
-                style: TextStyle(fontSize: 11, color: Nocturne.accent200)),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -166,7 +183,9 @@ class _PulsingAvatarState extends State<PulsingAvatar>
 
 /// A small green dot used on note cards that someone else currently has open.
 class LiveDot extends StatefulWidget {
-  const LiveDot({super.key});
+  final VoidCallback? onTap;
+
+  const LiveDot({super.key, this.onTap});
 
   @override
   State<LiveDot> createState() => _LiveDotState();
@@ -186,24 +205,35 @@ class _LiveDotState extends State<LiveDot>
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _c,
-        builder: (context, _) => Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: NocturneSemantic.income,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: NocturneSemantic.income
-                    .withValues(alpha: (1 - _c.value) * 0.6),
-                spreadRadius: 5 * _c.value,
-              ),
-            ],
-          ),
+  Widget build(BuildContext context) {
+    final dot = AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) => Container(
+        width: 7,
+        height: 7,
+        decoration: BoxDecoration(
+          color: NocturneSemantic.income,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: NocturneSemantic.income
+                  .withValues(alpha: (1 - _c.value) * 0.6),
+              spreadRadius: 5 * _c.value,
+            ),
+          ],
         ),
-      );
+      ),
+    );
+    if (widget.onTap == null) return dot;
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: dot,
+      ),
+    );
+  }
 }
 
 /// The Folders tab: a 2-up grid of folder cards plus a dashed "New folder".

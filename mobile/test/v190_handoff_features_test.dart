@@ -83,10 +83,26 @@ class _FakePresence extends NotesPresenceService {
         );
 
   @override
-  Future<void> setActiveNote(String? noteId, {String? title}) async {}
+  Future<void> setActiveNote(
+    String? noteId, {
+    String? title,
+    String? blockId,
+  }) async {}
 
   @override
-  Future<void> sendTyping(String noteId) async {}
+  Future<void> setFocusedBlock(String? blockId) async {}
+
+  @override
+  void sendTyping(String noteId, {String? blockId}) {}
+
+  @override
+  void sendBlockDelta({
+    required String noteId,
+    required String blockId,
+    NoteBlock? block,
+    bool deleted = false,
+    String? title,
+  }) {}
 }
 
 void main() {

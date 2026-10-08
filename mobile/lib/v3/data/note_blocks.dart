@@ -169,6 +169,19 @@ class NoteBlock {
         rows: rows ?? this.rows,
       );
 
+  /// Creates an independent deep copy of this block (including mutable lists
+  /// `items`, `head`, and `rows`) so undo history snapshots never alias state.
+  NoteBlock deepCopy() => NoteBlock(
+        id: id,
+        kind: kind,
+        text: text,
+        items: [for (final item in items) item.copyWith()],
+        head: [...head],
+        rows: [
+          for (final r in rows) [...r]
+        ],
+      );
+
   /// Plain text for previews and search.
   String get plain => switch (kind) {
         NoteBlockKind.heading => text,

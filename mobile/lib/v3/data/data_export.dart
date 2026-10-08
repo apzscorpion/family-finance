@@ -1,17 +1,13 @@
-import 'dart:io';
-
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-
-import '../../services/app_log.dart';
+import 'data_export_io.dart'
+    if (dart.library.js_interop) 'data_export_web.dart' as platform_export;
 import 'note_blocks.dart';
 import 'v3_models.dart';
 
 /// Writing transactions and notes out to files the user can keep.
 ///
 /// Everything goes to the app's own cache directory and is handed to the
-/// system share sheet, so no storage permission is involved — and nothing is
-/// left sitting in shared storage afterwards.
+/// system share sheet (or downloaded on web), so no storage permission is
+/// involved — and nothing is left sitting in shared storage afterwards.
 class DataExport {
   DataExport._();
 
@@ -115,7 +111,8 @@ class DataExport {
     buf.writeln();
   }
 
-  /// Writes [content] to a temporary file and opens the share sheet.
+  /// Writes [content] to a temporary file (or browser download on web) and
+  /// opens the share sheet.
   ///
   /// Returns false if the file could not be written or shared; the caller
   /// reports that rather than leaving the user guessing.
@@ -123,22 +120,12 @@ class DataExport {
     String content,
     String fileName, {
     String? subject,
-  }) async {
-    try {
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsString(content);
-
-      final result = await Share.shareXFiles(
-        [XFile(file.path, name: fileName)],
-        subject: subject ?? fileName,
+  }) =>
+      platform_export.shareExportedContent(
+        content,
+        fileName,
+        subject: subject,
       );
-      return result.status != ShareResultStatus.unavailable;
-    } catch (err, stack) {
-      AppLog.error('DataExport.share', err, stack);
-      return false;
-    }
-  }
 
   static String _escape(String s) {
     if (s.contains(',') || s.contains('"') || s.contains('\n')) {

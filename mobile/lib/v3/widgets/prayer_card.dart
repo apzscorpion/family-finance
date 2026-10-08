@@ -19,8 +19,8 @@ class PrayerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prayer = context.watch<PrayerController>();
-    if (!prayer.showOnHome) return const SizedBox.shrink();
+    final prayer = context.watch<PrayerController?>();
+    if (prayer == null || !prayer.showOnHome) return const SizedBox.shrink();
 
     final next = prayer.next!;
     final day = prayer.today!;

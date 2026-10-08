@@ -1,8 +1,7 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
-
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/services.dart';
 
 import '../../services/app_log.dart';
@@ -19,7 +18,8 @@ class NotificationBridge {
   static const _channel = MethodChannel('com.familyfinance/notifications');
 
   /// Android only; the channel simply reports false elsewhere.
-  static bool get isSupported => !kIsWeb && Platform.isAndroid;
+  static bool get isSupported =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   static bool? _available;
 

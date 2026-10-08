@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -33,6 +35,8 @@ class _NotesV3State extends State<NotesV3> {
   bool _showFolders = false;
   String? _folderId;
   V3Nav? _nav;
+  StreamSubscription<NoteRow>? _rowSub;
+  StreamSubscription<String>? _delSub;
 
   @override
   void initState() {
@@ -42,10 +46,19 @@ class _NotesV3State extends State<NotesV3> {
       if (!mounted) return;
       final s = context.read<V3State>();
       if (s.familyId.isEmpty) return;
-      context.read<NotesPresenceService>().connect(
-            familyId: s.familyId,
-            selfName: s.me?.name ?? 'Someone',
-          );
+      final presence = context.read<NotesPresenceService>();
+      presence.connect(
+        familyId: s.familyId,
+        selfName: s.me?.name ?? 'Someone',
+      );
+      _rowSub = presence.remoteNoteRows.listen((row) {
+        if (!mounted) return;
+        context.read<V3State>().applyRemoteNoteRow(row);
+      });
+      _delSub = presence.remoteNoteDeletes.listen((id) {
+        if (!mounted) return;
+        context.read<V3State>().removeRemoteNoteRow(id);
+      });
     });
   }
 
@@ -77,6 +90,8 @@ class _NotesV3State extends State<NotesV3> {
 
   @override
   void dispose() {
+    _rowSub?.cancel();
+    _delSub?.cancel();
     _nav?.unregisterBackHandler(_handleBack);
     _search.dispose();
     super.dispose();
@@ -125,6 +140,30 @@ class _NotesV3State extends State<NotesV3> {
     setState(() => _fabOpen = false);
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => NoteEditorV3(initialBlocks: [first]),
+    ));
+    if (!mounted) return;
+    await context.read<V3State>().refresh();
+  }
+
+  Future<void> _followPresence(NotePresence who) async {
+    final s = context.read<V3State>();
+    final noteId = who.noteId;
+    if (noteId == null || noteId == 'new') return;
+    NoteRow? target;
+    for (final n in s.notes) {
+      if (n.id == noteId) {
+        target = n;
+        break;
+      }
+    }
+    if (target == null) return;
+    final found = target;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => NoteEditorV3(
+        note: found,
+        initialFollowUserId: who.userId,
+        initialFocusBlockId: who.blockId,
+      ),
     ));
     if (!mounted) return;
     await context.read<V3State>().refresh();
@@ -296,7 +335,7 @@ class _NotesV3State extends State<NotesV3> {
                 ],
               ),
             ),
-            const LiveBanner(),
+            LiveBanner(onTap: _followPresence),
             if (_folderId != null)
               Builder(builder: (_) {
                 final matches = s.folders.where((f) => f.id == _folderId);
@@ -762,7 +801,24 @@ class _NoteCard extends StatelessWidget {
                   ),
                 ),
                 if (context.watch<NotesPresenceService>().isLive(note.id)) ...[
-                  const LiveDot(),
+                  LiveDot(
+                    onTap: () async {
+                      final viewers = context
+                          .read<NotesPresenceService>()
+                          .viewersOf(note.id);
+                      final first = viewers.isNotEmpty ? viewers.first : null;
+                      await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => NoteEditorV3(
+                          note: note,
+                          initialFollowUserId: first?.userId,
+                          initialFocusBlockId: first?.blockId,
+                        ),
+                      ));
+                      if (context.mounted) {
+                        await context.read<V3State>().refresh();
+                      }
+                    },
+                  ),
                   const SizedBox(width: 6),
                 ],
                 if (note.updatedBy != null)

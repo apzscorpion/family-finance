@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/nocturne.dart';
+import 'data/chat_controller.dart';
 import 'data/notes_presence.dart';
 import 'data/prayer/prayer_controller.dart';
 import 'data/v3_repository.dart';
@@ -12,6 +13,7 @@ import 'screens/activity_v3.dart';
 import 'screens/ai_settings_v3.dart';
 import 'screens/auth_v3.dart';
 import 'screens/cards_v3.dart';
+import 'screens/chat_list_v3.dart';
 import 'screens/detected_v3.dart';
 import 'screens/family_v3.dart';
 import 'screens/home_v3.dart';
@@ -33,15 +35,19 @@ class V3App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final db = Supabase.instance.client;
+    final repo = V3Repository(db);
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) =>
-              V3State(V3Repository(Supabase.instance.client))..bootstrap(),
+          create: (_) => V3State(repo)..bootstrap(),
         ),
         ChangeNotifierProvider(create: (_) => V3Nav()),
         ChangeNotifierProvider(
-          create: (_) => NotesPresenceService(Supabase.instance.client),
+          create: (_) => NotesPresenceService(db),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ChatController(repo, db),
         ),
         // Loads its own device-local config. Builds nothing and runs no timer
         // until the feature is switched on.
@@ -246,6 +252,7 @@ class _PageOverlay extends StatelessWidget {
         V3Page.prayer => const PrayerV3(),
         V3Page.prayerSettings => const PrayerSettingsV3(),
         V3Page.aiSettings => const AiSettingsV3(),
+        V3Page.chat => const ChatListV3(),
       };
 }
 
@@ -255,6 +262,7 @@ class _V3BottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nav = context.watch<V3Nav>();
+    final unreadDm = context.watch<ChatController?>()?.totalUnread ?? 0;
     const items = [
       (PhRegular.house, 'Home'),
       (PhRegular.listBullets, 'Activity'),
@@ -286,14 +294,19 @@ class _V3BottomBar extends StatelessWidget {
             _tab(nav, items[1], 1),
             const _AddButton(),
             _tab(nav, items[2], 2),
-            _tab(nav, items[3], 3),
+            _tab(nav, items[3], 3, badgeCount: unreadDm),
           ],
         ),
       ),
     );
   }
 
-  Widget _tab(V3Nav nav, (IconData, String) item, int i) {
+  Widget _tab(
+    V3Nav nav,
+    (IconData, String) item,
+    int i, {
+    int badgeCount = 0,
+  }) {
     final active = nav.tab == i && nav.page == null;
     return Expanded(
       child: GestureDetector(
@@ -302,9 +315,38 @@ class _V3BottomBar extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(item.$1,
-                size: 22,
-                color: active ? Nocturne.accent300 : Nocturne.neutral600),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(item.$1,
+                    size: 22,
+                    color: active ? Nocturne.accent300 : Nocturne.neutral600),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -3,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4.5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Nocturne.accent600,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Nocturne.bg, width: 1.5),
+                      ),
+                      child: Text(
+                        badgeCount > 9 ? '9+' : '$badgeCount',
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Nocturne.accent100,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 4),
             Text(item.$2,
                 style: TextStyle(

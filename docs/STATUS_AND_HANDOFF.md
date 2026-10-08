@@ -1,8 +1,8 @@
 # Family Spend Tracker — status and handoff
 
-Branch: `main` · Last commit `2f3db9a` · Version `1.9.1+23`
-Tests: **198 passing** (`cd mobile && flutter test`)
-Published: v1.9.1 on GitHub, tagged `v1.9.1`
+Branch: `main` · Version `1.9.2+24`
+Tests: **205 passing** (`cd mobile && flutter test`)
+Published: v1.9.2 on GitHub, tagged `v1.9.2`
 
 Supersedes `docs/V1.9.0_HANDOFF.md` for anything they disagree on. That file
 still holds the detailed root-cause write-ups for the earlier bugs.
@@ -24,108 +24,68 @@ In the order it was raised, with honest status.
 | 7 | Rebuild the notepad, Notion/Clover style | **Done by another agent** (`cfa81db`) |
 | 8 | Paste text → one checkbox per line, or a table | **Done** — parser + 32 tests |
 | 9 | AI for restructuring, configurable provider, Gemini | **Done** — provider layer + settings screen |
-| 10 | Recurring salary posts to family, should be personal | **Fixed and live** — migration applied, verified against the database |
+| 10 | Recurring salary posts to family, should be personal | **Done** — DB migration applied & verified + owner picker in UI (`recurring_sheet_v3.dart`) |
 | 11 | Remove the "Family" option at the top | **Done, verified on device** |
 | 12 | CSV import files salary/loan as expenses | **Fixed** — 16 tests. Not verified against your actual file |
 | 13 | Prayer notification banner + customisation | **Done, verified on device** |
-| 14 | Notes live editing, undo/redo, follow-user, conflicts | **Planned in detail, not started** |
-| 15 | Direct messages between members | **Planned in detail, not started** |
-| 16 | Web version (expenses read-only, notes + chat editable) | **Planned in detail, not started** |
+| 14 | Notes live editing, undo/redo, follow-user, conflicts | **Done** — block-level sync, `save_note_v2` RPC, coalesced undo + remote rebase, tappable presence |
+| 15 | Direct messages between members | **Done** — `direct_messages` table + RLS + Realtime, `ChatController`, `ChatListV3` & `ChatThreadV3`, unread badge |
+| 16 | Web version (expenses read-only, notes + chat editable) | **Done** — `lib/main_web.dart` + `lib/web/web_app.dart`, `flutter build web --target lib/main_web.dart` verified (including Wasm dry-run) |
 
 ---
 
-## 2. What is pending, in priority order
+## 2. What was pending and is now completed
 
 ### 2.1 Database migrations — APPLIED, verified
 
-Previously listed as blocking. Re-checked against the live database on
-2026-10-07; nothing to do here.
+Re-checked against the live database on 2026-10-08:
 
-```
-auto_post | last_posted | owner_user_id | type     -> all four columns present
-post_due_recurring()                              -> references owner_user_id
-recurring_charges                                 -> 0 rows, 0 without an owner
-```
-
-So the salary-attribution fix is live, and the backfill caveat is moot: there
-are no legacy recurring rows to repair. New rows get `owner_user_id` from
-`V3Repository.addRecurring`, which defaults it to the signed-in user.
+1. `recurring_charges`: `auto_post`, `last_posted`, `owner_user_id`, `type` all present; `post_due_recurring()` references `owner_user_id`.
+2. Applied `supabase/migrations/20261008030000_live_notes_and_direct_messages.sql` to the linked Supabase database:
+   - `notes.version integer not null default 1`
+   - `public.save_note_v2(...)` conditional versioned save RPC (`saved`, `version`, `row`)
+   - `public.direct_messages` table with indexes, RLS policies (`dm_select`, `dm_insert`, `dm_update_read`), `replica identity full`, and `supabase_realtime` publication.
 
 Re-verify with:
 
 ```bash
-supabase db query --linked "select column_name from information_schema.columns where table_name='recurring_charges' and column_name in ('type','owner_user_id','auto_post','last_posted');"
+npx supabase db query --linked "select column_name from information_schema.columns where table_name='notes' and column_name='version'; select to_regclass('public.direct_messages'); select proname from pg_proc where proname='save_note_v2';"
 ```
 
-### 2.2 Recurring owner picker
+### 2.2 Recurring owner picker — DONE
 
-Not a live bug any more (§2.1), but a real gap: a recurring charge is always
-owned by whoever created it, and there is no way to say "this is my wife's
-salary". That is the remaining half of the original request.
+- `mobile/lib/v3/sheets/recurring_sheet_v3.dart` includes the "For" / "Credited to" member chip selector (`_ownerUserId`), defaulting to `s.myId`, passing `ownerUserId` to both `addRecurring` and `updateRecurring` (`owner_user_id` patch), and displaying the owner badge on each recurring row when multiple members exist.
+- Verified with widget test in `test/v190_handoff_features_test.dart`.
 
-- `RecurringRow.ownerUserId` and `V3State.addRecurring(ownerUserId:)` exist.
-- Add a member picker to `mobile/lib/v3/sheets/recurring_sheet_v3.dart`,
-  defaulting to the signed-in member, mirroring the "For" picker in the
-  add-entry sheet.
-- Include `owner_user_id` in the `updateRecurring` patch map.
-- Show the owner on each recurring row so a wrong one is visible.
+### 2.3 Notes live editing — DONE
 
-### 2.3 Notes live editing (large)
+Implemented per `~/.claude/plans/swirling-skipping-puffin.md` §Phase 2:
 
-Full design in `~/.claude/plans/swirling-skipping-puffin.md` §Phase 2. Decisions
-already taken: **block-level** sync, not a character-level CRDT.
+- **Conditional versioned save**: `V3Repository.saveNoteConditional` calls `save_note_v2` with `p_expected_version`. On version conflict (`saved == false`), `NoteEditorV3` merges remote blocks (preserving the locally focused block) and retries once against the new version.
+- **Realtime `block_delta` broadcast + `postgres_changes`**: `NotesPresenceService` keys presence by `$userId:$sessionId` (so multi-device sessions don't collide), tracks focused `blockId`, broadcasts throttled (180ms) `block_delta` events on `notes:$familyId`, and subscribes to `postgres_changes` (`INSERT`/`UPDATE`/`DELETE`) on `public.notes`.
+- **All four traps guarded**:
+  1. Empty blocks are **not** pruned during background autosave (`_save(pruneEmpty: false)`); pruning happens only on final close (`_flushPendingSave(pruneEmpty: true)`).
+  2. Self-echo suppression in `_onRemoteNoteRow`: ignores rows where `row.updatedBy == s.myId && row.version <= _localVersion`.
+  3. `NoteBlock.deepCopy()` clones `items`, `head`, and `rows` deeply so undo snapshots never alias live mutable lists.
+  4. `_rebaseHistoryForBlock(remoteBlock)` updates unfocused blocks inside `_history` and `_redo` when remote edits arrive so local Undo never reverts another member's typing.
+- **Tappable presence & contested-block banner**: `LiveBanner`, `LiveDot`, and `_PresenceStrip` (filtered via `presence.viewersOf(noteId)`) jump to the collaborator's active note/block on tap. If a remote edit touches the locally focused block, an amber `"<Name> is editing this line"` banner appears above that block.
 
-Verified facts that change the shape of this work:
+### 2.4 Direct messages — DONE
 
-- **Undo/redo already exists** (`note_editor_v3.dart:861-868`). The bug is that
-  `_pushHistory` runs on **every keystroke** with a 50-entry cap, so undo reaches
-  back ~50 characters. It needs coalescing, not building.
-- **`notes` is already in the `supabase_realtime` publication**
-  (`20261005185939_v2_schema.sql:456`) with `replica identity full`. No migration
-  needed to subscribe.
-- **Presence exists but carries no content** — `NotesPresenceService` tracks
-  presence and a `typing` broadcast only, never `postgres_changes`. That is
-  exactly why others see nothing.
-- **The live indicators are not buttons.** `LiveBanner` and `LiveDot`
-  (`notes_widgets.dart:12`, `:168`) have no `onTap`.
-- **`_PresenceStrip` filters `p.noteId != null`** (`:2105`) — anyone editing any
-  note, not this one.
-- **`saveNote` is a full-row, last-write-wins upsert** (`v3_repository.dart:545`).
-  Two editors silently overwrite each other.
+- **Data & Realtime**: `DirectMessageRow` in `v3_models.dart`, `directMessages` / `sendDirectMessage` / `markDirectMessagesRead` in `v3_repository.dart`, and `ChatController` (`chat_controller.dart`) subscribing to `postgres_changes` on `public.direct_messages` (`dm:$familyId`).
+- **UI**: `ChatListV3` (`chat_list_v3.dart`) and `ChatThreadV3` (`chat_thread_v3.dart`) built in Nocturne style, accessible from the `Family` ("More") tab card, per-member row quick-chat icon, and `V3Page.chat`. Unread badge rendered on both the bottom nav `More` tab and the Family DM card.
 
-Four traps that will bite whoever implements it:
+### 2.5 Web version — DONE
 
-1. **Do not prune empty blocks on autosave.** `_save():158` drops `b.isEmpty`.
-   Run every 1.2s that deletes a block the user just added and paused in.
-   Prune only on the final flush when the note closes.
-2. **Suppress the `postgres_changes` self-echo.** Your own row UPDATE comes back
-   to you; without an `updated_by == myId` guard it clobbers your focused block
-   one round-trip after every autosave.
-3. **`NoteBlock.copyWith` aliases `items`/`head`/`rows` by reference**
-   (`note_blocks.dart:157`), so history snapshots share mutable lists. Add a
-   `deepCopy()` for history.
-4. **Rebase history on remote edits**, or undo will revert someone else's typing.
-
-### 2.4 Direct messages (medium)
-
-Full schema, RLS, RPCs and the Dart layer are specified in the plan file
-§Phase 3. Nothing exists today — no chat screens, no messages tables.
-
-### 2.5 Web version (medium)
-
-Plan file §Phase 4. Only three reachable files break the web build:
-
-| File | Problem |
-|---|---|
-| `v3/data/notification_bridge.dart:2` | `import 'dart:io'` — swap for `defaultTargetPlatform` |
-| `v3/data/data_export.dart:1,3,128` | `dart:io` + `path_provider` — needs a conditional import |
-| `v3/data/notifications_core.dart:2` | `flutter_local_notifications` 17 pulls `dart:io` via its Linux package |
-
-Approach: **a separate web entry point**, not a retrofit. `flutter create
---platforms=web .`, then `lib/main_web.dart` + `lib/web/web_app.dart` composing
-only web-safe providers and never constructing `PrayerController`. Avoids an FLN
-major upgrade and leaves mobile untouched. `sqflite` is declared but never
-imported — removing it kills a web warning for free.
+- Resolved all three web compilation blockers without upgrading `flutter_local_notifications`:
+  - `v3/data/notification_bridge.dart`: replaced `dart:io` `Platform.isAndroid` with `defaultTargetPlatform == TargetPlatform.android`.
+  - `v3/data/data_export.dart`: conditional import (`data_export_io.dart` vs `data_export_web.dart`) using `XFile.fromData` in-memory on web.
+  - `v3/data/prayer/prayer_controller.dart`: decoupled `notifications_core.dart` and `prayer_banner.dart` behind `prayer_platform_io.dart` / `prayer_platform_web.dart`, and updated `PrayerCard` to watch `PrayerController?`.
+  - Removed unused `sqflite` dependency from `pubspec.yaml`.
+- Added `lib/main_web.dart` and `lib/web/web_app.dart` (`WebApp`, `WebRoot`, `WebShell`) with desktop `NavigationRail` (`>= 760px`) and mobile bottom bar:
+  - **Home, Activity, Insights**: read-only on web (`V3Sheets.readOnly = true`, read-only notice banner, transaction row tap opens read-only detail sheet, quick-add/CSV-import/recurring mutations hidden, CSV export still works).
+  - **Notes & Chat**: full read/write with live collaboration and direct messaging.
+- Verified with `flutter build web --target lib/main_web.dart` (exit 0, Wasm dry-run succeeded) and widget tests in `test/v192_live_notes_dm_web_test.dart`.
 
 ### 2.6 Deferred from the original list
 
