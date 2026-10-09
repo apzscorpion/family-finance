@@ -259,6 +259,15 @@ over an existing install too, so `MY_PACKAGE_REPLACED` fires.
 
 ## 6. Environment and constraints
 
+- **Web deploys: only `python scripts/deploy_web.py`.** The app lives at
+  https://family-finance-tracker-dev.vercel.app (Vercel project
+  `family-finance-tracker-dev`). The same Vercel team hosts the owner's
+  **wedding site**, https://asif-sinana-wedding.vercel.app (project
+  `temporary-flying-mercury-8eg7q18`). **Never deploy, promote, alias or roll
+  back anything in that project.** A stale `.vercel` link once replaced the
+  wedding site with this app. The script pins the right project and checks
+  afterwards that the wedding site is unchanged.
+
 - **The app is sideloaded, not on Play.** `AndroidManifest.xml` deliberately
   strips permissions with `tools:node="remove"`, and the notification listener
   lives only in the `detect` flavour because Play Protect refuses to install an
