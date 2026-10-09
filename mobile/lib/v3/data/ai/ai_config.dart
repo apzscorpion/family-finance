@@ -20,27 +20,27 @@ enum AiProvider {
 
 extension AiProviderInfo on AiProvider {
   String get label => switch (this) {
-        AiProvider.gemini => 'Google Gemini',
-        AiProvider.claude => 'Anthropic Claude',
-        AiProvider.openai => 'OpenAI',
-        AiProvider.compatible => 'Other (OpenAI-compatible)',
-      };
+    AiProvider.gemini => 'Google Gemini',
+    AiProvider.claude => 'Anthropic Claude',
+    AiProvider.openai => 'OpenAI',
+    AiProvider.compatible => 'Other (OpenAI-compatible)',
+  };
 
   /// A sensible current model per provider. Always editable.
   String get defaultModel => switch (this) {
-        AiProvider.gemini => 'gemini-2.5-flash',
-        AiProvider.claude => 'claude-opus-5-5',
-        AiProvider.openai => 'gpt-4o-mini',
-        AiProvider.compatible => 'llama3.1',
-      };
+    AiProvider.gemini => 'gemini-2.5-flash',
+    AiProvider.claude => 'claude-opus-5-5',
+    AiProvider.openai => 'gpt-4o-mini',
+    AiProvider.compatible => 'llama3.1',
+  };
 
   /// Where to get a key, shown under the key field.
   String get keyHint => switch (this) {
-        AiProvider.gemini => 'aistudio.google.com/apikey',
-        AiProvider.claude => 'console.anthropic.com',
-        AiProvider.openai => 'platform.openai.com/api-keys',
-        AiProvider.compatible => 'Whatever your endpoint expects',
-      };
+    AiProvider.gemini => 'aistudio.google.com/apikey',
+    AiProvider.claude => 'console.anthropic.com',
+    AiProvider.openai => 'platform.openai.com/api-keys',
+    AiProvider.compatible => 'Whatever your endpoint expects',
+  };
 
   /// Only the compatible provider needs a base URL from the user.
   bool get needsBaseUrl => this == AiProvider.compatible;
@@ -72,11 +72,11 @@ class AiKey {
       AiKey(provider: provider, alias: alias, key: key, ok: next);
 
   Map<String, dynamic> toJson() => {
-        'provider': provider.name,
-        'alias': alias,
-        'key': key,
-        'ok': ok,
-      };
+    'provider': provider.name,
+    'alias': alias,
+    'key': key,
+    'ok': ok,
+  };
 
   static AiKey? fromJson(Object? j) {
     if (j is! Map) return null;
@@ -118,8 +118,10 @@ class AiConfig {
     this.active = const {},
   });
 
-  List<AiKey> keysFor(AiProvider p) =>
-      [for (final k in keys) if (k.provider == p) k];
+  List<AiKey> keysFor(AiProvider p) => [
+    for (final k in keys)
+      if (k.provider == p) k,
+  ];
 
   /// The key in use for the current provider: the chosen one, else the first.
   AiKey? get activeKey {
@@ -151,55 +153,55 @@ class AiConfig {
     String? baseUrl,
     List<AiKey>? keys,
     Map<String, String>? active,
-  }) =>
-      AiConfig(
-        provider: provider ?? this.provider,
-        model: model ?? this.model,
-        baseUrl: baseUrl ?? this.baseUrl,
-        keys: keys ?? this.keys,
-        active: active ?? this.active,
-      );
+  }) => AiConfig(
+    provider: provider ?? this.provider,
+    model: model ?? this.model,
+    baseUrl: baseUrl ?? this.baseUrl,
+    keys: keys ?? this.keys,
+    active: active ?? this.active,
+  );
 
   /// Switching provider clears the model so the new provider's default
   /// applies — a Gemini model name is meaningless to Claude.
-  AiConfig withProvider(AiProvider next) =>
-      copyWith(provider: next, model: '');
+  AiConfig withProvider(AiProvider next) => copyWith(provider: next, model: '');
 
   /// Adds a key for the current provider (replacing one with the same alias)
   /// and makes it the active one.
   AiConfig withKey(String alias, String key) => copyWith(
-        keys: [
-          for (final k in keys)
-            if (!(k.provider == provider && k.alias == alias)) k,
-          AiKey(provider: provider, alias: alias, key: key),
-        ],
-        active: {...active, provider.name: alias},
-      );
+    keys: [
+      for (final k in keys)
+        if (!(k.provider == provider && k.alias == alias)) k,
+      AiKey(provider: provider, alias: alias, key: key),
+    ],
+    active: {...active, provider.name: alias},
+  );
 
   AiConfig withoutKey(AiKey key) => copyWith(
-        keys: [
-          for (final k in keys)
-            if (!(k.provider == key.provider && k.alias == key.alias)) k,
-        ],
-      );
+    keys: [
+      for (final k in keys)
+        if (!(k.provider == key.provider && k.alias == key.alias)) k,
+    ],
+  );
 
   AiConfig withActive(AiKey key) =>
       copyWith(active: {...active, key.provider.name: key.alias});
 
-  AiConfig withStatus(AiKey key, bool? ok) => copyWith(keys: [
-        for (final k in keys)
-          k.provider == key.provider && k.alias == key.alias
-              ? k.withStatus(ok)
-              : k,
-      ]);
+  AiConfig withStatus(AiKey key, bool? ok) => copyWith(
+    keys: [
+      for (final k in keys)
+        k.provider == key.provider && k.alias == key.alias
+            ? k.withStatus(ok)
+            : k,
+    ],
+  );
 
   Map<String, dynamic> toJson() => {
-        'provider': provider.name,
-        'model': model,
-        'base_url': baseUrl,
-        'keys': [for (final k in keys) k.toJson()],
-        'active': active,
-      };
+    'provider': provider.name,
+    'model': model,
+    'base_url': baseUrl,
+    'keys': [for (final k in keys) k.toJson()],
+    'active': active,
+  };
 
   factory AiConfig.fromJson(Map<String, dynamic> j) {
     var provider = AiProvider.gemini;
@@ -208,8 +210,7 @@ class AiConfig {
     }
     final keys = <AiKey>[
       if (j['keys'] is List)
-        for (final raw in j['keys'] as List)
-          ?AiKey.fromJson(raw),
+        for (final raw in j['keys'] as List) ?AiKey.fromJson(raw),
     ];
     // Before named keys there was a single `api_key`; keep it as "Default".
     final legacy = j['api_key'];

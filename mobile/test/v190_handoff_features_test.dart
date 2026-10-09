@@ -338,6 +338,50 @@ void main() {
       expect(find.text('Tokyo'), findsOneWidget);
       expect(find.text('Kyoto'), findsOneWidget);
     });
+
+    List<String> lineTexts(WidgetTester tester) => tester
+        .widgetList<EditableText>(find.byType(EditableText))
+        .map((e) => e.controller.text)
+        .where((t) => t.length == 1)
+        .toList();
+
+    testWidgets('long-pressing a toolbar icon shows what it does',
+        (tester) async {
+      await tester.pumpWidget(await buildEditor(tester));
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.byTooltip('Add checklist'));
+      await tester.pumpAndSettle();
+      expect(find.text('Add checklist'), findsOneWidget);
+    });
+
+    testWidgets('checklist lines can be deleted and reordered', (tester) async {
+      await tester.pumpWidget(await buildEditor(tester, initialBlocks: [
+        NoteBlock.todoItems(const [
+          TodoItem(text: 'a'),
+          TodoItem(text: 'b'),
+          TodoItem(text: 'c'),
+        ]),
+      ]));
+      await tester.pumpAndSettle();
+      const lineHandle = 'Drag to move · tap for line options';
+
+      await tester.tap(find.byTooltip(lineHandle).at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete line'));
+      await tester.pumpAndSettle();
+      expect(lineTexts(tester), ['a', 'c']);
+
+      await tester.tap(find.byTooltip(lineHandle).at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Move up'));
+      await tester.pumpAndSettle();
+      expect(lineTexts(tester), ['c', 'a']);
+
+      await tester.drag(find.byTooltip(lineHandle).first, const Offset(0, 60));
+      await tester.pumpAndSettle();
+      expect(lineTexts(tester), ['a', 'c']);
+    });
   });
 
   group('Task #3 — AiSettingsV3 (§5.3)', () {

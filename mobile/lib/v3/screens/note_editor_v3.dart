@@ -15,6 +15,8 @@ import '../data/notes_presence.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../v3_state.dart';
+import 'note_ai_chat.dart';
+import 'note_markup.dart';
 import 'notes_widgets.dart';
 
 /// Clover / Notion-inspired block editor for Family Notes.
@@ -63,6 +65,9 @@ class _NoteEditorV3State extends State<NoteEditorV3>
 
   AiConfig _aiConfig = const AiConfig();
 
+  /// This note's AI conversation, kept while the editor is open.
+  final List<AiTurn> _aiTurns = [];
+
   /// Linear history for Undo / Redo (cap 100, deep-copied).
   static const int _historyCap = 100;
   final List<List<NoteBlock>> _history = [];
@@ -103,8 +108,8 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     _blocks = n != null && n.blocks.isNotEmpty
         ? n.blocks.map((b) => b.deepCopy()).toList()
         : (widget.initialBlocks ?? [NoteBlock.paragraph()])
-            .map((b) => b.deepCopy())
-            .toList();
+              .map((b) => b.deepCopy())
+              .toList();
     _pinned = n?.pinned ?? false;
     _private = n?.isPrivate ?? false;
     _followingUserId = widget.initialFollowUserId;
@@ -357,12 +362,9 @@ class _NoteEditorV3State extends State<NoteEditorV3>
 
   /// Coalesced text change inside a block (pushes history on word boundary or
   /// after 600ms idle, rather than every keystroke).
-  void _mutateText(
-    void Function() change, {
-    String? blockId,
-    String? newText,
-  }) {
-    final isBoundary = newText != null &&
+  void _mutateText(void Function() change, {String? blockId, String? newText}) {
+    final isBoundary =
+        newText != null &&
         newText.isNotEmpty &&
         (newText.endsWith(' ') ||
             newText.endsWith('.') ||
@@ -545,10 +547,12 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     final s = context.read<V3State>();
     setState(() => _saving = true);
 
-    final blocksToSave =
-        pruneEmpty ? _blocks.where((b) => !b.isEmpty).toList() : _blocks;
-    final payloadBlocks =
-        blocksToSave.isEmpty ? [NoteBlock.paragraph()] : blocksToSave;
+    final blocksToSave = pruneEmpty
+        ? _blocks.where((b) => !b.isEmpty).toList()
+        : _blocks;
+    final payloadBlocks = blocksToSave.isEmpty
+        ? [NoteBlock.paragraph()]
+        : blocksToSave;
 
     var res = await s.saveNoteConditional(
       id: _noteId,
@@ -564,8 +568,9 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     // merge the winning server row (preserving our focused block) and retry once.
     if (res != null && !res.ok) {
       _applyAuthoritativeRemoteRow(res.row);
-      final mergedBlocks =
-          pruneEmpty ? _blocks.where((b) => !b.isEmpty).toList() : _blocks;
+      final mergedBlocks = pruneEmpty
+          ? _blocks.where((b) => !b.isEmpty).toList()
+          : _blocks;
       res = await s.saveNoteConditional(
         id: _noteId,
         title: _title.text.trim(),
@@ -618,19 +623,29 @@ class _NoteEditorV3State extends State<NoteEditorV3>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Nocturne.surface,
-        title: const Text('Delete note?',
-            style: TextStyle(fontSize: 17, color: Nocturne.text)),
-        content: const Text('This cannot be undone.',
-            style: TextStyle(fontSize: 14, color: Nocturne.neutral400)),
+        title: const Text(
+          'Delete note?',
+          style: TextStyle(fontSize: 17, color: Nocturne.text),
+        ),
+        content: const Text(
+          'This cannot be undone.',
+          style: TextStyle(fontSize: 14, color: Nocturne.neutral400),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Nocturne.neutral400))),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Nocturne.neutral400),
+            ),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Delete',
-                  style: TextStyle(color: NocturneSemantic.expense))),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: NocturneSemantic.expense),
+            ),
+          ),
         ],
       ),
     );
@@ -641,18 +656,19 @@ class _NoteEditorV3State extends State<NoteEditorV3>
 
   Future<void> _shareNote() async {
     final title = _title.text.trim().isEmpty ? 'Note' : _title.text.trim();
-    final md = DataExport.noteMarkdown(NoteRow(
-      id: _noteId ?? 'temp',
-      title: title,
-      content: blocksToPlainText(_blocks),
-      pinned: _pinned,
-      visibility: _private ? 'private' : 'family',
-      folderId: widget.note?.folderId,
-      updatedAt: DateTime.now(),
-      blocks: _blocks,
-    ));
-    final filename =
-        '${title.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_')}.md';
+    final md = DataExport.noteMarkdown(
+      NoteRow(
+        id: _noteId ?? 'temp',
+        title: title,
+        content: blocksToPlainText(_blocks),
+        pinned: _pinned,
+        visibility: _private ? 'private' : 'family',
+        folderId: widget.note?.folderId,
+        updatedAt: DateTime.now(),
+        blocks: _blocks,
+      ),
+    );
+    final filename = '${title.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_')}.md';
     await DataExport.share(md, filename, subject: title);
   }
 
@@ -728,8 +744,10 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                     );
                   },
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Nocturne.accent900,
                       borderRadius: BorderRadius.circular(6),
@@ -738,14 +756,20 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(PhRegular.sparkle,
-                            size: 12, color: Nocturne.accent200),
+                        Icon(
+                          PhRegular.sparkle,
+                          size: 12,
+                          color: Nocturne.accent200,
+                        ),
                         SizedBox(width: 4),
-                        Text('Restructure with AI',
-                            style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w500,
-                                color: Nocturne.accent200)),
+                        Text(
+                          'Restructure with AI',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: Nocturne.accent200,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -786,9 +810,8 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     final text = data?.text?.trim();
     if (text == null || text.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Clipboard is empty')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Clipboard is empty')));
       }
       return;
     }
@@ -821,8 +844,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     final aiBlocks = result.blocks!;
     _mutateStructural(() {
       if (replaceIds != null && replaceIds.isNotEmpty) {
-        final firstIdx =
-            _blocks.indexWhere((b) => replaceIds.contains(b.id));
+        final firstIdx = _blocks.indexWhere((b) => replaceIds.contains(b.id));
         if (firstIdx != -1) {
           _blocks.removeWhere((b) => replaceIds.contains(b.id));
           _blocks.insertAll(firstIdx, aiBlocks);
@@ -838,7 +860,8 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            'AI structured into $count ${count == 1 ? 'item' : 'items'}'),
+          'AI structured into $count ${count == 1 ? 'item' : 'items'}',
+        ),
         action: SnackBarAction(
           label: 'Undo',
           textColor: Nocturne.accent200,
@@ -857,7 +880,8 @@ class _NoteEditorV3State extends State<NoteEditorV3>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-              'Configure an AI provider in Settings → AI restructuring first'),
+            'Configure an AI provider in Settings → AI restructuring first',
+          ),
         ),
       );
       return;
@@ -876,10 +900,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     }
 
     if (focused != null) {
-      await _restructureRawWithAi(
-        focused.plain,
-        replaceIds: {focused.id},
-      );
+      await _restructureRawWithAi(focused.plain, replaceIds: {focused.id});
     } else {
       final allText = blocksToPlainText(_blocks).trim();
       if (allText.isEmpty) {
@@ -895,33 +916,86 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     }
   }
 
+  Future<void> _openAiChat() async {
+    final cfg = await AiConfigStore.load();
+    if (!mounted) return;
+    setState(() => _aiConfig = cfg);
+    if (!cfg.isConfigured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Add an AI key in Settings → AI restructuring to use AI here',
+          ),
+        ),
+      );
+      return;
+    }
+    final focused = _blocks.indexWhere((b) => b.id == _focusedBlock);
+    await showNoteAiChat(
+      context,
+      turns: _aiTurns,
+      focusLabel: focused == -1 || _blocks[focused].isEmpty
+          ? null
+          : _blocks[focused].plain,
+      ask: _askAi,
+      onUndo: _undo,
+      onRestructure: _restructureNoteOrBlockWithAi,
+    );
+  }
+
+  /// One chat turn: sends the note and [request], applies the returned note
+  /// as a single undo step when it differs.
+  Future<AiTurn> _askAi(String request) async {
+    final cfg = await AiConfigStore.load();
+    final focused = _blocks.indexWhere((b) => b.id == _focusedBlock);
+    final res = await AiStructurer.edit(
+      blocks: _blocks,
+      request: request,
+      config: cfg,
+      focusedIndex: focused == -1 ? null : focused,
+      history: [
+        for (final t in _aiTurns.reversed.take(6).toList().reversed)
+          if (t.reply != null) (t.request, t.reply!),
+      ],
+    );
+    final turn = AiTurn(request, reply: res.reply, error: res.error);
+    final next = res.blocks == null ? null : carryOver(_blocks, res.blocks!);
+    if (mounted && next != null && !sameBlocks(_blocks, next)) {
+      _mutateStructural(() {
+        _blocks = next;
+        if (!_blocks.any((b) => b.id == _focusedBlock)) _focusedBlock = null;
+      }, deltaBlockId: next.first.id);
+      turn.changed = true;
+    }
+    _aiTurns.add(turn);
+    return turn;
+  }
+
   void _add(NoteBlock b, {int? afterIndex}) => _mutateStructural(() {
-        if (afterIndex != null &&
-            afterIndex >= 0 &&
-            afterIndex < _blocks.length) {
-          _blocks.insert(afterIndex + 1, b);
-        } else {
-          // If the last block is an empty paragraph and we're adding a
-          // non-paragraph block, replace that trailing empty paragraph.
-          if (_blocks.length == 1 &&
-              _blocks.first.isEmpty &&
-              _blocks.first.kind == NoteBlockKind.paragraph &&
-              b.kind != NoteBlockKind.paragraph) {
-            _blocks[0] = b;
-          } else {
-            _blocks.add(b);
-          }
-        }
-        _focusedBlock = b.id;
-      }, deltaBlockId: b.id);
+    if (afterIndex != null && afterIndex >= 0 && afterIndex < _blocks.length) {
+      _blocks.insert(afterIndex + 1, b);
+    } else {
+      // If the last block is an empty paragraph and we're adding a
+      // non-paragraph block, replace that trailing empty paragraph.
+      if (_blocks.length == 1 &&
+          _blocks.first.isEmpty &&
+          _blocks.first.kind == NoteBlockKind.paragraph &&
+          b.kind != NoteBlockKind.paragraph) {
+        _blocks[0] = b;
+      } else {
+        _blocks.add(b);
+      }
+    }
+    _focusedBlock = b.id;
+  }, deltaBlockId: b.id);
 
   void _replaceBlock(String blockId, NoteBlock next) => _mutateStructural(() {
-        final i = _blocks.indexWhere((x) => x.id == blockId);
-        if (i != -1) {
-          _blocks[i] = next;
-          _focusedBlock = next.id;
-        }
-      }, deltaBlockId: next.id);
+    final i = _blocks.indexWhere((x) => x.id == blockId);
+    if (i != -1) {
+      _blocks[i] = next;
+      _focusedBlock = next.id;
+    }
+  }, deltaBlockId: next.id);
 
   void _moveBlock(int index, int delta) {
     final target = index + delta;
@@ -942,7 +1016,9 @@ class _NoteEditorV3State extends State<NoteEditorV3>
       text: b.text,
       items: [for (final i in b.items) i.copyWith()],
       head: [...b.head],
-      rows: [for (final r in b.rows) [...r]],
+      rows: [
+        for (final r in b.rows) [...r],
+      ],
     );
     _mutateStructural(() {
       _blocks.insert(index + 1, copy);
@@ -951,13 +1027,13 @@ class _NoteEditorV3State extends State<NoteEditorV3>
   }
 
   void _deleteBlock(String blockId) => _mutateStructural(() {
-        _blocks.removeWhere((x) => x.id == blockId);
-        if (_blocks.isEmpty) {
-          final p = NoteBlock.paragraph();
-          _blocks.add(p);
-          _focusedBlock = p.id;
-        }
-      }, deltaBlockId: blockId);
+    _blocks.removeWhere((x) => x.id == blockId);
+    if (_blocks.isEmpty) {
+      final p = NoteBlock.paragraph();
+      _blocks.add(p);
+      _focusedBlock = p.id;
+    }
+  }, deltaBlockId: blockId);
 
   Future<void> _openBlockMenu(int index) async {
     if (index < 0 || index >= _blocks.length) return;
@@ -1042,10 +1118,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                   color: Nocturne.accent200,
                   onTap: () {
                     Navigator.pop(ctx);
-                    _restructureRawWithAi(
-                      block.plain,
-                      replaceIds: {block.id},
-                    );
+                    _restructureRawWithAi(block.plain, replaceIds: {block.id});
                   },
                 ),
               const Divider(color: Nocturne.neutral900, height: 16),
@@ -1156,8 +1229,9 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                             ),
                             const SizedBox(width: 6),
                             _MetaChip(
-                              icon:
-                                  _pinned ? PhFill.pushPin : PhRegular.pushPin,
+                              icon: _pinned
+                                  ? PhFill.pushPin
+                                  : PhRegular.pushPin,
                               label: _pinned ? 'Pinned' : 'Pin',
                               background: Nocturne.neutral900,
                               color: _pinned
@@ -1212,56 +1286,105 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                         const SizedBox(height: 8),
                         _syncLine(s),
                         const SizedBox(height: 22),
-                        for (var i = 0; i < _blocks.length; i++)
-                          Padding(
-                            key: _keyForBlock(_blocks[i].id),
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _BlockRow(
-                              key: ValueKey(_blocks[i].id),
-                              block: _blocks[i],
-                              focused: _focusedBlock == _blocks[i].id,
-                              contestedBy: _contestedBy[_blocks[i].id],
-                              aiConfigured: _aiConfig.isConfigured,
-                              onFocus: () => _focusBlock(_blocks[i].id),
-                              onOpenMenu: () => _openBlockMenu(i),
-                              onChanged: (next) {
-                                final prev = _blocks[i];
-                                final isStructural = prev.kind != next.kind ||
-                                    prev.items.length != next.items.length ||
-                                    prev.head.length != next.head.length ||
-                                    prev.rows.length != next.rows.length ||
-                                    (prev.kind == NoteBlockKind.todo &&
-                                        _todoDoneChanged(
-                                            prev.items, next.items));
-                                if (isStructural) {
-                                  _mutateStructural(() {
-                                    final idx = _blocks.indexWhere(
-                                        (x) => x.id == prev.id);
-                                    if (idx != -1) _blocks[idx] = next;
-                                  }, deltaBlockId: prev.id);
-                                } else {
-                                  _mutateText(
-                                    () {
-                                      final idx = _blocks.indexWhere(
-                                          (x) => x.id == prev.id);
-                                      if (idx != -1) _blocks[idx] = next;
-                                    },
-                                    blockId: prev.id,
-                                    newText: next.plain,
-                                  );
-                                }
-                              },
-                              onReplaceBlock: (next) =>
-                                  _replaceBlock(_blocks[i].id, next),
-                              onDelete: () => _deleteBlock(_blocks[i].id),
-                              onMultilinePaste: (raw) => _applyStructuredPaste(
-                                raw,
-                                targetBlockId: _blocks[i].id,
-                              ),
-                              onSlashPaste: _pasteFromToolbar,
-                              onSlashAi: _restructureNoteOrBlockWithAi,
-                            ),
+                        ReorderableListView(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.zero,
+                          buildDefaultDragHandles: false,
+                          proxyDecorator: _liftedProxy,
+                          onReorderItem: (from, to) => _moveBlock(
+                            from,
+                            to - from,
                           ),
+                          children: [
+                            for (var i = 0; i < _blocks.length; i++)
+                              Padding(
+                                key: _keyForBlock(_blocks[i].id),
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (_blocks.length > 1)
+                                      _DragHandle(
+                                        index: i,
+                                        tooltip: 'Drag to move block · tap for block options',
+                                        onTap: () => _openBlockMenu(i),
+                                      ),
+                                    Expanded(
+                                      child: _BlockRow(
+                                        key: ValueKey(_blocks[i].id),
+                                        block: _blocks[i],
+                                        focused: _focusedBlock == _blocks[i].id,
+                                        contestedBy:
+                                            _contestedBy[_blocks[i].id],
+                                        aiConfigured: _aiConfig.isConfigured,
+                                        onFocus: () =>
+                                            _focusBlock(_blocks[i].id),
+                                        onOpenMenu: () => _openBlockMenu(i),
+                                        onChanged: (next) {
+                                          final prev = _blocks[i];
+                                          final isStructural =
+                                              prev.kind != next.kind ||
+                                              prev.items.length !=
+                                                  next.items.length ||
+                                              prev.head.length !=
+                                                  next.head.length ||
+                                              prev.rows.length !=
+                                                  next.rows.length ||
+                                              (prev.kind ==
+                                                      NoteBlockKind.todo &&
+                                                  (_todoDoneChanged(
+                                                        prev.items,
+                                                        next.items,
+                                                      ) ||
+                                                      _linesChanged(
+                                                            prev.items,
+                                                            next.items,
+                                                          ) >
+                                                          1));
+                                          if (isStructural) {
+                                            _mutateStructural(() {
+                                              final idx = _blocks.indexWhere(
+                                                (x) => x.id == prev.id,
+                                              );
+                                              if (idx != -1) {
+                                                _blocks[idx] = next;
+                                              }
+                                            }, deltaBlockId: prev.id);
+                                          } else {
+                                            _mutateText(
+                                              () {
+                                                final idx = _blocks.indexWhere(
+                                                  (x) => x.id == prev.id,
+                                                );
+                                                if (idx != -1) {
+                                                  _blocks[idx] = next;
+                                                }
+                                              },
+                                              blockId: prev.id,
+                                              newText: next.plain,
+                                            );
+                                          }
+                                        },
+                                        onReplaceBlock: (next) =>
+                                            _replaceBlock(_blocks[i].id, next),
+                                        onDelete: () =>
+                                            _deleteBlock(_blocks[i].id),
+                                        onMultilinePaste: (raw) =>
+                                            _applyStructuredPaste(
+                                              raw,
+                                              targetBlockId: _blocks[i].id,
+                                            ),
+                                        onSlashPaste: _pasteFromToolbar,
+                                        onSlashAi:
+                                            _restructureNoteOrBlockWithAi,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
                         GestureDetector(
                           onTap: () => _add(NoteBlock.paragraph()),
                           behavior: HitTestBehavior.opaque,
@@ -1305,6 +1428,14 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     );
   }
 
+  static int _linesChanged(List<TodoItem> a, List<TodoItem> b) {
+    var n = 0;
+    for (var i = 0; i < a.length && i < b.length; i++) {
+      if (a[i].text != b[i].text) n++;
+    }
+    return n;
+  }
+
   static bool _todoDoneChanged(List<TodoItem> a, List<TodoItem> b) {
     if (a.length != b.length) return true;
     for (var i = 0; i < a.length; i++) {
@@ -1314,85 +1445,87 @@ class _NoteEditorV3State extends State<NoteEditorV3>
   }
 
   Widget _header(V3State s) => Padding(
-        padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
-        child: Row(
-          children: [
-            GestureDetector(
-              onTap: () async {
-                if (_dirty) await _save(pruneEmpty: true);
-                if (mounted) Navigator.pop(context);
-              },
-              behavior: HitTestBehavior.opaque,
-              child: const SizedBox(
-                width: 42,
-                height: 42,
-                child: Icon(PhRegular.arrowLeft,
-                    size: 22, color: Nocturne.text),
-              ),
-            ),
-            const Spacer(),
-            _PresenceStrip(
-              noteId: _noteId,
-              followingUserId: _followingUserId,
-              onTapPresence: (p) {
-                setState(() {
-                  if (_followingUserId == p.userId) {
-                    _followingUserId = null;
-                  } else {
-                    _followingUserId = p.userId;
-                  }
-                });
-                if (p.blockId != null) {
-                  _scrollToBlock(p.blockId!);
-                }
-              },
-            ),
-            _IconBtn(
-                icon: PhRegular.arrowCounterClockwise,
-                enabled: _canUndo,
-                onTap: _undo),
-            _IconBtn(
-                icon: PhRegular.arrowsClockwise,
-                enabled: _canRedo,
-                onTap: _redo),
-            _IconBtn(
-                icon: PhRegular.shareNetwork,
-                enabled: true,
-                onTap: _shareNote),
-            _IconBtn(icon: PhRegular.trash, enabled: true, onTap: _delete),
-            GestureDetector(
-              onTap: _dirty ? () => _save(pruneEmpty: false) : null,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _dirty ? Nocturne.accent900 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 15,
-                        height: 15,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Nocturne.accent200),
-                      )
-                    : Text(
-                        _dirty ? 'Save' : 'Saved',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: _dirty
-                              ? Nocturne.accent200
-                              : Nocturne.neutral600,
-                        ),
-                      ),
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+    child: Row(
+      children: [
+        GestureDetector(
+          onTap: () async {
+            if (_dirty) await _save(pruneEmpty: true);
+            if (mounted) Navigator.pop(context);
+          },
+          behavior: HitTestBehavior.opaque,
+          child: const SizedBox(
+            width: 42,
+            height: 42,
+            child: Icon(PhRegular.arrowLeft, size: 22, color: Nocturne.text),
+          ),
         ),
-      );
+        const Spacer(),
+        _PresenceStrip(
+          noteId: _noteId,
+          followingUserId: _followingUserId,
+          onTapPresence: (p) {
+            setState(() {
+              if (_followingUserId == p.userId) {
+                _followingUserId = null;
+              } else {
+                _followingUserId = p.userId;
+              }
+            });
+            if (p.blockId != null) {
+              _scrollToBlock(p.blockId!);
+            }
+          },
+        ),
+        _IconBtn(
+          icon: PhRegular.arrowCounterClockwise,
+          enabled: _canUndo,
+          onTap: _undo,
+        ),
+        _IconBtn(
+          icon: PhRegular.arrowsClockwise,
+          enabled: _canRedo,
+          onTap: _redo,
+        ),
+        _IconBtn(
+          icon: PhRegular.shareNetwork,
+          enabled: true,
+          onTap: _shareNote,
+        ),
+        _IconBtn(icon: PhRegular.trash, enabled: true, onTap: _delete),
+        GestureDetector(
+          onTap: _dirty ? () => _save(pruneEmpty: false) : null,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _dirty ? Nocturne.accent900 : Colors.transparent,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: _saving
+                ? const SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Nocturne.accent200,
+                    ),
+                  )
+                : Text(
+                    _dirty ? 'Save' : 'Saved',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: _dirty ? Nocturne.accent200 : Nocturne.neutral600,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _syncLine(V3State s) {
     final updatedBy = _lastUpdatedBy ?? widget.note?.updatedBy;
@@ -1412,21 +1545,28 @@ class _NoteEditorV3State extends State<NoteEditorV3>
           _saving
               ? 'Saving…'
               : (synced
-                  ? (_savedAt != null ? 'Saved' : 'All changes saved')
-                  : 'Autosaving…'),
+                    ? (_savedAt != null ? 'Saved' : 'All changes saved')
+                    : 'Autosaving…'),
           style: TextStyle(
-              fontSize: 11.5,
-              color: synced ? NocturneSemantic.income : Nocturne.neutral400),
+            fontSize: 11.5,
+            color: synced ? NocturneSemantic.income : Nocturne.neutral400,
+          ),
         ),
         if (who != null) ...[
-          const Text('  ·  ',
-              style: TextStyle(fontSize: 11.5, color: Nocturne.neutral600)),
+          const Text(
+            '  ·  ',
+            style: TextStyle(fontSize: 11.5, color: Nocturne.neutral600),
+          ),
           Flexible(
-            child: Text('Edited by $who',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 11.5, color: Nocturne.neutral500)),
+            child: Text(
+              'Edited by $who',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: Nocturne.neutral500,
+              ),
+            ),
           ),
         ],
       ],
@@ -1447,27 +1587,27 @@ class _NoteEditorV3State extends State<NoteEditorV3>
         children: [
           _ToolbarBtn(
             icon: PhRegular.listChecks,
-            tooltip: 'Checklist',
+            tooltip: 'Add checklist',
             onTap: () => _add(NoteBlock.todo()),
           ),
           _ToolbarBtn(
             icon: PhRegular.textbox,
-            tooltip: 'Heading',
+            tooltip: 'Add heading',
             onTap: () => _add(NoteBlock.heading()),
           ),
           _ToolbarBtn(
-            icon: PhRegular.chartBar,
-            tooltip: 'Table',
+            icon: PhRegular.table,
+            tooltip: 'Add table',
             onTap: () => _add(NoteBlock.table()),
           ),
           _ToolbarBtn(
             icon: PhRegular.note,
-            tooltip: 'Paragraph',
+            tooltip: 'Add text paragraph',
             onTap: () => _add(NoteBlock.paragraph()),
           ),
           _ToolbarBtn(
-            icon: PhRegular.paperclip,
-            tooltip: 'Paste structured',
+            icon: PhRegular.clipboardText,
+            tooltip: 'Paste clipboard as a list or table',
             onTap: _pasteFromToolbar,
           ),
           Container(
@@ -1476,51 +1616,55 @@ class _NoteEditorV3State extends State<NoteEditorV3>
             margin: const EdgeInsets.symmetric(horizontal: 4),
             color: Nocturne.neutral800,
           ),
-          GestureDetector(
-            onTap: _aiBusy ? null : _restructureNoteOrBlockWithAi,
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: _aiConfig.isConfigured
-                    ? Nocturne.accent900
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: _aiBusy
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Nocturne.accent200,
-                      ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          PhRegular.sparkle,
-                          size: 16,
-                          color: _aiConfig.isConfigured
-                              ? Nocturne.accent200
-                              : Nocturne.neutral400,
+          Tooltip(
+            message: 'Ask AI to edit this note',
+            triggerMode: TooltipTriggerMode.longPress,
+            child: GestureDetector(
+              onTap: _aiBusy ? null : _openAiChat,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _aiConfig.isConfigured
+                      ? Nocturne.accent900
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: _aiBusy
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Nocturne.accent200,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'AI',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            PhRegular.sparkle,
+                            size: 16,
                             color: _aiConfig.isConfigured
                                 ? Nocturne.accent200
                                 : Nocturne.neutral400,
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'AI',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _aiConfig.isConfigured
+                                  ? Nocturne.accent200
+                                  : Nocturne.neutral400,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
           ),
         ],
@@ -1569,19 +1713,24 @@ class _ToolbarBtn extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    triggerMode: TooltipTriggerMode.longPress,
+    child: Semantics(
+      button: true,
+      label: tooltip,
+      child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Tooltip(
-          message: tooltip,
-          child: Container(
-            width: 38,
-            height: 36,
-            alignment: Alignment.center,
-            child: Icon(icon, size: 19, color: Nocturne.neutral200),
-          ),
+        child: Container(
+          width: 38,
+          height: 36,
+          alignment: Alignment.center,
+          child: Icon(icon, size: 19, color: Nocturne.neutral200),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _MenuTile extends StatelessWidget {
@@ -1599,26 +1748,23 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            children: [
-              Icon(icon, size: 18, color: color ?? Nocturne.neutral300),
-              const SizedBox(width: 12),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: color ?? Nocturne.text,
-                ),
-              ),
-            ],
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color ?? Nocturne.neutral300),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(fontSize: 14, color: color ?? Nocturne.text),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 class _IconBtn extends StatelessWidget {
@@ -1634,17 +1780,17 @@ class _IconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: enabled ? onTap : null,
-        behavior: HitTestBehavior.opaque,
-        child: Opacity(
-          opacity: enabled ? 1 : 0.35,
-          child: SizedBox(
-            width: 38,
-            height: 38,
-            child: Icon(icon, size: 19, color: Nocturne.neutral300),
-          ),
-        ),
-      );
+    onTap: enabled ? onTap : null,
+    behavior: HitTestBehavior.opaque,
+    child: Opacity(
+      opacity: enabled ? 1 : 0.35,
+      child: SizedBox(
+        width: 38,
+        height: 38,
+        child: Icon(icon, size: 19, color: Nocturne.neutral300),
+      ),
+    ),
+  );
 }
 
 class _MetaChip extends StatelessWidget {
@@ -1664,24 +1810,24 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 11, color: color),
-              const SizedBox(width: 5),
-              Text(label, style: TextStyle(fontSize: 11, color: color)),
-            ],
-          ),
-        ),
-      );
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 5),
+          Text(label, style: TextStyle(fontSize: 11, color: color)),
+        ],
+      ),
+    ),
+  );
 }
 
 // ── Clover-style Block Row ──────────────────────────────────────────────────
@@ -1725,8 +1871,9 @@ class _BlockRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final slashQuery =
-        _showSlashMenu ? block.text.substring(1).trim().toLowerCase() : '';
+    final slashQuery = _showSlashMenu
+        ? block.text.substring(1).trim().toLowerCase()
+        : '';
     final isContested = contestedBy != null;
 
     return GestureDetector(
@@ -1754,8 +1901,11 @@ class _BlockRow extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
                   children: [
-                    const Icon(PhRegular.warning,
-                        size: 12, color: NocturneSemantic.warning),
+                    const Icon(
+                      PhRegular.warning,
+                      size: 12,
+                      color: NocturneSemantic.warning,
+                    ),
                     const SizedBox(width: 5),
                     Text(
                       '$contestedBy is editing this line',
@@ -1774,27 +1924,27 @@ class _BlockRow extends StatelessWidget {
                 Expanded(
                   child: switch (block.kind) {
                     NoteBlockKind.heading => _HeadingBlock(
-                        block: block,
-                        onFocus: onFocus,
-                        onChanged: onChanged,
-                        onMultilinePaste: onMultilinePaste,
-                      ),
+                      block: block,
+                      onFocus: onFocus,
+                      onChanged: onChanged,
+                      onMultilinePaste: onMultilinePaste,
+                    ),
                     NoteBlockKind.paragraph => _ParagraphBlock(
-                        block: block,
-                        onFocus: onFocus,
-                        onChanged: onChanged,
-                        onMultilinePaste: onMultilinePaste,
-                      ),
+                      block: block,
+                      onFocus: onFocus,
+                      onChanged: onChanged,
+                      onMultilinePaste: onMultilinePaste,
+                    ),
                     NoteBlockKind.todo => _TodoBlock(
-                        block: block,
-                        onFocus: onFocus,
-                        onChanged: onChanged,
-                      ),
+                      block: block,
+                      onFocus: onFocus,
+                      onChanged: onChanged,
+                    ),
                     NoteBlockKind.table => _TableBlock(
-                        block: block,
-                        onFocus: onFocus,
-                        onChanged: onChanged,
-                      ),
+                      block: block,
+                      onFocus: onFocus,
+                      onChanged: onChanged,
+                    ),
                   },
                 ),
                 const SizedBox(width: 4),
@@ -1854,28 +2004,34 @@ class _BlockRow extends StatelessWidget {
                       _QuickPill(
                         icon: PhRegular.checks,
                         label: 'Clear done',
-                        onTap: () => onChanged(block.copyWith(
-                          items: block.items.where((i) => !i.done).toList(),
-                        )),
+                        onTap: () => onChanged(
+                          block.copyWith(
+                            items: block.items.where((i) => !i.done).toList(),
+                          ),
+                        ),
                       ),
                     if (block.kind == NoteBlockKind.table) ...[
                       _QuickPill(
                         icon: PhRegular.plus,
                         label: 'Row',
-                        onTap: () => onChanged(block.copyWith(
-                          rows: [
-                            ...block.rows,
-                            List.filled(block.head.length, '')
-                          ],
-                        )),
+                        onTap: () => onChanged(
+                          block.copyWith(
+                            rows: [
+                              ...block.rows,
+                              List.filled(block.head.length, ''),
+                            ],
+                          ),
+                        ),
                       ),
                       _QuickPill(
                         icon: PhRegular.plus,
                         label: 'Column',
-                        onTap: () => onChanged(block.copyWith(
-                          head: [...block.head, ''],
-                          rows: block.rows.map((r) => [...r, '']).toList(),
-                        )),
+                        onTap: () => onChanged(
+                          block.copyWith(
+                            head: [...block.head, ''],
+                            rows: block.rows.map((r) => [...r, '']).toList(),
+                          ),
+                        ),
                       ),
                       _QuickPill(
                         icon: PhRegular.listChecks,
@@ -1907,6 +2063,50 @@ class _BlockRow extends StatelessWidget {
   }
 }
 
+/// Six-dot grip: drag to reorder within the nearest reorderable list, tap
+/// for options. Long-press shows what it does.
+class _DragHandle extends StatelessWidget {
+  final int index;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _DragHandle({
+    required this.index,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => ReorderableDragStartListener(
+    index: index,
+    child: Tooltip(
+      message: tooltip,
+      triggerMode: TooltipTriggerMode.longPress,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: const SizedBox(
+          width: 22,
+          height: 38,
+          child: Icon(
+            PhRegular.dotsSixVertical,
+            size: 15,
+            color: Nocturne.neutral600,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _liftedProxy(Widget child, int index, Animation<double> animation) =>
+    Material(
+      color: Nocturne.surface,
+      elevation: 6,
+      borderRadius: BorderRadius.circular(10),
+      child: child,
+    );
+
 class _QuickPill extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1920,32 +2120,29 @@ class _QuickPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: Nocturne.surface,
-            borderRadius: BorderRadius.circular(7),
-            border: Border.all(color: Nocturne.neutral800, width: 1),
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: Nocturne.surface,
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: Nocturne.neutral800, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: Nocturne.neutral400),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: Nocturne.neutral300),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 11, color: Nocturne.neutral400),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Nocturne.neutral300,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 class _SlashCommandMenu extends StatelessWidget {
@@ -1965,48 +2162,44 @@ class _SlashCommandMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = <({
-      IconData icon,
-      String title,
-      String subtitle,
-      VoidCallback onTap,
-    })>[
-      (
-        icon: PhRegular.listChecks,
-        title: 'Checklist',
-        subtitle: 'Track tasks or shopping items',
-        onTap: () => onSelectBlock(NoteBlock.todo()),
-      ),
-      (
-        icon: PhRegular.textbox,
-        title: 'Heading',
-        subtitle: 'Section heading',
-        onTap: () => onSelectBlock(NoteBlock.heading()),
-      ),
-      (
-        icon: PhRegular.chartBar,
-        title: 'Table',
-        subtitle: 'Rows and columns',
-        onTap: () => onSelectBlock(NoteBlock.table()),
-      ),
-      (
-        icon: PhRegular.paperclip,
-        title: 'Paste structured',
-        subtitle: 'Turn clipboard into checklist or table',
-        onTap: onPaste,
-      ),
-      if (aiConfigured)
-        (
-          icon: PhRegular.sparkle,
-          title: 'Restructure with AI',
-          subtitle: 'Organise note with your AI model',
-          onTap: onAi,
-        ),
-    ].where((item) {
-      if (query.isEmpty) return true;
-      return item.title.toLowerCase().contains(query) ||
-          item.subtitle.toLowerCase().contains(query);
-    }).toList();
+    final items =
+        <({IconData icon, String title, String subtitle, VoidCallback onTap})>[
+          (
+            icon: PhRegular.listChecks,
+            title: 'Checklist',
+            subtitle: 'Track tasks or shopping items',
+            onTap: () => onSelectBlock(NoteBlock.todo()),
+          ),
+          (
+            icon: PhRegular.textbox,
+            title: 'Heading',
+            subtitle: 'Section heading',
+            onTap: () => onSelectBlock(NoteBlock.heading()),
+          ),
+          (
+            icon: PhRegular.chartBar,
+            title: 'Table',
+            subtitle: 'Rows and columns',
+            onTap: () => onSelectBlock(NoteBlock.table()),
+          ),
+          (
+            icon: PhRegular.paperclip,
+            title: 'Paste structured',
+            subtitle: 'Turn clipboard into checklist or table',
+            onTap: onPaste,
+          ),
+          if (aiConfigured)
+            (
+              icon: PhRegular.sparkle,
+              title: 'Restructure with AI',
+              subtitle: 'Organise note with your AI model',
+              onTap: onAi,
+            ),
+        ].where((item) {
+          if (query.isEmpty) return true;
+          return item.title.toLowerCase().contains(query) ||
+              item.subtitle.toLowerCase().contains(query);
+        }).toList();
 
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -2036,8 +2229,10 @@ class _SlashCommandMenu extends StatelessWidget {
               onTap: item.onTap,
               behavior: HitTestBehavior.opaque,
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Container(
@@ -2048,8 +2243,11 @@ class _SlashCommandMenu extends StatelessWidget {
                         color: Nocturne.neutral900,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(item.icon,
-                          size: 15, color: Nocturne.accent200),
+                      child: Icon(
+                        item.icon,
+                        size: 15,
+                        color: Nocturne.accent200,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -2104,8 +2302,9 @@ class _HeadingBlock extends StatefulWidget {
 }
 
 class _HeadingBlockState extends State<_HeadingBlock> {
-  late final TextEditingController _c =
-      TextEditingController(text: widget.block.text);
+  late final TextEditingController _c = MarkupController(
+    text: widget.block.text,
+  );
 
   @override
   void didUpdateWidget(covariant _HeadingBlock oldWidget) {
@@ -2123,34 +2322,35 @@ class _HeadingBlockState extends State<_HeadingBlock> {
 
   @override
   Widget build(BuildContext context) => TextField(
-        controller: _c,
-        onTap: widget.onFocus,
-        onChanged: (v) {
-          if (v.contains('\n')) {
-            widget.onMultilinePaste(v);
-            return;
-          }
-          widget.onChanged(widget.block.copyWith(text: v));
-        },
-        style: const TextStyle(
-          fontSize: 19,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.2,
-          color: Nocturne.text,
-        ),
-        cursorColor: Nocturne.accent,
-        decoration: const InputDecoration(
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(vertical: 4),
-          border: InputBorder.none,
-          hintText: 'Heading',
-          hintStyle: TextStyle(
-            fontSize: 19,
-            fontWeight: FontWeight.w700,
-            color: Nocturne.neutral700,
-          ),
-        ),
-      );
+    controller: _c,
+    onTap: widget.onFocus,
+    onChanged: (v) {
+      if (v.contains('\n')) {
+        widget.onMultilinePaste(v);
+        return;
+      }
+      widget.onChanged(widget.block.copyWith(text: v));
+    },
+    contextMenuBuilder: formatContextMenu,
+    style: const TextStyle(
+      fontSize: 19,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.2,
+      color: Nocturne.text,
+    ),
+    cursorColor: Nocturne.accent,
+    decoration: const InputDecoration(
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(vertical: 4),
+      border: InputBorder.none,
+      hintText: 'Heading',
+      hintStyle: TextStyle(
+        fontSize: 19,
+        fontWeight: FontWeight.w700,
+        color: Nocturne.neutral700,
+      ),
+    ),
+  );
 }
 
 class _ParagraphBlock extends StatefulWidget {
@@ -2171,8 +2371,9 @@ class _ParagraphBlock extends StatefulWidget {
 }
 
 class _ParagraphBlockState extends State<_ParagraphBlock> {
-  late final TextEditingController _c =
-      TextEditingController(text: widget.block.text);
+  late final TextEditingController _c = MarkupController(
+    text: widget.block.text,
+  );
   String _prevText = '';
 
   @override
@@ -2240,7 +2441,9 @@ class _ParagraphBlockState extends State<_ParagraphBlock> {
           final prevLines = _prevText.split('\n').length;
           final nextLines = v.split('\n').length;
           final addedChars = v.length - _prevText.length;
-          if (nextLines - prevLines >= 1 && addedChars > 3 && _prevText.isEmpty) {
+          if (nextLines - prevLines >= 1 &&
+              addedChars > 3 &&
+              _prevText.isEmpty) {
             _prevText = v;
             widget.onMultilinePaste(v);
             return;
@@ -2262,7 +2465,7 @@ class _ParagraphBlockState extends State<_ParagraphBlock> {
           }).toList();
           return AdaptiveTextSelectionToolbar.buttonItems(
             anchors: editableTextState.contextMenuAnchors,
-            buttonItems: items,
+            buttonItems: [...formatButtons(editableTextState), ...items],
           );
         },
         maxLines: null,
@@ -2295,6 +2498,112 @@ class _TodoBlock extends StatelessWidget {
     required this.onChanged,
   });
 
+  void _moveItem(int from, int to) {
+    if (from == to || to < 0 || to >= block.items.length) return;
+    final items = [...block.items];
+    items.insert(to, items.removeAt(from));
+    onChanged(block.copyWith(items: items));
+  }
+
+  Future<void> _openItemMenu(
+    BuildContext context,
+    int i,
+  ) => showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Nocturne.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) {
+      void run(VoidCallback action) {
+        Navigator.pop(ctx);
+        action();
+      }
+
+      final items = block.items;
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                items[i].text.trim().isEmpty
+                    ? 'LINE ${i + 1}'
+                    : items[i].text.trim().toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  letterSpacing: 0.7,
+                  color: Nocturne.neutral500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (i > 0)
+                _MenuTile(
+                  icon: PhRegular.caretUp,
+                  label: 'Move up',
+                  onTap: () => run(() => _moveItem(i, i - 1)),
+                ),
+              if (i < items.length - 1)
+                _MenuTile(
+                  icon: PhRegular.caretDown,
+                  label: 'Move down',
+                  onTap: () => run(() => _moveItem(i, i + 1)),
+                ),
+              _MenuTile(
+                icon: PhRegular.plus,
+                label: 'Insert line below',
+                onTap: () => run(
+                  () => onChanged(
+                    block.copyWith(
+                      items: [...items]
+                        ..insert(i + 1, const TodoItem(text: '')),
+                    ),
+                  ),
+                ),
+              ),
+              _MenuTile(
+                icon: PhRegular.textStrikethrough,
+                label:
+                    items[i].text.startsWith('~~') &&
+                        items[i].text.endsWith('~~') &&
+                        items[i].text.length > 4
+                    ? 'Remove strikethrough'
+                    : 'Strike through (without ticking)',
+                onTap: () => run(() {
+                  final t = items[i].text;
+                  final struck =
+                      t.startsWith('~~') && t.endsWith('~~') && t.length > 4;
+                  final next = [...items];
+                  next[i] = next[i].copyWith(
+                    text: struck ? t.substring(2, t.length - 2) : '~~$t~~',
+                  );
+                  onChanged(block.copyWith(items: next));
+                }),
+              ),
+              _MenuTile(
+                icon: PhRegular.trash,
+                label: 'Delete line',
+                color: NocturneSemantic.expense,
+                onTap: () => run(() {
+                  final next = [...items]..removeAt(i);
+                  onChanged(
+                    block.copyWith(
+                      items: next.isEmpty ? const [TodoItem(text: '')] : next,
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
   @override
   Widget build(BuildContext context) {
     final me = context.read<V3State>().myId;
@@ -2302,48 +2611,80 @@ class _TodoBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < block.items.length; i++)
-          _TodoRow(
-            key: ValueKey('${block.id}_$i'),
-            item: block.items[i],
-            onFocus: onFocus,
-            onToggle: () {
-              final items = [...block.items];
-              final was = items[i];
-              items[i] = was.copyWith(
-                done: !was.done,
-                byUserId: !was.done ? me : null,
-              );
-              onChanged(block.copyWith(items: items));
-            },
-            onText: (v) {
-              final items = [...block.items];
-              items[i] = items[i].copyWith(text: v);
-              onChanged(block.copyWith(items: items));
-            },
-            onSubmit: () {
-              final items = [...block.items]
-                ..insert(i + 1, const TodoItem(text: ''));
-              onChanged(block.copyWith(items: items));
-            },
-          ),
+        ReorderableListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          buildDefaultDragHandles: false,
+          proxyDecorator: _liftedProxy,
+          onReorderItem: _moveItem,
+          children: [
+            for (var i = 0; i < block.items.length; i++)
+              Row(
+                key: ValueKey('${block.id}_$i'),
+                children: [
+                  _DragHandle(
+                    index: i,
+                    tooltip: 'Drag to move · tap for line options',
+                    onTap: () => _openItemMenu(context, i),
+                  ),
+                  Expanded(
+                    child: _TodoRow(
+                      item: block.items[i],
+                      onFocus: onFocus,
+                      onToggle: () {
+                        final items = [...block.items];
+                        final was = items[i];
+                        items[i] = was.copyWith(
+                          done: !was.done,
+                          byUserId: !was.done ? me : null,
+                        );
+                        onChanged(block.copyWith(items: items));
+                      },
+                      onText: (v) {
+                        final items = [...block.items];
+                        items[i] = items[i].copyWith(text: v);
+                        onChanged(block.copyWith(items: items));
+                      },
+                      onSubmit: () {
+                        final items = [...block.items]
+                          ..insert(i + 1, const TodoItem(text: ''));
+                        onChanged(block.copyWith(items: items));
+                      },
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
         GestureDetector(
-          onTap: () => onChanged(block.copyWith(
-              items: [...block.items, const TodoItem(text: '')])),
+          onTap: () => onChanged(
+            block.copyWith(
+              items: [
+                ...block.items,
+                const TodoItem(text: ''),
+              ],
+            ),
+          ),
           behavior: HitTestBehavior.opaque,
           child: const SizedBox(
             height: 34,
             child: Row(
               children: [
+                SizedBox(width: 22),
                 SizedBox(
                   width: 22,
-                  child: Icon(PhRegular.plus,
-                      size: 14, color: Nocturne.neutral500),
+                  child: Icon(
+                    PhRegular.plus,
+                    size: 14,
+                    color: Nocturne.neutral500,
+                  ),
                 ),
                 SizedBox(width: 10),
-                Text('Add item',
-                    style:
-                        TextStyle(fontSize: 13.5, color: Nocturne.neutral500)),
+                Text(
+                  'Add item',
+                  style: TextStyle(fontSize: 13.5, color: Nocturne.neutral500),
+                ),
               ],
             ),
           ),
@@ -2361,7 +2702,6 @@ class _TodoRow extends StatefulWidget {
   final VoidCallback onSubmit;
 
   const _TodoRow({
-    super.key,
     required this.item,
     required this.onFocus,
     required this.onToggle,
@@ -2374,8 +2714,9 @@ class _TodoRow extends StatefulWidget {
 }
 
 class _TodoRowState extends State<_TodoRow> {
-  late final TextEditingController _c =
-      TextEditingController(text: widget.item.text);
+  late final TextEditingController _c = MarkupController(
+    text: widget.item.text,
+  );
 
   @override
   void didUpdateWidget(covariant _TodoRow oldWidget) {
@@ -2431,6 +2772,7 @@ class _TodoRowState extends State<_TodoRow> {
               onTap: widget.onFocus,
               onChanged: widget.onText,
               onSubmitted: (_) => widget.onSubmit(),
+              contextMenuBuilder: formatContextMenu,
               textInputAction: TextInputAction.next,
               style: TextStyle(
                 fontSize: 15,
@@ -2444,8 +2786,7 @@ class _TodoRowState extends State<_TodoRow> {
                 contentPadding: EdgeInsets.zero,
                 border: InputBorder.none,
                 hintText: 'To-do',
-                hintStyle:
-                    TextStyle(fontSize: 15, color: Nocturne.neutral700),
+                hintStyle: TextStyle(fontSize: 15, color: Nocturne.neutral700),
               ),
             ),
           ),
@@ -2456,8 +2797,10 @@ class _TodoRowState extends State<_TodoRow> {
                 color: Nocturne.mix(by.color, 22),
                 borderRadius: BorderRadius.circular(5),
               ),
-              child: Text(by.name,
-                  style: TextStyle(fontSize: 10, color: by.color)),
+              child: Text(
+                by.name,
+                style: TextStyle(fontSize: 10, color: by.color),
+              ),
             ),
         ],
       ),
@@ -2522,7 +2865,9 @@ class _TableBlock extends StatelessWidget {
                         decoration: const BoxDecoration(
                           border: Border(
                             top: BorderSide(
-                                color: Nocturne.neutral900, width: 1),
+                              color: Nocturne.neutral900,
+                              width: 1,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -2578,8 +2923,9 @@ class _Cell extends StatefulWidget {
 }
 
 class _CellState extends State<_Cell> {
-  late final TextEditingController _c =
-      TextEditingController(text: widget.text);
+  late final TextEditingController _c = TextEditingController(
+    text: widget.text,
+  );
 
   @override
   void didUpdateWidget(covariant _Cell oldWidget) {
@@ -2597,33 +2943,31 @@ class _CellState extends State<_Cell> {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: 124,
-        child: TextField(
-          controller: _c,
-          onTap: widget.onFocus,
-          onChanged: widget.onChanged,
-          style: TextStyle(
-            fontSize: widget.header ? 11.5 : 13.5,
-            fontWeight: widget.header ? FontWeight.w600 : FontWeight.w400,
-            letterSpacing: widget.header ? 0.3 : 0,
-            color: widget.header ? Nocturne.neutral300 : Nocturne.text,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-          cursorColor: Nocturne.accent,
-          textCapitalization: widget.header
-              ? TextCapitalization.words
-              : TextCapitalization.sentences,
-          decoration: InputDecoration(
-            isDense: true,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-            border: InputBorder.none,
-            hintText: widget.header ? 'Header' : '',
-            hintStyle:
-                const TextStyle(fontSize: 11.5, color: Nocturne.neutral700),
-          ),
-        ),
-      );
+    width: 124,
+    child: TextField(
+      controller: _c,
+      onTap: widget.onFocus,
+      onChanged: widget.onChanged,
+      style: TextStyle(
+        fontSize: widget.header ? 11.5 : 13.5,
+        fontWeight: widget.header ? FontWeight.w600 : FontWeight.w400,
+        letterSpacing: widget.header ? 0.3 : 0,
+        color: widget.header ? Nocturne.neutral300 : Nocturne.text,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+      cursorColor: Nocturne.accent,
+      textCapitalization: widget.header
+          ? TextCapitalization.words
+          : TextCapitalization.sentences,
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        border: InputBorder.none,
+        hintText: widget.header ? 'Header' : '',
+        hintStyle: const TextStyle(fontSize: 11.5, color: Nocturne.neutral700),
+      ),
+    ),
+  );
 }
 
 class _PresenceStrip extends StatelessWidget {
@@ -2677,4 +3021,3 @@ class _PresenceStrip extends StatelessWidget {
     );
   }
 }
-

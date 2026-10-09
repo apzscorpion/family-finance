@@ -55,6 +55,13 @@ class PhRegular {
   static const IconData trash = IconData(0xe4a6, fontFamily: 'Phosphor');
   static const IconData wallet = IconData(0xe68a, fontFamily: 'Phosphor');
   static const IconData circle = IconData(0xe18a, fontFamily: 'Phosphor');
+  static const IconData dotsSixVertical = IconData(0xeae2, fontFamily: 'Phosphor');
+  static const IconData table = IconData(0xe476, fontFamily: 'Phosphor');
+  static const IconData clipboardText = IconData(0xe198, fontFamily: 'Phosphor');
+  static const IconData textB = IconData(0xe5be, fontFamily: 'Phosphor');
+  static const IconData textItalic = IconData(0xe5c0, fontFamily: 'Phosphor');
+  static const IconData textStrikethrough = IconData(0xe5c2, fontFamily: 'Phosphor');
+  static const IconData paperPlaneRight = IconData(0xe396, fontFamily: 'Phosphor');
   static const IconData trendUp = IconData(0xe4ae, fontFamily: 'Phosphor');
   static const IconData trendDown = IconData(0xe4ac, fontFamily: 'Phosphor');
   static const IconData receiptX = IconData(0xed40, fontFamily: 'Phosphor');
