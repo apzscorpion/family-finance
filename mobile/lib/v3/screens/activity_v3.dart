@@ -68,7 +68,7 @@ class _ActivityV3State extends State<ActivityV3> {
     // When viewing Imported (or in batch-selection mode so imported rows from
     // older months are never hidden), include imported rows beyond the 7d/30d
     // period window.
-    final base = _type == 'imported' ? s.importedTxns : s.scoped;
+    final base = _type == 'imported' ? s.importedTxns : s.scopedAllAccounts;
     return base.where((t) {
       if (_type == 'expense' && !t.isExpense) return false;
       if (_type == 'income' && t.isExpense) return false;
@@ -297,7 +297,8 @@ class _ActivityV3State extends State<ActivityV3> {
 
     // Categories present in the current scope, most used first.
     final counts = <String, int>{};
-    final catSource = _type == 'imported' ? s.importedTxns : s.scoped;
+    final catSource =
+        _type == 'imported' ? s.importedTxns : s.scopedAllAccounts;
     for (final t in catSource) {
       counts[t.categoryKey] = (counts[t.categoryKey] ?? 1) + 1;
     }

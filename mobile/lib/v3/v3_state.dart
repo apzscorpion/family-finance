@@ -271,11 +271,32 @@ class V3State extends ChangeNotifier {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
+  /// The account a transaction counts under. One saved with no account
+  /// (older imports, quick adds) belongs to the main account, so it is never
+  /// hidden by the account filter.
+  String? sourceOf(TxnRow t) => t.sourceId ?? mainSourceId;
+
+  /// Salary if there is one, else the first account.
+  String? get mainSourceId {
+    for (final src in sources) {
+      if (ExpenseImport.accountGroupOf(src.name) == 'salary') return src.id;
+    }
+    return sources.isEmpty ? null : sources.first.id;
+  }
+
   /// Transactions inside the selected period, scope and money source.
   List<TxnRow> get scoped => txns.where((t) {
         if (t.ageInDays >= maxDays) return false;
         if (!isFamily && t.userId != scope) return false;
-        if (srcFilter != null && t.sourceId != srcFilter) return false;
+        if (srcFilter != null && sourceOf(t) != srcFilter) return false;
+        return true;
+      }).toList();
+
+  /// Like [scoped] but across every account: the Activity list shows all
+  /// spending and income, imported or not.
+  List<TxnRow> get scopedAllAccounts => txns.where((t) {
+        if (t.ageInDays >= maxDays) return false;
+        if (!isFamily && t.userId != scope) return false;
         return true;
       }).toList();
 
@@ -293,10 +314,7 @@ class V3State extends ChangeNotifier {
   /// user is looking at, else Salary, else the first account.
   String? get defaultImportSourceId {
     if (srcFilter != null && sourceById(srcFilter) != null) return srcFilter;
-    for (final src in sources) {
-      if (ExpenseImport.accountGroupOf(src.name) == 'salary') return src.id;
-    }
-    return sources.isEmpty ? null : sources.first.id;
+    return mainSourceId;
   }
 
   /// Files each imported row under an account and a category.
@@ -336,7 +354,7 @@ class V3State extends ChangeNotifier {
       final opening = src?.openingBalance ?? 0.0;
       final net = txns
           .where((t) =>
-              (isFamily || t.userId == scope) && t.sourceId == srcFilter)
+              (isFamily || t.userId == scope) && sourceOf(t) == srcFilter)
           .fold(0.0, (s, t) => s + (t.isExpense ? -t.amount : t.amount));
       return opening + net;
     }
@@ -397,7 +415,7 @@ class V3State extends ChangeNotifier {
     for (final t in txns) {
       if (t.ageInDays >= maxDays) continue;
       if (!isFamily && t.userId != scope) continue;
-      if (t.sourceId != sourceId) continue;
+      if (sourceOf(t) != sourceId) continue;
       if (t.isExpense) {
         outAmt += t.amount;
       } else {
