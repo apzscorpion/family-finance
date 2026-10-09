@@ -117,12 +117,61 @@ class V3Repository {
   Future<List<CategoryRow>> categories(String familyId) async {
     final rows = await _db
         .from('categories')
-        .select('id,key,name,icon,color')
+        .select('id,key,name,icon,color,parent_id')
         .eq('family_id', familyId)
         .order('name');
     return (rows as List)
         .map((r) => CategoryRow.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
+  }
+
+  Future<CategoryRow> addCategory({
+    required String familyId,
+    required String name,
+    required String key,
+    String? icon,
+    String? color,
+    String? parentId,
+  }) async {
+    final row = await _db
+        .from('categories')
+        .insert({
+          'family_id': familyId,
+          'name': name.trim(),
+          'key': key.trim(),
+          if (icon != null && icon.isNotEmpty) 'icon': icon,
+          if (color != null && color.isNotEmpty) 'color': color,
+          if (parentId != null && parentId.isNotEmpty) 'parent_id': parentId,
+        })
+        .select('id,key,name,icon,color,parent_id')
+        .single();
+    return CategoryRow.fromJson(Map<String, dynamic>.from(row as Map));
+  }
+
+  Future<CategoryRow> updateCategory({
+    required String id,
+    required String name,
+    String? icon,
+    String? color,
+    String? parentId,
+  }) async {
+    final patch = <String, dynamic>{
+      'name': name.trim(),
+      'icon': (icon != null && icon.isNotEmpty) ? icon : null,
+      'color': (color != null && color.isNotEmpty) ? color : null,
+      'parent_id': (parentId != null && parentId.isNotEmpty) ? parentId : null,
+    };
+    final row = await _db
+        .from('categories')
+        .update(patch)
+        .eq('id', id)
+        .select('id,key,name,icon,color,parent_id')
+        .single();
+    return CategoryRow.fromJson(Map<String, dynamic>.from(row as Map));
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await _db.from('categories').delete().eq('id', id);
   }
 
   Future<List<SourceRow>> sources(String familyId) async {

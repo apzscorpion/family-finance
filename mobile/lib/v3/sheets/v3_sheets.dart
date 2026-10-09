@@ -484,6 +484,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
   String? _sourceId;
   final _note = TextEditingController();
 
+  /// Selected occurrence date (defaults to today or existing transaction date)
+  late DateTime _date;
+
   /// Single "For" selector members. Defaults to logged-in user.
   final Set<String> _selectedMembers = {};
 
@@ -507,6 +510,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
   void initState() {
     super.initState();
     final e = widget.edit;
+    _date = e?.occurredAt ?? DateTime.now();
     if (e != null) {
       _type = e.type;
       _expression = CalcEngine.format(e.amount);
@@ -523,6 +527,28 @@ class _V3AddSheetState extends State<V3AddSheet> {
           _splitMode = 'gift';
         }
       }
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: Nocturne.accent,
+            surface: Nocturne.surface,
+          ),
+          dialogTheme: const DialogThemeData(backgroundColor: Nocturne.surface),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() => _date = picked);
     }
   }
 
@@ -636,6 +662,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
             forUserId: forUserId,
             paidBy: paidBy,
             shares: shares,
+            occurredAt: _date,
           )
         : await s.addTransaction(
             title: title,
@@ -647,6 +674,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
             forUserId: forUserId,
             paidBy: paidBy,
             shares: shares,
+            occurredAt: _date,
           );
 
     if (ok && _repeatMonthly) {
@@ -767,6 +795,63 @@ class _V3AddSheetState extends State<V3AddSheet> {
           ),
           const SizedBox(height: 10),
 
+          // ── Date selector ────────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Nocturne.bg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Nocturne.neutral800, width: 1),
+            ),
+            child: Row(
+              children: [
+                const Icon(PhRegular.calendar,
+                    size: 15, color: Nocturne.accent300),
+                const SizedBox(width: 8),
+                Text(
+                  V3DetailSheet._dateLabel(_date),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: Nocturne.text,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '(${_date.day}/${_date.month}/${_date.year})',
+                  style: const TextStyle(
+                      fontSize: 11, color: Nocturne.neutral500),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _pickDate,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Nocturne.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Nocturne.neutral700, width: 1),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Change',
+                            style: TextStyle(
+                                fontSize: 11, color: Nocturne.accent200)),
+                        SizedBox(width: 3),
+                        Icon(PhBold.caretRight,
+                            size: 10, color: Nocturne.accent200),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
           // ── Note / Merchant text field ────────────────────────────────────
           Container(
             height: 40,
@@ -855,39 +940,76 @@ class _V3AddSheetState extends State<V3AddSheet> {
               },
             ),
           ),
-
-          // ── From / Into Source chips ──────────────────────────────────────
+          // ── From / Into Source chips with explanation ─────────────────────
           if (s.sources.isNotEmpty) ...[
             const SizedBox(height: 10),
-            _ChipRow(
-              label: _type == 'income' ? 'Into' : 'From',
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                for (final src in s.sources)
-                  V3Chip(
-                    label: src.name,
-                    height: 28,
-                    selected: _sourceId == src.id,
-                    icon: src.design.icon,
-                    iconColor: src.design.color,
-                    onTap: () => setState(() =>
-                        _sourceId = _sourceId == src.id ? null : src.id),
+                Padding(
+                  padding: const EdgeInsets.only(left: 2, bottom: 4),
+                  child: Text(
+                    _type == 'income'
+                        ? 'CREDIT ACCOUNT (e.g. Salary, Loan, Savings pool)'
+                        : 'DEBIT SOURCE (e.g. Deduct from Salary, Loan, Savings pool)',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                      color: Nocturne.neutral500,
+                    ),
                   ),
+                ),
+                _ChipRow(
+                  label: _type == 'income' ? 'Into' : 'From',
+                  children: [
+                    for (final src in s.sources)
+                      V3Chip(
+                        label: src.name,
+                        height: 28,
+                        selected: _sourceId == src.id,
+                        icon: src.design.icon,
+                        iconColor: src.design.color,
+                        onTap: () => setState(() =>
+                            _sourceId = _sourceId == src.id ? null : src.id),
+                      ),
+                  ],
+                ),
               ],
             ),
           ],
           const SizedBox(height: 8),
 
-          // ── Paid via chips ────────────────────────────────────────────────
-          _ChipRow(
-            label: 'Paid via',
+          // ── Paid via chips with explanation ───────────────────────────────
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (final m in _methods)
-                V3Chip(
-                  label: m,
-                  height: 28,
-                  selected: _method == m,
-                  onTap: () => setState(() => _method = m),
+              const Padding(
+                padding: EdgeInsets.only(left: 2, bottom: 4),
+                child: Text(
+                  'PAYMENT CHANNEL (UPI, Cash, Debit/Credit Card, Bank transfer, Loan)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.4,
+                    color: Nocturne.neutral500,
+                  ),
                 ),
+              ),
+              _ChipRow(
+                label: 'Paid via',
+                children: [
+                  for (final m in _methods)
+                    V3Chip(
+                      label: m,
+                      height: 28,
+                      selected: _method == m,
+                      onTap: () => setState(() => _method = m),
+                    ),
+                ],
+              ),
             ],
           ),
 

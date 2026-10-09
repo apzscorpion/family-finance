@@ -2,7 +2,7 @@ name: family_finance
 description: "Family & Personal Finance Manager — track income, expenses, budgets and share with trusted family members."
 publish_to: 'none'
 
-version: 1.9.4+26
+version: 1.9.5+27
 
 environment:
   sdk: ^3.13.4

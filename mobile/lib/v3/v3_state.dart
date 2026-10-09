@@ -54,6 +54,7 @@ class V3State extends ChangeNotifier {
   /// True until the first load picks a scope, so a deliberate switch back to
   /// the family view is never overwritten by a later refresh.
   bool _scopeChosen = false;
+  bool _srcFilterChosen = false;
   String period = '30d';
   bool hidden = false;
   String? srcFilter;
@@ -181,6 +182,14 @@ class V3State extends ChangeNotifier {
       }
     }
 
+    if (!_srcFilterChosen && sources.isNotEmpty) {
+      final salary = sources.where((s) => s.name.toLowerCase() == 'salary');
+      if (salary.isNotEmpty) {
+        srcFilter = salary.first.id;
+      }
+      _srcFilterChosen = true;
+    }
+
     loading = false;
     notifyListeners();
   }
@@ -212,6 +221,8 @@ class V3State extends ChangeNotifier {
     return null;
   }
 
+
+
   SourceRow? sourceById(String? id) {
     if (id == null) return null;
     for (final s in sources) {
@@ -239,6 +250,7 @@ class V3State extends ChangeNotifier {
   }
 
   void setSource(String? id) {
+    _srcFilterChosen = true;
     srcFilter = (srcFilter == id) ? null : id;
     notifyListeners();
   }
@@ -285,7 +297,17 @@ class V3State extends ChangeNotifier {
 
   /// Running balance: opening balances across money sources plus every
   /// transaction ever, not just the visible window.
+  /// If a specific source is selected via [srcFilter], computes the balance for that source.
   double get balance {
+    if (srcFilter != null) {
+      final src = sourceById(srcFilter);
+      final opening = src?.openingBalance ?? 0.0;
+      final net = txns
+          .where((t) =>
+              (isFamily || t.userId == scope) && t.sourceId == srcFilter)
+          .fold(0.0, (s, t) => s + (t.isExpense ? -t.amount : t.amount));
+      return opening + net;
+    }
     final opening = sources.fold(0.0, (s, m) => s + m.openingBalance);
     final net = txns
         .where((t) => isFamily || t.userId == scope)
@@ -396,6 +418,7 @@ class V3State extends ChangeNotifier {
     String? paidBy,
     Map<String, double>? shares,
     String? note,
+    DateTime? occurredAt,
   }) async {
     final cat = categoryByKey(categoryKey);
     final created = await V3Repository.guard(
@@ -409,6 +432,7 @@ class V3State extends ChangeNotifier {
         categoryId: cat?.id,
         sourceId: sourceId,
         forUserId: forUserId,
+        occurredAt: occurredAt,
         paidBy: paidBy,
         shares: shares,
         note: note,
@@ -432,6 +456,7 @@ class V3State extends ChangeNotifier {
     String? paidBy,
     Map<String, double>? shares,
     String? note,
+    DateTime? occurredAt,
   }) async {
     final cat = categoryByKey(categoryKey);
     final patch = <String, dynamic>{
@@ -443,6 +468,8 @@ class V3State extends ChangeNotifier {
       'source_id': sourceId,
       'user_id': forUserId ?? myId,
       'paid_by': paidBy ?? myId,
+      if (occurredAt != null)
+        'occurred_at': occurredAt.toUtc().toIso8601String(),
       'split_with':
           shares == null || shares.isEmpty ? null : shares.keys.toList(),
       'shares': shares,

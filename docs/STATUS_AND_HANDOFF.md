@@ -1,8 +1,8 @@
 # Family Spend Tracker — status and handoff
 
-Branch: `main` · Version `1.9.4+26`
-Tests: **207 passing** (`cd mobile && flutter test`)
-Published: v1.9.4 on GitHub, tagged `v1.9.4`
+Branch: `main` · Version `1.9.5+27`
+Tests: **211 passing** (`cd mobile && flutter test`)
+Published: v1.9.5 on GitHub, tagged `v1.9.5`
 
 Supersedes `docs/V1.9.0_HANDOFF.md` for anything they disagree on. That file
 still holds the detailed root-cause write-ups for the earlier bugs.
@@ -31,6 +31,10 @@ In the order it was raised, with honest status.
 | 14 | Notes live editing, undo/redo, follow-user, conflicts | **Done** — block-level sync, `save_note_v2` RPC, coalesced undo + remote rebase, tappable presence |
 | 15 | Direct messages between members | **Done** — `direct_messages` table + RLS + Realtime, `ChatController`, `ChatListV3` & `ChatThreadV3`, unread badge |
 | 16 | Web version (expenses read-only, notes + chat editable) | **Done** — `lib/main_web.dart` + `lib/web/web_app.dart`, `flutter build web --target lib/main_web.dart` verified (including Wasm dry-run) |
+| 17 | Prominent balance & expense on hero card + Salary default | **Done** — Spent & Balance displayed side-by-side, default to Salary source, source-specific balance calculation |
+| 18 | Expense date selection (past/custom dates) | **Done** — Date picker row in `V3AddSheet`, `occurredAt` stored for new/edited transactions |
+| 19 | CSV Format Help & 1-tap AI conversion prompt | **Done** — `(i) Format & AI Prompt` sheet with schema, Gemini/ChatGPT prompt, and template |
+| 20 | Add expense explanatory subheaders | **Done** — Clear uppercase headers for Debit Source / Fund pool and Payment Channel |
 
 ---
 

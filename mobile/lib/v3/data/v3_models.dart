@@ -119,6 +119,7 @@ class CategoryRow {
   final String name;
   final String? icon;
   final String? color;
+  final String? parentId;
 
   const CategoryRow({
     required this.id,
@@ -126,7 +127,28 @@ class CategoryRow {
     required this.name,
     this.icon,
     this.color,
+    this.parentId,
   });
+
+  bool get isSubCategory => parentId != null && parentId!.isNotEmpty;
+
+  CategoryRow copyWith({
+    String? id,
+    String? key,
+    String? name,
+    String? icon,
+    String? color,
+    String? parentId,
+  }) {
+    return CategoryRow(
+      id: id ?? this.id,
+      key: key ?? this.key,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
+      parentId: parentId ?? this.parentId,
+    );
+  }
 
   factory CategoryRow.fromJson(Map<String, dynamic> j) => CategoryRow(
         id: j['id'].toString(),
@@ -134,7 +156,17 @@ class CategoryRow {
         name: j['name']?.toString() ?? '',
         icon: j['icon']?.toString(),
         color: j['color']?.toString(),
+        parentId: j['parent_id']?.toString(),
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'key': key,
+        'name': name,
+        if (icon != null) 'icon': icon,
+        if (color != null) 'color': color,
+        if (parentId != null) 'parent_id': parentId,
+      };
 }
 
 class TxnRow {
@@ -176,8 +208,8 @@ class TxnRow {
     required this.title,
     required this.amount,
     required this.type,
-    required this.method,
-    required this.origin,
+    this.method = 'UPI',
+    this.origin = 'manual',
     required this.occurredAt,
     this.split,
     this.note,

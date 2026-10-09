@@ -7,6 +7,8 @@ import 'package:family_finance/v3/screens/chat_list_v3.dart';
 import 'package:family_finance/v3/screens/chat_thread_v3.dart';
 import 'package:family_finance/v3/screens/note_editor_v3.dart';
 import 'package:family_finance/v3/screens/notes_widgets.dart';
+import 'package:family_finance/v3/data/expense_import.dart';
+import 'package:family_finance/v3/screens/import_v3.dart';
 import 'package:family_finance/v3/sheets/v3_sheets.dart';
 import 'package:family_finance/v3/v3_nav.dart';
 import 'package:family_finance/v3/v3_state.dart';
@@ -104,6 +106,14 @@ class _TestRepo extends V3Repository {
   }
 
   @override
+  Future<void> markDirectMessagesRead({
+    required String familyId,
+    required String senderId,
+  }) async {
+    markedReadSenders.add(senderId);
+  }
+
+  @override
   Future<void> deleteDirectMessage(String messageId) async {
     deletedMessageIds.add(messageId);
     sentMessages.removeWhere((m) => m.id == messageId);
@@ -122,12 +132,71 @@ class _TestRepo extends V3Repository {
     );
   }
 
+  final List<TxnRow> transactionsList = [];
+
   @override
-  Future<void> markDirectMessagesRead({
+  Future<TxnRow> addTransaction({
     required String familyId,
-    required String senderId,
+    required String title,
+    required double amount,
+    required String type,
+    String method = 'UPI',
+    String origin = 'manual',
+    String? categoryId,
+    String? sourceId,
+    String? cardId,
+    String? forUserId,
+    DateTime? occurredAt,
+    String? paidBy,
+    Map<String, double>? shares,
+    String? note,
   }) async {
-    markedReadSenders.add(senderId);
+    final row = TxnRow(
+      id: 'txn-${transactionsList.length + 1}',
+      familyId: familyId,
+      userId: forUserId ?? currentUserId,
+      paidBy: paidBy ?? currentUserId,
+      sourceId: sourceId,
+      categoryId: categoryId,
+      categoryKey: 'groceries',
+      title: title,
+      amount: amount,
+      type: type,
+      method: method,
+      origin: origin,
+      occurredAt: occurredAt ?? DateTime.now(),
+      shares: shares ?? const {},
+      note: note,
+    );
+    transactionsList.add(row);
+    return row;
+  }
+
+  @override
+  Future<int> addTransactionsBulk({
+    required String familyId,
+    required List<Map<String, dynamic>> rows,
+  }) async {
+    for (final r in rows) {
+      transactionsList.add(
+        TxnRow(
+          id: 'txn-bulk-${transactionsList.length + 1}',
+          familyId: familyId,
+          userId: currentUserId,
+          paidBy: currentUserId,
+          title: r['title'] as String,
+          amount: (r['amount'] as num).toDouble(),
+          type: r['type'] as String,
+          categoryKey: 'groceries',
+          method: 'upi',
+          origin: 'import',
+          occurredAt: r['occurred_at'] != null
+              ? DateTime.parse(r['occurred_at'] as String)
+              : DateTime.now(),
+        ),
+      );
+    }
+    return rows.length;
   }
 }
 
@@ -782,5 +851,156 @@ void main() {
         expect(find.text('Sara'), findsWidgets);
       },
     );
+  });
+
+  group('Phase 5 — Specific Dates, Salary Default & CSV AI Prompt Help', () {
+    test('V3State defaults srcFilter to Salary source on load and computes balance per source', () async {
+      final repo = _TestRepo();
+      final state = _buildSeededState(repo);
+      state.sources = [
+        const SourceRow(
+          id: 'src-sal',
+          name: 'Salary',
+          kind: 'income',
+          sortOrder: 1,
+          openingBalance: 50000,
+        ),
+        const SourceRow(
+          id: 'src-loan',
+          name: 'Loan',
+          kind: 'loan',
+          sortOrder: 2,
+          openingBalance: 20000,
+        ),
+      ];
+      state.txns = [
+        TxnRow(
+          id: 't-1',
+          familyId: 'fam-1',
+          userId: 'user-asif',
+          title: 'Grocery',
+          amount: 5000,
+          type: 'expense',
+          method: 'upi',
+          origin: 'manual',
+          categoryKey: 'groceries',
+          sourceId: 'src-sal',
+          occurredAt: DateTime.now(),
+        ),
+        TxnRow(
+          id: 't-2',
+          familyId: 'fam-1',
+          userId: 'user-asif',
+          title: 'Loan EMI',
+          amount: 2000,
+          type: 'expense',
+          method: 'upi',
+          origin: 'manual',
+          categoryKey: 'other',
+          sourceId: 'src-loan',
+          occurredAt: DateTime.now(),
+        ),
+      ];
+
+      await state.refresh();
+      expect(state.srcFilter, equals('src-sal'));
+      expect(state.balance, equals(45000.0));
+
+      state.setSource('src-loan');
+      expect(state.srcFilter, equals('src-loan'));
+      expect(state.balance, equals(18000.0));
+
+      state.setSource('src-loan');
+      expect(state.srcFilter, isNull);
+      expect(state.balance, equals(63000.0));
+    });
+
+    test('V3State importExpenses preserves custom dates on imported items', () async {
+      final repo = _TestRepo();
+      final state = _buildSeededState(repo);
+      final customDate = DateTime(2026, 9, 15);
+
+      final imported = [
+        ImportedExpense(
+          title: 'Flight Ticket',
+          amount: 4500,
+          date: customDate,
+          category: 'Transport',
+          selected: true,
+        ),
+      ];
+
+      final count = await state.importExpenses(imported);
+      expect(count, equals(1));
+      expect(repo.transactionsList.length, equals(1));
+      expect(repo.transactionsList.first.title, equals('Flight Ticket'));
+      expect(repo.transactionsList.first.occurredAt.toLocal().year, equals(2026));
+      expect(repo.transactionsList.first.occurredAt.toLocal().month, equals(9));
+      expect(repo.transactionsList.first.occurredAt.toLocal().day, equals(15));
+    });
+
+    testWidgets('V3AddSheet renders date picker row and explanatory subheaders', (tester) async {
+      final repo = _TestRepo();
+      final state = _buildSeededState(repo);
+      state.sources = [
+        const SourceRow(
+          id: 'src-sal',
+          name: 'Salary',
+          kind: 'income',
+          sortOrder: 1,
+          openingBalance: 50000,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<V3State>.value(value: state),
+            ChangeNotifierProvider<V3Nav>(create: (_) => V3Nav()),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: V3AddSheet(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Today'), findsOneWidget);
+      expect(find.text('Change'), findsOneWidget);
+
+      expect(find.textContaining('DEBIT SOURCE'), findsOneWidget);
+      expect(find.textContaining('PAYMENT CHANNEL'), findsOneWidget);
+    });
+
+    testWidgets('ImportV3 header contains format and AI prompt help button which opens _CsvHelpSheet', (tester) async {
+      final repo = _TestRepo();
+      final state = _buildSeededState(repo);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<V3State>.value(value: state),
+            ChangeNotifierProvider<V3Nav>(create: (_) => V3Nav()),
+          ],
+          child: const MaterialApp(
+            home: ImportV3(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Format & AI Prompt'), findsOneWidget);
+
+      await tester.tap(find.text('Format & AI Prompt'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('CSV Format & AI Prompt Guide'), findsOneWidget);
+      expect(find.text('Prompt to give Gemini / ChatGPT'), findsOneWidget);
+      expect(find.text('Copy prompt'), findsOneWidget);
+      expect(find.text('Sample CSV Template'), findsOneWidget);
+      expect(find.text('Copy sample'), findsOneWidget);
+    });
   });
 }

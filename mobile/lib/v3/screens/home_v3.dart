@@ -465,24 +465,77 @@ class _HeroCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Text(
-            s.isFamily ? 'FAMILY SPENT' : '${s.scopeName.toUpperCase()} SPENT',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                fontSize: 11, color: Nocturne.accent300, letterSpacing: 0.88),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      s.isFamily ? 'FAMILY SPENT' : '${s.scopeName.toUpperCase()} SPENT',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 11, color: Nocturne.accent300, letterSpacing: 0.88),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: V3Num(
+                        s.money(spent),
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w600,
+                          color: Nocturne.text,
+                          letterSpacing: -0.8,
+                          height: 1.1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      source != null ? '${source.name.toUpperCase()} BALANCE' : 'TOTAL BALANCE',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: s.balance >= 0 ? NocturneSemantic.income : NocturneSemantic.expense,
+                        letterSpacing: 0.88,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: V3Num(
+                        s.money(s.balance),
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w600,
+                          color: s.balance >= 0 ? NocturneSemantic.income : NocturneSemantic.expense,
+                          letterSpacing: -0.8,
+                          height: 1.1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          V3Num(
-            s.money(spent),
-            style: const TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w500,
-              color: Nocturne.text,
-              letterSpacing: -0.9, // -.025em at 36px
-              height: 1.1,
-            ),
-          ),
+          const SizedBox(height: 8),
           if (limit > 0)
             Row(
               children: [
@@ -551,14 +604,16 @@ class _HeroCard extends StatelessWidget {
           Row(
             children: [
               _HeroStat(
-                  label: 'Received',
+                  label: 'Income',
                   value: s.moneyShort(s.totalIncome),
                   color: NocturneSemantic.income),
               const SizedBox(width: 8),
               _HeroStat(
-                  label: 'Balance',
-                  value: s.moneyShort(s.balance),
-                  color: Nocturne.text),
+                  label: 'Net saved',
+                  value: s.moneyShort(s.totalIncome - spent),
+                  color: (s.totalIncome - spent) >= 0
+                      ? NocturneSemantic.income
+                      : NocturneSemantic.expense),
               const SizedBox(width: 8),
               _HeroStat(
                   label: 'Per day',

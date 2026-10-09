@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
@@ -206,6 +207,15 @@ class _ImportV3State extends State<ImportV3> {
     Navigator.of(context).pop();
   }
 
+  void _openCsvHelp() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => const _CsvHelpSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final selected = _rows.where((r) => r.selected).length;
@@ -243,6 +253,34 @@ class _ImportV3State extends State<ImportV3> {
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                             color: Nocturne.text)),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _openCsvHelp,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Nocturne.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border:
+                              Border.all(color: Nocturne.neutral800, width: 1),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(PhRegular.info,
+                                size: 16, color: Nocturne.accent200),
+                            SizedBox(width: 5),
+                            Text('Format & AI Prompt',
+                                style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: Nocturne.accent200)),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1102,6 +1140,296 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── CSV Format & AI Prompt Help Sheet ────────────────────────────────────────
+
+class _CsvHelpSheet extends StatefulWidget {
+  const _CsvHelpSheet();
+
+  @override
+  State<_CsvHelpSheet> createState() => _CsvHelpSheetState();
+}
+
+class _CsvHelpSheetState extends State<_CsvHelpSheet> {
+  bool _copied = false;
+
+  static const _sampleCsv = '''Date,Title,Amount,Type,Category,Method
+2026-10-01,Monthly Salary,75000,income,Salary,Bank
+2026-10-02,Supermarket Groceries,3450,expense,Groceries,UPI
+2026-10-03,Electricity Bill,1850,expense,Utilities,Card
+2026-10-05,Fuel Petrol,2000,expense,Transport,UPI''';
+
+  static const _aiPrompt = '''Please convert my bank statement or transaction text into a clean CSV format for my family finance tracker.
+
+Required CSV Headers:
+Date,Title,Amount,Type,Category,Method
+
+Format Rules:
+1. Date: YYYY-MM-DD (e.g. 2026-10-01)
+2. Title: Clean merchant or description name (e.g. Supermarket, Electricity Bill, Salary)
+3. Amount: Pure positive number (no currency symbols or commas, e.g. 3450 or 1850.50)
+4. Type: "expense" for debits/spending, or "income" for credits/salary/deposits
+5. Category: One of Groceries, Food, Utilities, Transport, Shopping, Healthcare, Housing, Entertainment, Salary, Investment, Loan, Other
+6. Method: UPI, Cash, Card, Bank, or Loan
+
+Output ONLY the CSV block without any markdown chat or extra explanations. Here are my transactions:
+[PASTE YOUR TRANSACTIONS OR BANK STATEMENT HERE]''';
+
+  void _copyPrompt() {
+    Clipboard.setData(const ClipboardData(text: _aiPrompt));
+    HapticFeedback.mediumImpact();
+    setState(() => _copied = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('AI Prompt copied to clipboard! Paste into Gemini or ChatGPT.'),
+        backgroundColor: Nocturne.surface,
+      ),
+    );
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  void _copySample() {
+    Clipboard.setData(const ClipboardData(text: _sampleCsv));
+    HapticFeedback.selectionClick();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Sample CSV copied to clipboard!'),
+        backgroundColor: Nocturne.surface,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: Nocturne.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Nocturne.neutral700,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                const Icon(PhRegular.downloadSimple, size: 22, color: Nocturne.accent200),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'CSV Format & AI Prompt Guide',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: Nocturne.text,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(PhRegular.x, size: 20, color: Nocturne.neutral400),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Upload CSV files with specific dates, amounts, categories and sources. If you have raw bank statements or spreadsheets, copy our AI prompt below to instantly format them.',
+              style: TextStyle(fontSize: 12.5, height: 1.45, color: Nocturne.neutral400),
+            ),
+            const SizedBox(height: 16),
+
+            // ── AI Prompt Box ──────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Nocturne.bg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Nocturne.accent800, width: 1.2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(PhRegular.sparkle, size: 16, color: Nocturne.accent200),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Prompt to give Gemini / ChatGPT',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: Nocturne.text,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _copyPrompt,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: _copied ? NocturneSemantic.income : Nocturne.accent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _copied ? PhBold.check : PhRegular.copy,
+                                size: 13,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _copied ? 'Copied!' : 'Copy prompt',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    _aiPrompt,
+                    maxLines: 8,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.4,
+                      fontFamily: 'monospace',
+                      color: Nocturne.neutral300,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Supported Headers Explanation ──────────────────────────────
+            const Text(
+              'Required & Supported Columns',
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: Nocturne.text,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _headerGuideItem('Date', 'YYYY-MM-DD, DD/MM/YYYY, or standard bank date formats.'),
+            _headerGuideItem('Title', 'Merchant name, recipient, or item description.'),
+            _headerGuideItem('Amount', 'Value in ₹ (Dr / Cr automatically mapped).'),
+            _headerGuideItem('Type', 'expense (debit) or income (credit / salary).'),
+            _headerGuideItem('Category', 'Groceries, Utilities, Transport, Food, Salary, etc.'),
+            _headerGuideItem('Method', 'UPI, Cash, Card, Bank, Loan (optional).'),
+            const SizedBox(height: 14),
+
+            // ── Sample CSV preview ─────────────────────────────────────────
+            Row(
+              children: [
+                const Text(
+                  'Sample CSV Template',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: Nocturne.text,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _copySample,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(PhRegular.copy, size: 13, color: Nocturne.accent200),
+                      SizedBox(width: 4),
+                      Text(
+                        'Copy sample',
+                        style: TextStyle(fontSize: 11.5, color: Nocturne.accent200),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Nocturne.bg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Nocturne.neutral800, width: 1),
+              ),
+              child: const Text(
+                _sampleCsv,
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.45,
+                  fontFamily: 'monospace',
+                  color: Nocturne.neutral300,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _headerGuideItem(String col, String desc) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Nocturne.bg,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Nocturne.neutral700, width: 1),
+            ),
+            child: Text(
+              col,
+              style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: Nocturne.accent200,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              desc,
+              style: const TextStyle(fontSize: 11.5, color: Nocturne.neutral400),
+            ),
+          ),
         ],
       ),
     );

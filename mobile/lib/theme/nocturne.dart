@@ -116,8 +116,9 @@ class NocturneSemantic {
   /// the toast tick and every income category. Converted from OKLCH, not eyeballed.
   static const Color income = Color(0xFF6CD79D);
 
-  /// Expense / negative delta.
+  /// Expense / negative delta / delete actions.
   static const Color expense = Color(0xFFF08A8A);
+  static const Color danger = expense;
 
   /// Warning, over-threshold budget bars, "due soon".
   static const Color warning = Color(0xFFE8B45E);
