@@ -9,6 +9,7 @@ import '../data/expense_import_xlsx.dart';
 import '../data/import_picker.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
+import '../sheets/batch_edit_sheet.dart';
 import '../v3_state.dart';
 import '../widgets/v3_motion.dart';
 import '../widgets/v3_primitives.dart';
@@ -55,14 +56,71 @@ class _ImportV3State extends State<ImportV3> {
   bool _busy = false;
   bool _parsed = false;
 
+  /// Account rows go to when nothing in the row says otherwise.
+  String? _intoSourceId;
+
   @override
   void initState() {
     super.initState();
+    _intoSourceId = context.read<V3State>().defaultImportSourceId;
     if (widget.initialText != null) {
       _source = widget.sourceLabel;
-      _rows = ExpenseImport.parse(widget.initialText!);
+      _rows = _routed(ExpenseImport.parse(widget.initialText!));
       _parsed = true;
     }
+  }
+
+  List<ImportedExpense> _routed(List<ImportedExpense> rows) {
+    context.read<V3State>().routeImport(rows, fallbackId: _intoSourceId);
+    return rows;
+  }
+
+  void _setInto(String id) {
+    setState(() {
+      _intoSourceId = id;
+      _routed(_rows);
+    });
+  }
+
+  Future<void> _pickRowAccount(ImportedExpense row) async {
+    final s = context.read<V3State>();
+    final id = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AccountPicker(sources: s.sources, current: row.sourceId),
+    );
+    if (id == null || !mounted) return;
+    setState(() {
+      row.sourceId = id;
+      row.pinned = true;
+    });
+  }
+
+  Future<void> _editSelected() async {
+    final chosen = _rows.where((r) => r.selected).toList();
+    if (chosen.isEmpty) return;
+    final edit = await BatchEditSheet.open(context, count: chosen.length);
+    if (edit == null || !mounted) return;
+    setState(() {
+      for (final r in chosen) {
+        if (edit.isIncome != null) r.isIncome = edit.isIncome!;
+      }
+      // Direction feeds routing (a salary credit goes to Salary), so re-route
+      // first and let explicit picks win afterwards.
+      _routed(_rows);
+      for (final r in chosen) {
+        if (edit.sourceId != null) {
+          r.sourceId = edit.sourceId;
+          r.pinned = true;
+        }
+      }
+      for (final r in chosen) {
+        if (edit.categoryKey != null) {
+          r.categoryKey = edit.categoryKey;
+          r.categoryPinned = true;
+        }
+      }
+    });
   }
 
   @override
@@ -88,7 +146,7 @@ class _ImportV3State extends State<ImportV3> {
         : ExpenseImport.parse(doc.text, kind: doc.kind);
 
     setState(() {
-      _rows = rows;
+      _rows = _routed(rows);
       _source = doc.fileName;
       _parsed = true;
       _busy = false;
@@ -99,7 +157,7 @@ class _ImportV3State extends State<ImportV3> {
     final text = _paste.text;
     if (text.trim().isEmpty) return;
     setState(() {
-      _rows = ExpenseImport.parse(text);
+      _rows = _routed(ExpenseImport.parse(text));
       _source = 'Pasted text';
       _parsed = true;
     });
@@ -119,7 +177,7 @@ class _ImportV3State extends State<ImportV3> {
     // importer reads that rather than the flattened preview text.
     final text = DataExport.noteMarkdown(note);
     setState(() {
-      _rows = ExpenseImport.parse(text, kind: 'md');
+      _rows = _routed(ExpenseImport.parse(text, kind: 'md'));
       _source = note.title.isEmpty ? 'Untitled note' : note.title;
       _parsed = true;
     });
@@ -595,6 +653,7 @@ class _ImportV3State extends State<ImportV3> {
           ],
         ),
       ),
+      if (s.sources.isNotEmpty) _intoCard(s),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
         child: Row(
@@ -627,8 +686,26 @@ class _ImportV3State extends State<ImportV3> {
                 ],
               ),
             ),
+            const SizedBox(width: 14),
+            GestureDetector(
+              onTap: _rows.any((r) => r.selected) ? _editSelected : null,
+              behavior: HitTestBehavior.opaque,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(PhRegular.pencilSimple,
+                      size: 15, color: Nocturne.accent200),
+                  SizedBox(width: 5),
+                  Text('Edit selected',
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: Nocturne.accent200)),
+                ],
+              ),
+            ),
             const Spacer(),
-            const Text('Spending total · ',
+            const Text('Spent · ',
                 style: TextStyle(
                     fontSize: 12.5, color: Nocturne.neutral400)),
             Text(s.money(total),
@@ -654,8 +731,15 @@ class _ImportV3State extends State<ImportV3> {
                 child: _RowTile(
                   row: _rows[i],
                   money: s.money,
+                  accountName: s.sourceById(_rows[i].sourceId)?.name,
+                  categoryName: _rows[i].categoryKey == null
+                      ? null
+                      : s.catStyle(_rows[i].categoryKey!).name,
                   onToggle: () => setState(
                       () => _rows[i].selected = !_rows[i].selected),
+                  onAccount: s.sources.isEmpty
+                      ? null
+                      : () => _pickRowAccount(_rows[i]),
                 ),
               ),
               if (i < _rows.length - 1) const V3RowDivider(),
@@ -665,6 +749,146 @@ class _ImportV3State extends State<ImportV3> {
       ),
     ];
   }
+}
+
+extension on _ImportV3State {
+  Widget _intoCard(V3State s) {
+    final routedElsewhere =
+        _rows.where((r) => !r.pinned && r.sourceId != _intoSourceId).length;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: Nocturne.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Nocturne.neutral800, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('IMPORT INTO',
+              style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w600,
+                  color: Nocturne.neutral400)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final src in s.sources)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      key: ValueKey('import_into_${src.id}'),
+                      onTap: () => _setInto(src.id),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 11, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: _intoSourceId == src.id
+                              ? Nocturne.accent900
+                              : Nocturne.bg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: _intoSourceId == src.id
+                                  ? Nocturne.accent400
+                                  : Nocturne.neutral800),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(src.design.icon,
+                                size: 14,
+                                color: _intoSourceId == src.id
+                                    ? Nocturne.accent200
+                                    : Nocturne.neutral400),
+                            const SizedBox(width: 6),
+                            Text(src.name,
+                                style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: _intoSourceId == src.id
+                                        ? Nocturne.accent100
+                                        : Nocturne.neutral300)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            routedElsewhere == 0
+                ? 'Salary credits go to Salary, loan disbursals to Loan, rent '
+                    'received to Rental — automatically. Tap a row\'s account '
+                    'to change it.'
+                : '$routedElsewhere row${routedElsewhere == 1 ? '' : 's'} '
+                    'filed elsewhere automatically (salary, loan, rent or the '
+                    'account named in the file). Tap a row\'s account to change it.',
+            style: const TextStyle(
+                fontSize: 11.5, height: 1.4, color: Nocturne.neutral500),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountPicker extends StatelessWidget {
+  const _AccountPicker({required this.sources, required this.current});
+
+  final List<SourceRow> sources;
+  final String? current;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('File under account',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Nocturne.text)),
+              const SizedBox(height: 6),
+              for (final src in sources)
+                V3Press(
+                  onTap: () => Navigator.of(context).pop(src.id),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      children: [
+                        Icon(src.design.icon,
+                            size: 18, color: Nocturne.neutral300),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(src.name,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Nocturne.text)),
+                        ),
+                        if (src.id == current)
+                          const Icon(PhRegular.check,
+                              size: 16, color: Nocturne.accent),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
 }
 
 class _SourceTile extends StatelessWidget {
@@ -735,11 +959,17 @@ class _RowTile extends StatelessWidget {
     required this.row,
     required this.money,
     required this.onToggle,
+    this.accountName,
+    this.categoryName,
+    this.onAccount,
   });
 
   final ImportedExpense row;
   final String Function(double) money;
   final VoidCallback onToggle;
+  final String? accountName;
+  final String? categoryName;
+  final VoidCallback? onAccount;
 
   @override
   Widget build(BuildContext context) {
@@ -778,7 +1008,10 @@ class _RowTile extends StatelessWidget {
                         '${date.day}/${date.month}/${date.year}'
                       else
                         'No date · today',
-                      if (row.category != null) row.category!,
+                      if (categoryName != null)
+                        categoryName!
+                      else if (row.category != null)
+                        row.category!,
                     ].join(' · '),
                     style: const TextStyle(
                         fontSize: 11.5, color: Nocturne.neutral500),
@@ -786,6 +1019,33 @@ class _RowTile extends StatelessWidget {
                 ],
               ),
             ),
+            if (onAccount != null) ...[
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onAccount,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 96),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Nocturne.bg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: row.pinned
+                            ? Nocturne.accent400
+                            : Nocturne.neutral800),
+                  ),
+                  child: Text(
+                    accountName ?? 'No account',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 11, color: Nocturne.accent200),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(width: 10),
             Text(
               '${row.isIncome ? '+' : '−'}${money(row.amount)}',
@@ -900,6 +1160,20 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
       _selectedIds.addAll(imported.map((t) => t.id));
       _initialized = true;
     }
+  }
+
+  Future<void> _editSelectedImported(V3State s) async {
+    final edit = await BatchEditSheet.open(context, count: _selectedIds.length);
+    if (edit == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final n = await s.batchUpdateTransactions(
+      _selectedIds,
+      sourceId: edit.sourceId,
+      categoryKey: edit.categoryKey,
+      type: edit.isIncome == null ? null : (edit.isIncome! ? 'income' : 'expense'),
+    );
+    messenger.showSnackBar(SnackBar(
+        content: Text('Updated $n transaction${n == 1 ? '' : 's'}')));
   }
 
   Future<void> _deleteSelected(V3State s) async {
@@ -1065,7 +1339,7 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '${d.day}/${d.month}/${d.year} · ${s.catStyle(t.categoryKey).name}',
+                                  '${d.day}/${d.month}/${d.year} · ${s.catStyle(t.categoryKey).name} · ${s.sourceById(t.sourceId)?.name ?? 'No account'}',
                                   style: const TextStyle(
                                     fontSize: 11.5,
                                     color: Nocturne.neutral500,
@@ -1093,6 +1367,39 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
               ),
             ),
             const SizedBox(height: 12),
+            V3Press(
+              onTap: _selectedIds.isEmpty || _deleting
+                  ? null
+                  : () => _editSelectedImported(s),
+              child: Container(
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Nocturne.bg,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: _selectedIds.isEmpty
+                          ? Nocturne.neutral700
+                          : Nocturne.accent400),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(PhRegular.pencilSimple,
+                        size: 16, color: Nocturne.accent200),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Edit ${_selectedIds.length} selected (account, type, category)',
+                      style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: Nocturne.accent200),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             V3Press(
               onTap: _selectedIds.isEmpty || _deleting
                   ? null

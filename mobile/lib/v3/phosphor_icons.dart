@@ -93,6 +93,8 @@ class PhRegular {
   static const IconData lock = IconData(0xe2fa, fontFamily: 'Phosphor');
   static const IconData lockSimple = IconData(0xe308, fontFamily: 'Phosphor');
   static const IconData envelopeSimple = IconData(0xe218, fontFamily: 'Phosphor');
+  static const IconData chatCircleDots = IconData(0xe16c, fontFamily: 'Phosphor');
+  static const IconData checkSquare = IconData(0xe186, fontFamily: 'Phosphor');
   static const IconData at = IconData(0xe0ac, fontFamily: 'Phosphor');
   static const IconData signOut = IconData(0xe42a, fontFamily: 'Phosphor');
   static const IconData wifiHigh = IconData(0xe4ea, fontFamily: 'Phosphor');
@@ -208,6 +210,8 @@ class PhBold {
   static const IconData lock = IconData(0xe2fa, fontFamily: 'PhosphorBold');
   static const IconData lockSimple = IconData(0xe308, fontFamily: 'PhosphorBold');
   static const IconData envelopeSimple = IconData(0xe218, fontFamily: 'PhosphorBold');
+  static const IconData chatCircleDots = IconData(0xe16c, fontFamily: 'PhosphorBold');
+  static const IconData checkSquare = IconData(0xe186, fontFamily: 'PhosphorBold');
   static const IconData at = IconData(0xe0ac, fontFamily: 'PhosphorBold');
   static const IconData signOut = IconData(0xe42a, fontFamily: 'PhosphorBold');
   static const IconData wifiHigh = IconData(0xe4ea, fontFamily: 'PhosphorBold');
@@ -323,6 +327,8 @@ class PhFill {
   static const IconData lock = IconData(0xe2fa, fontFamily: 'PhosphorFill');
   static const IconData lockSimple = IconData(0xe308, fontFamily: 'PhosphorFill');
   static const IconData envelopeSimple = IconData(0xe218, fontFamily: 'PhosphorFill');
+  static const IconData chatCircleDots = IconData(0xe16c, fontFamily: 'PhosphorFill');
+  static const IconData checkSquare = IconData(0xe186, fontFamily: 'PhosphorFill');
   static const IconData at = IconData(0xe0ac, fontFamily: 'PhosphorFill');
   static const IconData signOut = IconData(0xe42a, fontFamily: 'PhosphorFill');
   static const IconData wifiHigh = IconData(0xe4ea, fontFamily: 'PhosphorFill');

@@ -175,7 +175,7 @@ class FamilyV3 extends StatelessWidget {
               child: Row(
                 children: [
                   const V3IconTile(
-                    icon: PhRegular.envelopeSimple,
+                    icon: PhRegular.chatCircleDots,
                     color: Nocturne.accent300,
                     size: 36,
                     radius: 11,
@@ -548,7 +548,7 @@ class _MemberRowTile extends StatelessWidget {
               child: const SizedBox(
                 width: 34,
                 height: 34,
-                child: Icon(PhRegular.envelopeSimple,
+                child: Icon(PhRegular.chatCircleDots,
                     size: 18, color: Nocturne.accent300),
               ),
             ),

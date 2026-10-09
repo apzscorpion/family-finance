@@ -139,7 +139,7 @@ class _ChatListV3State extends State<ChatListV3> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    PhRegular.envelopeSimple,
+                    PhRegular.chatCircleDots,
                     size: 32,
                     color: Nocturne.neutral500,
                   ),

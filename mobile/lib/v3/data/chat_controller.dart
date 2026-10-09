@@ -282,8 +282,12 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
     _syncUnreadBadge();
 
     if (_db != null) {
+      unawaited(startChatBackgroundLink());
+      var tick = 0;
       _pollTimer?.cancel();
       _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        // Minimised, the socket carries the alerts; polling is only a backstop.
+        if (!_appInForeground && ++tick % 10 != 0) return;
         refresh(notifyNew: true);
       });
       _heartbeatTimer?.cancel();
@@ -1033,6 +1037,7 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> leave() async {
+    if (_db != null) unawaited(stopChatBackgroundLink());
     _pollTimer?.cancel();
     _pollTimer = null;
     _heartbeatTimer?.cancel();

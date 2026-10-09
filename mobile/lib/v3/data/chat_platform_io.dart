@@ -68,3 +68,6 @@ Future<void> notifyIncomingChat({
     );
   }
 }
+Future<void> startChatBackgroundLink() => AppNotifications.startChatLink();
+
+Future<void> stopChatBackgroundLink() => AppNotifications.stopChatLink();

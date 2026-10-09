@@ -381,6 +381,24 @@ class V3Repository {
     await _db.from('transactions').update(patch).eq('id', id);
   }
 
+  /// Patches many transactions in chunks, like [deleteTransactionsBulk].
+  Future<int> updateTransactionsBulk(
+    List<String> ids,
+    Map<String, dynamic> patch,
+  ) async {
+    var updated = 0;
+    for (var i = 0; i < ids.length; i += 100) {
+      final chunk = ids.sublist(i, i + 100 < ids.length ? i + 100 : ids.length);
+      final rows = await _db
+          .from('transactions')
+          .update(patch)
+          .inFilter('id', chunk)
+          .select('id');
+      updated += (rows as List).length;
+    }
+    return updated;
+  }
+
   Future<void> deleteTransaction(String id) async {
     await _db.from('transactions').delete().eq('id', id);
   }

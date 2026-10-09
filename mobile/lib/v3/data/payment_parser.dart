@@ -91,7 +91,7 @@ class PaymentParser {
   );
 
   /// Merchant keyword → category. First match wins, so order matters.
-  static const Map<String, List<String>> _categoryHints = {
+  static const Map<String, List<String>> categoryHints = {
     'transport': ['uber', 'ola', 'rapido', 'metro', 'irctc', 'redbus', 'cab'],
     'fuel': ['petrol', 'fuel', 'indian oil', 'hp ', 'bharat petroleum', 'shell'],
     'groceries': [
@@ -214,7 +214,7 @@ class PaymentParser {
   static String? _category(String merchant, String body, bool isCredit) {
     if (isCredit) return 'refund';
     final hay = '$merchant $body'.toLowerCase();
-    for (final entry in _categoryHints.entries) {
+    for (final entry in categoryHints.entries) {
       for (final needle in entry.value) {
         if (hay.contains(needle)) return entry.key;
       }

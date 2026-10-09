@@ -162,6 +162,67 @@ class V3Design {
     'refund': 'other',
   };
 
+  static const Map<String, IconData> categoryIconRegistry = {
+    'fork-knife': PhRegular.forkKnife,
+    'basket': PhRegular.basket,
+    'shopping-bag': PhRegular.shoppingBag,
+    'shopping-cart': PhRegular.shoppingCart,
+    'taxi': PhRegular.taxi,
+    'gas-pump': PhRegular.gasPump,
+    'lightning': PhRegular.lightning,
+    'house-line': PhRegular.houseLine,
+    'play-circle': PhRegular.playCircle,
+    'first-aid': PhRegular.firstAid,
+    'graduation-cap': PhRegular.graduationCap,
+    'briefcase': PhRegular.briefcase,
+    'storefront': PhRegular.storefront,
+    'gift': PhRegular.gift,
+    'bank': PhRegular.bank,
+    'buildings': PhRegular.buildings,
+    'hand-coins': PhRegular.handCoins,
+    'coins': PhRegular.coins,
+    'credit-card': PhRegular.creditCard,
+    'wallet': PhRegular.wallet,
+    'map-pin': PhRegular.mapPin,
+    'compass': PhRegular.compass,
+    'camera': PhRegular.camera,
+    'sparkle': PhRegular.sparkle,
+    'star': PhRegular.star,
+    'sun': PhRegular.sun,
+    'calendar': PhRegular.calendar,
+    'target': PhRegular.target,
+    'circle': PhRegular.circle,
+  };
+
+  static const List<String> customCategoryColors = [
+    '#64C897', // Sage green
+    '#EE9A69', // Coral / Peach
+    '#A297EB', // Purple / Lavender
+    '#E2C06D', // Amber / Gold
+    '#DE82B7', // Rose / Pink
+    '#67B5E1', // Sky blue
+    '#839ED7', // Periwinkle
+    '#BC8FDD', // Lilac
+    '#EB8186', // Salmon
+    '#6BCAC9', // Teal
+    '#6CD79D', // Mint green
+    '#FBBF24', // Warm amber
+    '#F472B6', // Bright pink
+    '#38BDF8', // Cyan
+  ];
+
+  static IconData iconFromName(String? iconName) {
+    if (iconName == null || iconName.isEmpty) return PhRegular.circle;
+    return categoryIconRegistry[iconName.trim()] ?? PhRegular.circle;
+  }
+
+  static String iconNameFromData(IconData icon) {
+    for (final entry in categoryIconRegistry.entries) {
+      if (entry.value == icon) return entry.key;
+    }
+    return 'circle';
+  }
+
   static V3Cat cat(String key) =>
       cats[key] ??
       const V3Cat('other', 'Other', null,

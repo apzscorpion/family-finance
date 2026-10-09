@@ -164,6 +164,12 @@ class SupabaseService {
         await Supabase.initialize(
           url: supabaseUrl,
           anonKey: supabaseAnonKey, // ignore: deprecated_member_use
+          // The default drops the socket the instant the app is minimised,
+          // which silenced chat alerts. The chat foreground service keeps the
+          // process alive, so the socket must stay up with it.
+          realtimeLifecycleOptions: const RealtimeLifecycleOptions(
+            disconnectAfterPause: Duration(hours: 12),
+          ),
         ).timeout(const Duration(seconds: 10));
         _initialized = true;
       } catch (err, errStack) {

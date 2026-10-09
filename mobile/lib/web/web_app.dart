@@ -654,7 +654,7 @@ class _WebSideNav extends StatelessWidget {
           ),
           _NavTile(
             key: const ValueKey('web_nav_chat'),
-            icon: PhRegular.envelopeSimple,
+            icon: PhRegular.chatCircleDots,
             label: 'Direct messages',
             active: activeIdx == 4,
             badgeCount: unreadDm,
@@ -848,7 +848,7 @@ class _WebBottomBar extends StatelessWidget {
       (PhRegular.listBullets, 'Activity'),
       (PhRegular.chartDonut, 'Insights'),
       (PhRegular.notePencil, 'Notes'),
-      (PhRegular.envelopeSimple, 'Chat'),
+      (PhRegular.chatCircleDots, 'Chat'),
     ];
 
     return Container(

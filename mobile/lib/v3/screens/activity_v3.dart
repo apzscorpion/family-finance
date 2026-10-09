@@ -6,6 +6,7 @@ import '../../theme/nocturne.dart';
 import '../data/data_export.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
+import '../sheets/batch_edit_sheet.dart';
 import '../sheets/v3_sheets.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
@@ -129,6 +130,28 @@ class _ActivityV3State extends State<ActivityV3> {
         _selectedIds.addAll(ids);
       }
     });
+  }
+
+  Future<void> _editSelected(V3State s) async {
+    final ids = _selectedIds.toList();
+    final edit = await BatchEditSheet.open(context, count: ids.length);
+    if (edit == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final n = await s.batchUpdateTransactions(
+      ids,
+      sourceId: edit.sourceId,
+      categoryKey: edit.categoryKey,
+      type: edit.isIncome == null
+          ? null
+          : (edit.isIncome! ? 'income' : 'expense'),
+    );
+    if (!mounted) return;
+    setState(() {
+      _selecting = false;
+      _selectedIds.clear();
+    });
+    messenger.showSnackBar(SnackBar(
+        content: Text('Updated $n transaction${n == 1 ? '' : 's'}')));
   }
 
   void _selectImported(V3State s) {
@@ -608,6 +631,53 @@ class _ActivityV3State extends State<ActivityV3> {
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
                             color: Nocturne.text,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        key: const ValueKey('activity_batch_edit'),
+                        onTap: _selectedIds.isEmpty || _deleting
+                            ? null
+                            : () => _editSelected(s),
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 11, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _selectedIds.isEmpty
+                                ? Nocturne.neutral800
+                                : Nocturne.accent900,
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: _selectedIds.isEmpty
+                                  ? Nocturne.neutral700
+                                  : Nocturne.accent400,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                PhRegular.pencilSimple,
+                                size: 13,
+                                color: _selectedIds.isEmpty
+                                    ? Nocturne.neutral500
+                                    : Nocturne.accent200,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Edit',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _selectedIds.isEmpty
+                                      ? Nocturne.neutral500
+                                      : Nocturne.accent200,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

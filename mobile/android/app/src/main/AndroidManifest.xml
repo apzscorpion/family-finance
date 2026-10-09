@@ -18,6 +18,12 @@
          default path and needs no permission at all. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
+    <!-- Family chat: a minimised app is frozen within seconds, so without a
+         foreground service DMs and pokes never alert. remoteMessaging is the
+         Android 14 type for exactly this. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING"/>
+
     <!-- Explicitly strip any sensitive permissions that trigger Google Play Protect blocks -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove"/>
     <uses-permission android:name="android.permission.INSTALL_PACKAGES" tools:node="remove"/>
@@ -83,6 +89,12 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+
+        <service
+            android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
+            android:exported="false"
+            android:stopWithTask="true"
+            android:foregroundServiceType="remoteMessaging"/>
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

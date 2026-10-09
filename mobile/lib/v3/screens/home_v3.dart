@@ -213,7 +213,7 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           _HeaderButton(
-            icon: PhRegular.envelopeSimple,
+            icon: PhRegular.chatCircleDots,
             onTap: () => context.read<V3Nav>().openChat(),
             showDot: unreadDm > 0,
           ),
@@ -699,12 +699,6 @@ class _QuickActions extends StatelessWidget {
         'Notes',
         const Color(0xFF64C897),
         () => nav.goPage(V3Page.notes)
-      ),
-      (
-        PhRegular.envelopeSimple,
-        'Chat',
-        const Color(0xFFDE82B7),
-        () => nav.openChat()
       ),
     ];
 

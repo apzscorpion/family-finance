@@ -192,3 +192,6 @@ Future<void> notifyIncomingChat({
     );
   }
 }
+Future<void> startChatBackgroundLink() async {}
+
+Future<void> stopChatBackgroundLink() async {}

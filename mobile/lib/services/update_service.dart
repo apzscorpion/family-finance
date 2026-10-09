@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 
 class UpdateService {
-  static const String currentVersion = '1.9.5';
+  static const String currentVersion = '1.9.6';
   static const String githubRepo = 'apzscorpion/family-finance';
   static const String pubspecUrl =
       'https://raw.githubusercontent.com/$githubRepo/main/mobile/pubspec.yaml';

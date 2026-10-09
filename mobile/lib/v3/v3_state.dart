@@ -280,14 +280,46 @@ class V3State extends ChangeNotifier {
       }).toList();
 
   /// All imported transactions (`origin == 'import'`) in the current member
-  /// scope, regardless of the 7d/30d window so older bank exports are always
-  /// reachable for review or batch deletion.
+  /// scope, regardless of the 7d/30d window or the account filter, so older
+  /// imports — including ones filed under no account — are always reachable
+  /// for review, re-filing or batch deletion.
   List<TxnRow> get importedTxns => txns.where((t) {
         if (t.origin != 'import') return false;
         if (!isFamily && t.userId != scope) return false;
-        if (srcFilter != null && t.sourceId != srcFilter) return false;
         return true;
       }).toList();
+
+  /// The account an import files into when a row names none: the account the
+  /// user is looking at, else Salary, else the first account.
+  String? get defaultImportSourceId {
+    if (srcFilter != null && sourceById(srcFilter) != null) return srcFilter;
+    for (final src in sources) {
+      if (ExpenseImport.accountGroupOf(src.name) == 'salary') return src.id;
+    }
+    return sources.isEmpty ? null : sources.first.id;
+  }
+
+  /// Files each imported row under an account and a category.
+  void routeImport(List<ImportedExpense> rows, {String? fallbackId}) {
+    ExpenseImport.route(
+      rows,
+      [for (final src in sources) (id: src.id, name: src.name)],
+      fallbackId: fallbackId ?? defaultImportSourceId,
+      expenseHints: PaymentParser.categoryHints,
+    );
+    // A category the file names outright beats any guess.
+    for (final r in rows) {
+      if (r.categoryPinned) continue;
+      final raw = r.category?.trim().toLowerCase();
+      if (raw == null || raw.isEmpty) continue;
+      for (final c in categories) {
+        if (c.key.toLowerCase() == raw || c.name.toLowerCase() == raw) {
+          r.categoryKey = c.key;
+          break;
+        }
+      }
+    }
+  }
 
   double get totalSpent =>
       scoped.where((t) => t.isExpense).fold(0.0, (s, t) => s + t.amount);
@@ -542,6 +574,32 @@ class V3State extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Applies the same change to many transactions at once. Null fields are
+  /// left as they are. Returns how many rows were updated.
+  Future<int> batchUpdateTransactions(
+    Iterable<String> ids, {
+    String? sourceId,
+    String? categoryKey,
+    String? type,
+  }) async {
+    final idList = ids.toSet().toList();
+    if (idList.isEmpty) return 0;
+    final cat = categoryKey == null ? null : categoryByKey(categoryKey);
+    final patch = <String, dynamic>{
+      'source_id': ?sourceId,
+      'category_id': ?cat?.id,
+      'type': ?type,
+    };
+    if (patch.isEmpty) return 0;
+    final n = await V3Repository.guard(
+      'batchUpdateTransactions',
+      () => _repo.updateTransactionsBulk(idList, patch),
+    );
+    if (n == null) return 0;
+    await refresh();
+    return n;
+  }
+
   /// Deletes a batch of transactions by ID and removes them from in-memory
   /// state immediately.
   Future<int> deleteTransactions(Iterable<String> ids) async {
@@ -735,13 +793,15 @@ class V3State extends ChangeNotifier {
     for (final r in chosen) {
       final raw = r.category?.trim().toLowerCase();
       final categoryId =
-          raw == null ? null : (byKey[raw] ?? byName[raw]);
+          (r.categoryKey == null ? null : categoryByKey(r.categoryKey!)?.id) ??
+              (raw == null ? null : (byKey[raw] ?? byName[raw]));
 
       payload.add({
         'title': r.title,
         'amount': r.amount,
         'type': r.isIncome ? 'income' : 'expense',
         'category_id': ?categoryId,
+        'source_id': ?r.sourceId,
         'occurred_at':
             (r.date ?? DateTime.now()).toUtc().toIso8601String(),
       });

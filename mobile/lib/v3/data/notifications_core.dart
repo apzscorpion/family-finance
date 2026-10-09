@@ -185,6 +185,60 @@ class AppNotifications {
     }
   }
 
+  static const chatLinkId = 500000 - 1;
+  static bool _chatLinkUp = false;
+
+  /// Android freezes a minimised app within seconds, which kills the chat
+  /// socket. A remoteMessaging foreground service keeps the process alive so
+  /// DMs and pokes still alert. Its notification sits on a min-importance
+  /// channel: silent and collapsed.
+  static Future<void> startChatLink() async {
+    if (kIsWeb || _chatLinkUp || defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    await ensureInit();
+    if (!_ready) return;
+    try {
+      await _android?.startForegroundService(
+        chatLinkId,
+        'Family chat connected',
+        'Messages and pokes will alert you',
+        notificationDetails: const AndroidNotificationDetails(
+          'ff_chat_link',
+          'Chat connection',
+          channelDescription:
+              'Keeps family chat connected while the app is minimised',
+          importance: Importance.min,
+          priority: Priority.min,
+          ongoing: true,
+          playSound: false,
+          enableVibration: false,
+          showWhen: false,
+        ),
+        payload: 'dm:',
+        // Sticky would restart the service after a kill with no Flutter engine
+        // behind it — an empty notification that does nothing.
+        startType: AndroidServiceStartType.startNotSticky,
+        foregroundServiceTypes: {
+          AndroidServiceForegroundType.foregroundServiceTypeRemoteMessaging,
+        },
+      );
+      _chatLinkUp = true;
+    } catch (err, stack) {
+      AppLog.error('AppNotifications.startChatLink', err, stack);
+    }
+  }
+
+  static Future<void> stopChatLink() async {
+    if (!_chatLinkUp) return;
+    _chatLinkUp = false;
+    try {
+      await _android?.stopForegroundService();
+    } catch (err, stack) {
+      AppLog.error('AppNotifications.stopChatLink', err, stack);
+    }
+  }
+
   /// Shared by both isolates: pulls the typed text out of a response and
   /// parses it. Returns null for any response that is not a quick add.
   static PendingQuickAdd? _quickAddFrom(NotificationResponse response) {

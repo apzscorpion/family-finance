@@ -13,8 +13,13 @@ class ImportedExpense {
     required this.amount,
     this.date,
     this.category,
+    this.account,
     this.isIncome = false,
     this.selected = true,
+    this.sourceId,
+    this.categoryKey,
+    this.pinned = false,
+    this.categoryPinned = false,
   });
 
   final String title;
@@ -28,24 +33,46 @@ class ImportedExpense {
   /// Raw category text from the file, matched against real categories later.
   final String? category;
 
-  final bool isIncome;
+  /// Raw account text: an account/bank column, or the statement's own header
+  /// ("Account type: Salary") when the file names one.
+  final String? account;
+
+  bool isIncome;
 
   /// Rows start selected; the preview lets the user drop individual ones.
   bool selected;
+
+  /// Money source the row will be filed under. Set by routing or the user.
+  String? sourceId;
+
+  /// Category key used when the file's own category text names no real
+  /// category.
+  String? categoryKey;
+
+  /// The user set this row's account by hand, so re-routing leaves it alone.
+  bool pinned;
+
+  /// The user picked this row's category by hand.
+  bool categoryPinned;
 
   ImportedExpense copyWith({bool? selected}) => ImportedExpense(
         title: title,
         amount: amount,
         date: date,
         category: category,
+        account: account,
         isIncome: isIncome,
         selected: selected ?? this.selected,
+        sourceId: sourceId,
+        categoryKey: categoryKey,
+        pinned: pinned,
+        categoryPinned: categoryPinned,
       );
 
   @override
   String toString() =>
       'ImportedExpense($title, $amount, ${date?.toIso8601String()}, '
-      'income=$isIncome)';
+      'income=$isIncome, source=$sourceId, cat=$categoryKey)';
 }
 
 class ExpenseImport {
@@ -67,6 +94,10 @@ class ExpenseImport {
   static const _creditKeys = ['credit', 'deposit', 'cr', 'paid in', 'received'];
   static const _categoryKeys = ['category', 'cat', 'tag', 'group', 'head'];
   static const _typeKeys = ['type', 'direction', 'kind', 'dr/cr'];
+  static const _accountKeys = [
+    'account', 'account name', 'account type', 'source', 'bank', 'wallet',
+    'paid from', 'from account', 'fund', 'pocket',
+  ];
 
   /// Parses by file kind, falling back to a best guess from the content.
   static List<ImportedExpense> parse(String text, {String kind = 'txt'}) {
@@ -112,6 +143,13 @@ class ExpenseImport {
     final creditCol = _matchColumn(header, _creditKeys);
     final categoryCol = _matchColumn(header, _categoryKeys);
     final typeCol = _matchColumn(header, _typeKeys);
+    var accountCol = _matchColumn(header, _accountKeys);
+    if (accountCol == titleCol) accountCol = null;
+
+    // Bank statements open with a few lines about the account itself
+    // ("Account Type: Salary Account") before the column header.
+    final preamble = table.take(headerIndex).expand((r) => r).join(' ');
+    final fileAccount = accountGroupOf(preamble) == null ? null : preamble;
 
     // Does this file express direction with a minus sign? Decided across the
     // whole file, because a single row tells you nothing: an export where
@@ -174,6 +212,7 @@ class ExpenseImport {
         amount: amount.abs(),
         date: _parseDate(_cell(row, dateCol)),
         category: _blankToNull(category),
+        account: _blankToNull(_cell(row, accountCol)) ?? fileAccount,
         isIncome: isIncome,
       ));
     }
@@ -542,5 +581,137 @@ class ExpenseImport {
     final d = DateTime(year, month, day);
     if (d.month != month || d.day != day) return null;
     return d;
+  }
+
+  // ── Routing: which account and category a row belongs to ─────────────────
+
+  static final _salaryWords =
+      RegExp(r'\b(salary|salaries|payroll|wages?|stipend|sal cr)\b');
+  static final _businessWords = RegExp(
+      r'\b(business|freelance|consult\w*|invoice|client|side income|sales)\b');
+  static final _rentInWords = RegExp(
+      r'\b(rent received|rental income|rent from|tenant|lease income)\b');
+  static final _pensionWords = RegExp(r'\b(pension|annuity)\b');
+  static final _refundWords = RegExp(
+      r'\b(refund|refunded|cashback|reversal|reversed|reimburse\w*)\b');
+  static final _giftWords = RegExp(r'\b(gift|gifted)\b');
+  static final _loanInWords = RegExp(r'\b(disburs\w*)\b');
+
+  /// The income category key a row's text reads as: `salary`, `loan`,
+  /// `rentin`, `pension`, `business`, `refund`, `gift`, or null.
+  static String? incomeKindOf(String text) {
+    final v = text.toLowerCase();
+    if (v.trim().isEmpty) return null;
+    // Loan first: "loan against salary" is borrowed money, not pay.
+    if (_loanInWords.hasMatch(v) ||
+        (_loanWord.hasMatch(v) && !_loanOutflow.hasMatch(v))) {
+      return 'loan';
+    }
+    if (_salaryWords.hasMatch(v)) return 'salary';
+    if (_pensionWords.hasMatch(v)) return 'pension';
+    if (_rentInWords.hasMatch(v)) return 'rentin';
+    if (_refundWords.hasMatch(v)) return 'refund';
+    if (_businessWords.hasMatch(v)) return 'business';
+    if (_giftWords.hasMatch(v)) return 'gift';
+    return null;
+  }
+
+  /// Which seeded money source (`salary`, `side`, `rental`, `loan`, `other`)
+  /// an account name points at.
+  static String? accountGroupOf(String text) {
+    final v = text.toLowerCase();
+    if (RegExp(r'\bloans?\b').hasMatch(v)) return 'loan';
+    if (RegExp(r'\b(salary|payroll|wages?)\b').hasMatch(v)) return 'salary';
+    if (RegExp(r'\b(rent|rental|rentals|tenant)\b').hasMatch(v)) {
+      return 'rental';
+    }
+    if (RegExp(r'\b(side|business|shop|freelance)\b').hasMatch(v)) {
+      return 'side';
+    }
+    if (RegExp(r'\b(pension|other)\b').hasMatch(v)) return 'other';
+    return null;
+  }
+
+  /// Income kind → the source it is paid into. Refunds and gifts land back in
+  /// whichever account is being imported into, so they are not routed.
+  static const _incomeSource = {
+    'salary': 'salary',
+    'loan': 'loan',
+    'rentin': 'rental',
+    'business': 'side',
+    'pension': 'other',
+  };
+
+  static final _emiWords =
+      RegExp(r'\b(emi|repay\w*|instal?ments?|nach|ach d)\b');
+
+  /// Best category key for a row. Income uses its kind; spending uses merchant
+  /// hints, with loan repayments filed as bills rather than as shopping.
+  static String? inferCategoryKey(
+    ImportedExpense r, {
+    Map<String, List<String>> expenseHints = const {},
+  }) {
+    final text = '${r.category ?? ''} ${r.title}'.toLowerCase();
+    if (r.isIncome) return incomeKindOf(text);
+    if (_emiWords.hasMatch(text) || _loanWord.hasMatch(text)) return 'bills';
+    for (final e in expenseHints.entries) {
+      for (final needle in e.value) {
+        if (text.contains(needle)) return e.key;
+      }
+    }
+    return null;
+  }
+
+  /// Picks the source a row belongs to.
+  ///
+  /// In order: an account the file names; the source an income kind is paid
+  /// into (a salary credit to Salary, a loan disbursal to Loan); otherwise
+  /// [fallbackId], the account the user is importing into.
+  static String? routeSource(
+    ImportedExpense r,
+    List<({String id, String name})> sources, {
+    String? fallbackId,
+  }) {
+    String? byGroup(String group) {
+      for (final s in sources) {
+        if (accountGroupOf(s.name) == group) return s.id;
+      }
+      return null;
+    }
+
+    final account = r.account?.trim().toLowerCase() ?? '';
+    if (account.isNotEmpty) {
+      for (final s in sources) {
+        final n = s.name.trim().toLowerCase();
+        if (n.isNotEmpty && (account == n || account.contains(n))) return s.id;
+      }
+      final g = accountGroupOf(account);
+      final hit = g == null ? null : byGroup(g);
+      if (hit != null) return hit;
+    }
+
+    if (r.isIncome) {
+      final group =
+          _incomeSource[incomeKindOf('${r.category ?? ''} ${r.title}')];
+      final hit = group == null ? null : byGroup(group);
+      if (hit != null) return hit;
+    }
+    return fallbackId;
+  }
+
+  /// Routes every row; rows the user pinned by hand keep their account.
+  static void route(
+    List<ImportedExpense> rows,
+    List<({String id, String name})> sources, {
+    String? fallbackId,
+    Map<String, List<String>> expenseHints = const {},
+  }) {
+    for (final r in rows) {
+      if (!r.categoryPinned) {
+        r.categoryKey = inferCategoryKey(r, expenseHints: expenseHints);
+      }
+      if (r.pinned) continue;
+      r.sourceId = routeSource(r, sources, fallbackId: fallbackId);
+    }
   }
 }
