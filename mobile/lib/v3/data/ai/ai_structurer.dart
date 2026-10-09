@@ -88,8 +88,10 @@ Return only JSON matching the schema.''';
     } on _ApiError catch (err) {
       // The provider answered: show its own reason (bad key, unknown model,
       // quota) instead of a generic "could not reach".
-      AppLog.error('AiStructurer.structure', err);
-      return AiResult.failed(err.toString());
+      // Google echoes the key in some errors; never show or log it.
+      final message = err.toString().replaceAll(config.apiKey.trim(), '••••');
+      AppLog.error('AiStructurer.structure', message);
+      return AiResult.failed(message);
     } on http.ClientException catch (err) {
       AppLog.error('AiStructurer.structure', err);
       return const AiResult.failed('Could not reach the AI service');
