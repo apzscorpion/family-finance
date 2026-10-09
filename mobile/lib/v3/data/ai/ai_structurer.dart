@@ -214,6 +214,39 @@ Return only JSON matching the schema.''';
     }
   }
 
+  /// One JSON request for features beyond notes (the import review). Returns
+  /// the decoded object or a user-facing error; never throws.
+  static Future<({Map<String, dynamic>? data, String? error})> askJson({
+    required AiConfig config,
+    required String system,
+    required String input,
+    required Map<String, dynamic> Function({required bool strict}) schema,
+    required Map<String, dynamic> example,
+  }) async {
+    if (!config.isConfigured) {
+      return (data: null, error: 'Set up an AI provider in settings first');
+    }
+    try {
+      final raw = await _call(config,
+          system: system, input: input, schema: schema, example: example);
+      final decoded = raw == null ? null : _extractJson(raw);
+      if (decoded is! Map) {
+        return (data: null, error: 'Could not read the model’s reply');
+      }
+      return (data: Map<String, dynamic>.from(decoded), error: null);
+    } on _ApiError catch (err) {
+      final message = err.toString().replaceAll(config.apiKey.trim(), '••••');
+      AppLog.error('AiStructurer.askJson', message);
+      return (data: null, error: message);
+    } on http.ClientException catch (err) {
+      AppLog.error('AiStructurer.askJson', err);
+      return (data: null, error: 'Could not reach the AI service');
+    } catch (err, stack) {
+      AppLog.error('AiStructurer.askJson', err, stack);
+      return (data: null, error: _friendly(err));
+    }
+  }
+
   static String _friendly(Object err) {
     final text = err.toString();
     if (text.contains('401') || text.contains('403')) {

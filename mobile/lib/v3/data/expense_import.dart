@@ -85,7 +85,8 @@ class ExpenseImport {
   ];
   static const _titleKeys = [
     'title', 'description', 'desc', 'details', 'narration', 'particulars',
-    'merchant', 'payee', 'name', 'item', 'remarks', 'note', 'transaction',
+    'merchant', 'payee', 'name', 'item', 'remarks', 'note', 'memo', 'notes',
+    'transaction',
   ];
   static const _amountKeys = [
     'amount', 'amt', 'value', 'price', 'total', 'sum', 'cost',
@@ -208,7 +209,9 @@ class ExpenseImport {
       }
 
       out.add(ImportedExpense(
-        title: title.isEmpty ? 'Imported' : title,
+        title: title.isNotEmpty
+            ? title
+            : (category.trim().isNotEmpty ? category.trim() : 'Imported'),
         amount: amount.abs(),
         date: _parseDate(_cell(row, dateCol)),
         category: _blankToNull(category),
@@ -539,8 +542,10 @@ class ExpenseImport {
 
     final iso = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})').firstMatch(s);
     if (iso != null) {
-      return _safeDate(int.parse(iso.group(1)!), int.parse(iso.group(2)!),
-          int.parse(iso.group(3)!));
+      return _withTime(
+          _safeDate(int.parse(iso.group(1)!), int.parse(iso.group(2)!),
+              int.parse(iso.group(3)!)),
+          s.substring(iso.end));
     }
 
     final slash =
@@ -552,9 +557,10 @@ class ExpenseImport {
       var year = yearRaw == null
           ? DateTime.now().year
           : (yearRaw.length == 2 ? 2000 + int.parse(yearRaw) : int.parse(yearRaw));
-      if (a > 12 && b <= 12) return _safeDate(year, b, a);
-      if (b > 12 && a <= 12) return _safeDate(year, a, b);
-      return _safeDate(year, b, a);
+      final rest = s.substring(slash.end);
+      if (a > 12 && b <= 12) return _withTime(_safeDate(year, b, a), rest);
+      if (b > 12 && a <= 12) return _withTime(_safeDate(year, a, b), rest);
+      return _withTime(_safeDate(year, b, a), rest);
     }
 
     // `3 Jan 2026`, `Jan 3`, `3rd January`
@@ -574,6 +580,25 @@ class ExpenseImport {
     }
 
     return null;
+  }
+
+  static final _timeOfDay = RegExp(
+      r'(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap])?\.?\s*m?\.?',
+      caseSensitive: false);
+
+  /// Adds `11:43 pm`, `23:43` or `T23:43:00` after a date, when there is one.
+  static DateTime? _withTime(DateTime? date, String rest) {
+    if (date == null) return null;
+    final m = _timeOfDay.firstMatch(rest);
+    if (m == null) return date;
+    var hour = int.parse(m.group(1)!);
+    final minute = int.parse(m.group(2)!);
+    final half = m.group(4)?.toLowerCase();
+    if (half == 'p' && hour < 12) hour += 12;
+    if (half == 'a' && hour == 12) hour = 0;
+    if (hour > 23 || minute > 59) return date;
+    return DateTime(date.year, date.month, date.day, hour, minute,
+        int.tryParse(m.group(3) ?? '') ?? 0);
   }
 
   static DateTime? _safeDate(int year, int month, int day) {
@@ -642,6 +667,23 @@ class ExpenseImport {
     'pension': 'other',
   };
 
+  /// Spending words from people's own sheets, before merchant names.
+  static final _categoryWords = <String, RegExp>{
+    'dining': RegExp(
+        r'\b(food|meals?|lunch|dinner|breakfast|snacks?|tea|coffee|restaurant|dosa|biryani|eat\w*)\b'),
+    'groceries': RegExp(r'\b(grocer\w*|vegetables?|milk|supermarket|provisions?)\b'),
+    'transport': RegExp(
+        r'\b(travel|transport|bus|auto|taxi|cab|train|metro|flight|parking|toll)\b'),
+    'fuel': RegExp(r'\b(fuel|petrol|diesel)\b'),
+    'bills': RegExp(
+        r'\b(bills?|electricity|recharge|mobile|internet|wifi|broadband|sim)\b'),
+    'home': RegExp(r'\b(rent|house|home|maintenance)\b'),
+    'health': RegExp(r'\b(medic\w*|doctor|hospital|pharmacy|clinic|health)\b'),
+    'education': RegExp(r'\b(school|college|tuition|fees?|course|books?)\b'),
+    'subs': RegExp(r'\b(subscriptions?|netflix|spotify|prime)\b'),
+    'shopping': RegExp(r'\b(shopping|clothes|dress|chappal|shoes?)\b'),
+  };
+
   static final _emiWords =
       RegExp(r'\b(emi|repay\w*|instal?ments?|nach|ach d)\b');
 
@@ -654,6 +696,9 @@ class ExpenseImport {
     final text = '${r.category ?? ''} ${r.title}'.toLowerCase();
     if (r.isIncome) return incomeKindOf(text);
     if (_emiWords.hasMatch(text) || _loanWord.hasMatch(text)) return 'bills';
+    for (final e in _categoryWords.entries) {
+      if (e.value.hasMatch(text)) return e.key;
+    }
     for (final e in expenseHints.entries) {
       for (final needle in e.value) {
         if (text.contains(needle)) return e.key;

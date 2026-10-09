@@ -190,6 +190,7 @@ class V3Shell extends StatelessWidget {
             ),
             if (nav.page != null)
               Positioned.fill(child: _PageOverlay(page: nav.page!)),
+            const _OfflineBanner(),
           ],
         ),
         bottomNavigationBar: const _V3BottomBar(),
@@ -402,4 +403,47 @@ class _AddButton extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// Says why a save did not go through, instead of leaving taps looking dead.
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+        valueListenable: V3Repository.offline,
+        builder: (context, offline, _) => !offline
+            ? const SizedBox.shrink()
+            : Positioned(
+                left: 0,
+                right: 0,
+                top: MediaQuery.of(context).padding.top + 4,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Container(
+                      key: const ValueKey('offline_banner'),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Nocturne.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Nocturne.neutral700),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(PhRegular.wifiHigh,
+                              size: 14, color: Nocturne.neutral400),
+                          SizedBox(width: 6),
+                          Text("You're offline — changes can't be saved right now",
+                              style: TextStyle(
+                                  fontSize: 12, color: Nocturne.neutral300)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+      );
 }

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/app_log.dart';
@@ -286,6 +289,32 @@ class V3Repository {
     final inserted =
         await _db.from('transactions').insert(payload).select('id');
     return (inserted as List).length;
+  }
+
+  /// Rewrites earlier imported rows in place; each row carries its `id`.
+  Future<int> upsertTransactionsBulk({
+    required String familyId,
+    required List<Map<String, dynamic>> rows,
+  }) async {
+    if (rows.isEmpty) return 0;
+    final uid = currentUserId;
+    var written = 0;
+    for (var i = 0; i < rows.length; i += 200) {
+      final chunk = rows.sublist(i, i + 200 < rows.length ? i + 200 : rows.length);
+      final result = await _db.from('transactions').upsert([
+        for (final r in chunk)
+          {
+            'family_id': familyId,
+            'user_id': uid,
+            'paid_by': uid,
+            'origin': 'import',
+            'method': 'Other',
+            ...r,
+          },
+      ], onConflict: 'id').select('id');
+      written += (result as List).length;
+    }
+    return written;
   }
 
   Future<TxnRow> addTransaction({
@@ -975,12 +1004,37 @@ class V3Repository {
 
   /// Wraps a call so a network or RLS failure surfaces in the log and as null,
   /// instead of tearing down the widget tree mid-build.
+  /// True while the last network call failed for connectivity reasons.
+  static final offline = ValueNotifier<bool>(false);
+
+  /// No call may hang a tap: a request with no answer in [guardTimeout] fails
+  /// like any other error instead of leaving the button looking dead.
+  static Duration guardTimeout = const Duration(seconds: 20);
+
   static Future<T?> guard<T>(String context, Future<T> Function() op) async {
     try {
-      return await op();
+      final result = await op().timeout(guardTimeout);
+      if (offline.value) offline.value = false;
+      return result;
     } catch (err, stack) {
-      AppLog.error(context, err, stack);
+      if (_isConnectivity(err)) {
+        offline.value = true;
+        AppLog.error(context, 'offline: ${err.runtimeType}');
+      } else {
+        AppLog.error(context, err, stack);
+      }
       return null;
     }
+  }
+
+  static bool _isConnectivity(Object err) {
+    if (err is TimeoutException) return true;
+    final text = err.toString();
+    return text.contains('SocketException') ||
+        text.contains('ClientException') ||
+        text.contains('Failed host lookup') ||
+        text.contains('Connection refused') ||
+        text.contains('Network is unreachable') ||
+        text.contains('Connection closed');
   }
 }

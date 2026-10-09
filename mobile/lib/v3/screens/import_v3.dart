@@ -9,7 +9,9 @@ import '../data/expense_import_xlsx.dart';
 import '../data/import_picker.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
+import '../data/import_ai.dart';
 import '../sheets/batch_edit_sheet.dart';
+import 'import_review_sheet.dart';
 import '../v3_state.dart';
 import '../widgets/v3_motion.dart';
 import '../widgets/v3_primitives.dart';
@@ -93,6 +95,15 @@ class _ImportV3State extends State<ImportV3> {
     setState(() {
       row.sourceId = id;
       row.pinned = true;
+    });
+  }
+
+  Future<void> _askAi() async {
+    final review = await ImportReviewSheet.open(context, _rows);
+    if (review == null || !mounted) return;
+    setState(() {
+      ImportAi.apply(review, _rows);
+      _routed(_rows);
     });
   }
 
@@ -188,14 +199,22 @@ class _ImportV3State extends State<ImportV3> {
     if (selected == 0) return;
 
     setState(() => _busy = true);
-    final n = await context.read<V3State>().importExpenses(_rows);
+    final s = context.read<V3State>();
+    final n = await s.importExpenses(_rows);
     if (!mounted) return;
     setState(() => _busy = false);
+    final fixed = s.lastImportUpdated;
+    final added = n - fixed;
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(n == 0
-          ? 'Nothing was imported'
-          : 'Added $n transaction${n == 1 ? '' : 's'}'),
+          ? 'Nothing was imported — check your connection'
+          : [
+              if (added > 0) 'Added $added',
+              if (fixed > 0)
+                '${added > 0 ? 'corrected' : 'Corrected'} $fixed earlier '
+                    'import${fixed == 1 ? '' : 's'}',
+            ].join(', ')),
     ));
     if (n > 0) Navigator.of(context).pop();
   }
@@ -651,6 +670,40 @@ class _ImportV3State extends State<ImportV3> {
               ),
             ),
           ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        child: V3Press(
+          key: const ValueKey('import_ask_ai'),
+          onTap: _askAi,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Nocturne.accent800, Nocturne.accent900],
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Nocturne.accent600),
+            ),
+            child: const Row(
+              children: [
+                Icon(PhRegular.sparkle, size: 18, color: Nocturne.accent100),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Ask AI to check income, wallets and categories',
+                    style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: Nocturne.accent100),
+                  ),
+                ),
+                Icon(PhRegular.caretRight,
+                    size: 14, color: Nocturne.accent200),
+              ],
+            ),
+          ),
         ),
       ),
       if (s.sources.isNotEmpty) _intoCard(s),

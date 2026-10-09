@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'data/expense_import.dart';
@@ -139,7 +141,31 @@ class V3State extends ChangeNotifier {
     await refresh();
   }
 
-  Future<void> refresh() async {
+  Future<void>? _refreshing;
+  bool _refreshAgain = false;
+
+  /// Reloads everything. Calls that arrive mid-refresh are folded into one
+  /// follow-up pass, so a burst of edits on a slow network does not stack up
+  /// a dozen parallel reloads.
+  Future<void> refresh() {
+    final running = _refreshing;
+    if (running != null) {
+      _refreshAgain = true;
+      return running;
+    }
+    return _refreshing = () async {
+      try {
+        do {
+          _refreshAgain = false;
+          await _refreshOnce();
+        } while (_refreshAgain);
+      } finally {
+        _refreshing = null;
+      }
+    }();
+  }
+
+  Future<void> _refreshOnce() async {
     if (familyId.isEmpty) return;
     loading = true;
     notifyListeners();
@@ -530,7 +556,7 @@ class V3State extends ChangeNotifier {
       return true;
     });
     if (ok != true) return false;
-    await refresh();
+    unawaited(refresh());
     return true;
   }
 
@@ -581,7 +607,7 @@ class V3State extends ChangeNotifier {
       return true;
     });
     if (ok != true) return false;
-    await refresh();
+    unawaited(refresh());
     return true;
   }
 
@@ -614,7 +640,7 @@ class V3State extends ChangeNotifier {
       () => _repo.updateTransactionsBulk(idList, patch),
     );
     if (n == null) return 0;
-    await refresh();
+    unawaited(refresh());
     return n;
   }
 
@@ -694,7 +720,7 @@ class V3State extends ChangeNotifier {
       return true;
     });
     if (ok != true) return false;
-    await refresh();
+    unawaited(refresh());
     return true;
   }
 
@@ -714,7 +740,7 @@ class V3State extends ChangeNotifier {
             'postDueRecurring', () => _repo.postDueRecurring(familyId)) ??
         0;
     if (count > 0) {
-      await refresh();
+      unawaited(refresh());
     }
     return count;
   }
@@ -737,7 +763,7 @@ class V3State extends ChangeNotifier {
       'setMemberRole',
       () => _repo.setMemberRole(familyId, userId, role),
     );
-    await refresh();
+    unawaited(refresh());
   }
 
   Future<void> setMemberStatus(String userId, String status) async {
@@ -745,7 +771,7 @@ class V3State extends ChangeNotifier {
       'setMemberStatus',
       () => _repo.setMemberStatus(familyId, userId, status),
     );
-    await refresh();
+    unawaited(refresh());
   }
 
   Future<bool> renameMe(String newName) async {
@@ -754,7 +780,7 @@ class V3State extends ChangeNotifier {
       return true;
     });
     if (ok == true) {
-      await refresh();
+      unawaited(refresh());
       return true;
     }
     return false;
@@ -766,7 +792,7 @@ class V3State extends ChangeNotifier {
       return true;
     });
     if (ok == true) {
-      await refresh();
+      unawaited(refresh());
       return true;
     }
     return false;
@@ -799,10 +825,39 @@ class V3State extends ChangeNotifier {
   /// anything unrecognised is left unset rather than guessed at, so an import
   /// never silently files spending under the wrong heading. Returns how many
   /// rows were written.
+  /// How many rows of the last import corrected an earlier import instead of
+  /// adding a new transaction.
+  int lastImportUpdated = 0;
+
+  /// An earlier import of the same row: same amount, same day, and the same
+  /// title — or the bare "Imported" title older versions saved when they
+  /// could not read the Memo column.
+  TxnRow? _earlierImportOf(ImportedExpense r, Set<String> taken) {
+    final day = r.date ?? DateTime.now();
+    final title = r.title.trim().toLowerCase();
+    for (final t in txns) {
+      if (t.origin != 'import' || taken.contains(t.id)) continue;
+      if (t.userId != myId) continue;
+      if ((t.amount - r.amount).abs() > 0.005) continue;
+      final at = t.occurredAt.toLocal();
+      if (at.year != day.year || at.month != day.month || at.day != day.day) {
+        continue;
+      }
+      final old = t.title.trim().toLowerCase();
+      if (old == title || old == 'imported') return t;
+    }
+    return null;
+  }
+
+  /// Saves the chosen rows. Re-importing a file corrects the rows it already
+  /// brought in (account, direction, category) rather than duplicating them.
   Future<int> importExpenses(List<ImportedExpense> rows) async {
+    lastImportUpdated = 0;
     if (familyId.isEmpty) return 0;
     final chosen = rows.where((r) => r.selected).toList();
     if (chosen.isEmpty) return 0;
+    final taken = <String>{};
+    final updates = <Map<String, dynamic>>[];
 
     final byKey = {for (final c in categories) c.key.toLowerCase(): c.id};
     final byName = {for (final c in categories) c.name.toLowerCase(): c.id};
@@ -814,7 +869,7 @@ class V3State extends ChangeNotifier {
           (r.categoryKey == null ? null : categoryByKey(r.categoryKey!)?.id) ??
               (raw == null ? null : (byKey[raw] ?? byName[raw]));
 
-      payload.add({
+      final row = {
         'title': r.title,
         'amount': r.amount,
         'type': r.isIncome ? 'income' : 'expense',
@@ -822,16 +877,33 @@ class V3State extends ChangeNotifier {
         'source_id': ?r.sourceId,
         'occurred_at':
             (r.date ?? DateTime.now()).toUtc().toIso8601String(),
-      });
+      };
+      final earlier = _earlierImportOf(r, taken);
+      if (earlier != null) {
+        taken.add(earlier.id);
+        updates.add({'id': earlier.id, ...row});
+      } else {
+        payload.add(row);
+      }
     }
 
-    final written = await V3Repository.guard(
-      'importExpenses',
-      () => _repo.addTransactionsBulk(familyId: familyId, rows: payload),
-    );
+    final added = payload.isEmpty
+        ? 0
+        : await V3Repository.guard(
+            'importExpenses',
+            () => _repo.addTransactionsBulk(familyId: familyId, rows: payload),
+          );
+    final updated = updates.isEmpty
+        ? 0
+        : await V3Repository.guard(
+            'importExpenses.update',
+            () => _repo.upsertTransactionsBulk(familyId: familyId, rows: updates),
+          );
+    lastImportUpdated = updated ?? 0;
+    final written = (added ?? 0) + (updated ?? 0);
 
-    if (written != null && written > 0) await refresh();
-    return written ?? 0;
+    if (written > 0) unawaited(refresh());
+    return written;
   }
 
   /// Pulls whatever the notification listener captured, drops anything that
@@ -920,7 +992,7 @@ class V3State extends ChangeNotifier {
   Future<void> renameSource(String id, String name) async {
     await V3Repository.guard(
         'renameSource', () => _repo.updateSource(id, name: name));
-    await refresh();
+    unawaited(refresh());
   }
 
   /// Deletes a source that nothing references; archives it otherwise, so the
