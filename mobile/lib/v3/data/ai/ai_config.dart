@@ -46,6 +46,52 @@ extension AiProviderInfo on AiProvider {
   bool get needsBaseUrl => this == AiProvider.compatible;
 }
 
+/// One saved API key. [alias] is unique per provider so a key that expires
+/// can be swapped for another with a tap.
+class AiKey {
+  final AiProvider provider;
+  final String alias;
+  final String key;
+
+  /// Result of the last connection test: true working, false failed,
+  /// null never tested.
+  final bool? ok;
+
+  const AiKey({
+    required this.provider,
+    required this.alias,
+    required this.key,
+    this.ok,
+  });
+
+  /// `••••abcd`, enough to tell keys apart without showing them.
+  String get masked =>
+      key.length <= 4 ? '••••' : '••••${key.substring(key.length - 4)}';
+
+  AiKey withStatus(bool? next) =>
+      AiKey(provider: provider, alias: alias, key: key, ok: next);
+
+  Map<String, dynamic> toJson() => {
+        'provider': provider.name,
+        'alias': alias,
+        'key': key,
+        'ok': ok,
+      };
+
+  static AiKey? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final provider = AiProvider.values.where((p) => p.name == j['provider']);
+    final alias = j['alias'], key = j['key'];
+    if (provider.isEmpty || alias is! String || key is! String) return null;
+    return AiKey(
+      provider: provider.first,
+      alias: alias,
+      key: key,
+      ok: j['ok'] is bool ? j['ok'] as bool : null,
+    );
+  }
+}
+
 /// Device-local AI settings.
 ///
 /// Stored next to the prayer config rather than in Supabase: an API key is
@@ -53,18 +99,39 @@ extension AiProviderInfo on AiProvider {
 /// family member's phone.
 class AiConfig {
   final AiProvider provider;
-  final String apiKey;
   final String model;
 
   /// Base URL for [AiProvider.compatible], e.g. `http://192.168.1.4:11434/v1`.
   final String baseUrl;
 
+  /// Every saved key, across all providers.
+  final List<AiKey> keys;
+
+  /// Alias of the key in use, per provider name.
+  final Map<String, String> active;
+
   const AiConfig({
     this.provider = AiProvider.gemini,
-    this.apiKey = '',
     this.model = '',
     this.baseUrl = '',
+    this.keys = const [],
+    this.active = const {},
   });
+
+  List<AiKey> keysFor(AiProvider p) =>
+      [for (final k in keys) if (k.provider == p) k];
+
+  /// The key in use for the current provider: the chosen one, else the first.
+  AiKey? get activeKey {
+    final saved = keysFor(provider);
+    if (saved.isEmpty) return null;
+    return saved.firstWhere(
+      (k) => k.alias == active[provider.name],
+      orElse: () => saved.first,
+    );
+  }
+
+  String get apiKey => activeKey?.key ?? '';
 
   /// The model to actually send, falling back to the provider default when the
   /// user has not overridden it.
@@ -80,15 +147,17 @@ class AiConfig {
 
   AiConfig copyWith({
     AiProvider? provider,
-    String? apiKey,
     String? model,
     String? baseUrl,
+    List<AiKey>? keys,
+    Map<String, String>? active,
   }) =>
       AiConfig(
         provider: provider ?? this.provider,
-        apiKey: apiKey ?? this.apiKey,
         model: model ?? this.model,
         baseUrl: baseUrl ?? this.baseUrl,
+        keys: keys ?? this.keys,
+        active: active ?? this.active,
       );
 
   /// Switching provider clears the model so the new provider's default
@@ -96,11 +165,40 @@ class AiConfig {
   AiConfig withProvider(AiProvider next) =>
       copyWith(provider: next, model: '');
 
+  /// Adds a key for the current provider (replacing one with the same alias)
+  /// and makes it the active one.
+  AiConfig withKey(String alias, String key) => copyWith(
+        keys: [
+          for (final k in keys)
+            if (!(k.provider == provider && k.alias == alias)) k,
+          AiKey(provider: provider, alias: alias, key: key),
+        ],
+        active: {...active, provider.name: alias},
+      );
+
+  AiConfig withoutKey(AiKey key) => copyWith(
+        keys: [
+          for (final k in keys)
+            if (!(k.provider == key.provider && k.alias == key.alias)) k,
+        ],
+      );
+
+  AiConfig withActive(AiKey key) =>
+      copyWith(active: {...active, key.provider.name: key.alias});
+
+  AiConfig withStatus(AiKey key, bool? ok) => copyWith(keys: [
+        for (final k in keys)
+          k.provider == key.provider && k.alias == key.alias
+              ? k.withStatus(ok)
+              : k,
+      ]);
+
   Map<String, dynamic> toJson() => {
         'provider': provider.name,
-        'api_key': apiKey,
         'model': model,
         'base_url': baseUrl,
+        'keys': [for (final k in keys) k.toJson()],
+        'active': active,
       };
 
   factory AiConfig.fromJson(Map<String, dynamic> j) {
@@ -108,11 +206,28 @@ class AiConfig {
     for (final p in AiProvider.values) {
       if (p.name == j['provider']) provider = p;
     }
+    final keys = <AiKey>[
+      if (j['keys'] is List)
+        for (final raw in j['keys'] as List)
+          ?AiKey.fromJson(raw),
+    ];
+    // Before named keys there was a single `api_key`; keep it as "Default".
+    final legacy = j['api_key'];
+    if (keys.isEmpty && legacy is String && legacy.trim().isNotEmpty) {
+      keys.add(AiKey(provider: provider, alias: 'Default', key: legacy.trim()));
+    }
+    final active = <String, String>{
+      if (j['active'] is Map)
+        for (final e in (j['active'] as Map).entries)
+          if (e.key is String && e.value is String)
+            e.key as String: e.value as String,
+    };
     return AiConfig(
       provider: provider,
-      apiKey: j['api_key'] is String ? j['api_key'] as String : '',
       model: j['model'] is String ? j['model'] as String : '',
       baseUrl: j['base_url'] is String ? j['base_url'] as String : '',
+      keys: keys,
+      active: active,
     );
   }
 }

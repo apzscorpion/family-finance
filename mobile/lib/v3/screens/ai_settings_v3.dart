@@ -18,6 +18,7 @@ class AiSettingsV3 extends StatefulWidget {
 
 class _AiSettingsV3State extends State<AiSettingsV3> {
   AiConfig _config = const AiConfig();
+  late final TextEditingController _alias = TextEditingController();
   late final TextEditingController _apiKey = TextEditingController();
   late final TextEditingController _model = TextEditingController();
   late final TextEditingController _baseUrl = TextEditingController();
@@ -25,6 +26,7 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
   bool _loading = true;
   bool _showKey = false;
   bool _testing = false;
+  String? _testingAlias;
   String? _testMessage;
   bool? _testOk;
 
@@ -41,7 +43,6 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
     if (!mounted) return;
     setState(() {
       _config = cfg;
-      _apiKey.text = cfg.apiKey;
       _model.text = cfg.model;
       _baseUrl.text = cfg.baseUrl;
       _loading = false;
@@ -50,6 +51,7 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
 
   @override
   void dispose() {
+    _alias.dispose();
     _apiKey.dispose();
     _model.dispose();
     _baseUrl.dispose();
@@ -66,29 +68,50 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
   }
 
   void _selectProvider(AiProvider p) {
-    final next = _config.withProvider(p).copyWith(
-          apiKey: _apiKey.text.trim(),
-          baseUrl: _baseUrl.text.trim(),
-        );
+    final next = _config.withProvider(p).copyWith(baseUrl: _baseUrl.text.trim());
     _model.clear();
     _persist(next);
   }
 
+  /// Saves the key typed into the add form, then tests it.
+  Future<void> _addKey() async {
+    final key = _apiKey.text.trim();
+    if (key.isEmpty) return;
+    var alias = _alias.text.trim();
+    if (alias.isEmpty) {
+      alias = 'Key ${_config.keysFor(_config.provider).length + 1}';
+    }
+    _alias.clear();
+    _apiKey.clear();
+    await _persist(_config.withKey(alias, key));
+    await _testKey(_config.activeKey!);
+  }
+
   Future<void> _testConnection() async {
+    if (_apiKey.text.trim().isNotEmpty) return _addKey();
+    final key = _config.activeKey;
+    if (key == null) {
+      setState(() {
+        _testOk = false;
+        _testMessage = 'Enter an API key first';
+      });
+      return;
+    }
+    await _testKey(key);
+  }
+
+  Future<void> _testKey(AiKey key) async {
     if (_testing) return;
-    final current = _config.copyWith(
-      apiKey: _apiKey.text.trim(),
-      model: _model.text.trim(),
-      baseUrl: _baseUrl.text.trim(),
-    );
+    final current = _config.withActive(key).copyWith(
+          model: _model.text.trim(),
+          baseUrl: _baseUrl.text.trim(),
+        );
     await AiConfigStore.save(current);
 
     if (!current.isConfigured) {
       setState(() {
         _testOk = false;
-        _testMessage = current.provider.needsBaseUrl
-            ? 'Enter both an API key and base URL first'
-            : 'Enter an API key first';
+        _testMessage = 'Enter both an API key and base URL first';
       });
       return;
     }
@@ -96,33 +119,28 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
     setState(() {
       _config = current;
       _testing = true;
+      _testingAlias = key.alias;
       _testMessage = null;
       _testOk = null;
     });
 
     final res = await AiStructurer.structure(_sampleInput, current);
     if (!mounted) return;
+    final next = _config.withStatus(key, res.ok);
+    await AiConfigStore.save(next);
     setState(() {
+      _config = next;
       _testing = false;
+      _testingAlias = null;
       _testOk = res.ok;
       _testMessage = res.ok
-          ? 'Connected to ${current.provider.label} (${current.effectiveModel}) — structured ${res.blocks!.length} block${res.blocks!.length == 1 ? '' : 's'}.'
-          : (res.error ?? 'Connection test failed');
+          ? '"${key.alias}" works with ${current.provider.label} (${current.effectiveModel}).'
+          : '"${key.alias}": ${res.error ?? 'Connection test failed'}';
     });
   }
 
-  Future<void> _clearKey() async {
-    await AiConfigStore.clear();
-    if (!mounted) return;
-    setState(() {
-      _config = const AiConfig();
-      _apiKey.clear();
-      _model.clear();
-      _baseUrl.clear();
-      _testMessage = 'Cleared AI configuration from this device';
-      _testOk = true;
-    });
-  }
+  Future<void> _deleteKey(AiKey key) =>
+      _persist(_config.withoutKey(key));
 
   @override
   Widget build(BuildContext context) {
@@ -163,23 +181,42 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'API KEY',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    letterSpacing: 0.7,
-                    color: Nocturne.neutral500,
+                const _Label('SAVED KEYS'),
+                const SizedBox(height: 6),
+                if (_config.keysFor(provider).isEmpty)
+                  const Text(
+                    'No keys saved for this provider yet.',
+                    style: TextStyle(fontSize: 12.5, color: Nocturne.neutral500),
+                  ),
+                for (final key in _config.keysFor(provider))
+                  _KeyRow(
+                    keyInfo: key,
+                    active: key.alias == _config.activeKey?.alias,
+                    testing: _testingAlias == key.alias,
+                    onSelect: () => _persist(_config.withActive(key)),
+                    onTest: () => _testKey(key),
+                    onDelete: () => _deleteKey(key),
+                  ),
+                const SizedBox(height: 14),
+                const _Label('ADD A KEY'),
+                const SizedBox(height: 6),
+                _Field(
+                  child: TextField(
+                    controller: _alias,
+                    autocorrect: false,
+                    style: const TextStyle(fontSize: 13.5, color: Nocturne.text),
+                    cursorColor: Nocturne.accent,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      hintText: 'Name, e.g. Personal or Work',
+                      hintStyle:
+                          TextStyle(fontSize: 13.5, color: Nocturne.neutral600),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Container(
-                  height: 44,
-                  padding: const EdgeInsets.only(left: 12, right: 6),
-                  decoration: BoxDecoration(
-                    color: Nocturne.bg,
-                    borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: Nocturne.neutral800, width: 1),
-                  ),
+                const SizedBox(height: 8),
+                _Field(
                   child: Row(
                     children: [
                       Expanded(
@@ -188,8 +225,7 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                           obscureText: !_showKey,
                           autocorrect: false,
                           enableSuggestions: false,
-                          onChanged: (v) =>
-                              _persist(_config.copyWith(apiKey: v.trim())),
+                          onSubmitted: (_) => _addKey(),
                           style: const TextStyle(
                             fontSize: 13.5,
                             color: Nocturne.text,
@@ -372,32 +408,6 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                         ),
                       ),
                     ),
-                    if (_config.apiKey.isNotEmpty ||
-                        _config.baseUrl.isNotEmpty) ...[
-                      const SizedBox(width: 10),
-                      GestureDetector(
-                        onTap: _clearKey,
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          height: 42,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Nocturne.bg,
-                            borderRadius: BorderRadius.circular(11),
-                            border: Border.all(
-                                color: Nocturne.neutral800, width: 1),
-                          ),
-                          child: const Text(
-                            'Clear',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Nocturne.neutral400,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
                 if (_testMessage != null) ...[
@@ -567,4 +577,122 @@ class _Card extends StatelessWidget {
         ),
         child: child,
       );
+}
+class _Label extends StatelessWidget {
+  final String text;
+  const _Label(this.text);
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: const TextStyle(
+          fontSize: 10.5,
+          letterSpacing: 0.7,
+          color: Nocturne.neutral500,
+        ),
+      );
+}
+
+class _Field extends StatelessWidget {
+  final Widget child;
+  const _Field({required this.child});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 44,
+        padding: const EdgeInsets.only(left: 12, right: 6),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          color: Nocturne.bg,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: Nocturne.neutral800, width: 1),
+        ),
+        child: child,
+      );
+}
+
+/// A saved key: tap to make it the one in use, test it, or delete it.
+class _KeyRow extends StatelessWidget {
+  final AiKey keyInfo;
+  final bool active;
+  final bool testing;
+  final VoidCallback onSelect;
+  final VoidCallback onTest;
+  final VoidCallback onDelete;
+
+  const _KeyRow({
+    required this.keyInfo,
+    required this.active,
+    required this.testing,
+    required this.onSelect,
+    required this.onTest,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (keyInfo.ok) {
+      true => ('Working', NocturneSemantic.income),
+      false => ('Failed', NocturneSemantic.expense),
+      null => ('Not tested', Nocturne.neutral500),
+    };
+    return GestureDetector(
+      onTap: onSelect,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              active ? PhFill.checkCircle : PhRegular.circle,
+              size: 18,
+              color: active ? Nocturne.accent400 : Nocturne.neutral600,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    keyInfo.alias,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                      color: Nocturne.text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${keyInfo.masked} · $label',
+                    style: TextStyle(fontSize: 11.5, color: color),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Test ${keyInfo.alias}',
+              onPressed: testing ? null : onTest,
+              icon: testing
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Nocturne.accent300,
+                      ),
+                    )
+                  : const Icon(PhRegular.sparkle,
+                      size: 17, color: Nocturne.neutral400),
+            ),
+            IconButton(
+              tooltip: 'Delete ${keyInfo.alias}',
+              onPressed: onDelete,
+              icon: const Icon(PhRegular.trash,
+                  size: 17, color: Nocturne.neutral400),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

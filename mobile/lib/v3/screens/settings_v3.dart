@@ -1,7 +1,10 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/app_log.dart';
 import '../../services/update_service.dart';
@@ -654,6 +657,9 @@ class SettingsV3 extends StatelessWidget {
 
   static void _showDeveloperSupport(BuildContext context) {
     final reportCtrl = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+    String? screenshot; // base64, like chat photos
+    var sending = false;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -661,84 +667,132 @@ class SettingsV3 extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          Future<void> attach() async {
+            try {
+              final file = await ImagePicker().pickImage(
+                source: ImageSource.gallery,
+                maxWidth: 1280,
+                maxHeight: 1280,
+                imageQuality: 72,
+              );
+              if (file == null) return;
+              final bytes = await file.readAsBytes();
+              setSheet(() => screenshot = base64Encode(bytes));
+            } catch (err, stack) {
+              AppLog.error('DeveloperSupport.attach', err, stack);
+            }
+          }
+
+          Future<void> send() async {
+            final msg = reportCtrl.text.trim();
+            if (msg.isEmpty || sending) return;
+            setSheet(() => sending = true);
+            try {
+              final client = Supabase.instance.client;
+              await client.from('support_requests').insert({
+                'email': client.auth.currentUser?.email,
+                'message': msg,
+                'screenshot': screenshot,
+                'error_log': AppLog.hasEntries ? AppLog.dump() : null,
+                'app_version': UpdateService.currentVersion,
+                'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
+              });
+              if (ctx.mounted) Navigator.pop(ctx);
+              messenger.showSnackBar(const SnackBar(
+                  content: Text('Thanks! Your report was sent.')));
+            } catch (err, stack) {
+              // Keep the sheet open so the text is not lost.
+              AppLog.error('DeveloperSupport.send', err, stack);
+              setSheet(() => sending = false);
+              messenger.showSnackBar(const SnackBar(
+                  content: Text('Could not send — check your connection.')));
+            }
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(PhRegular.info, color: Nocturne.accent200, size: 22),
-                SizedBox(width: 8),
-                Text('Developer Support',
-                    style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Nocturne.text)),
+                const Row(
+                  children: [
+                    Icon(PhRegular.info, color: Nocturne.accent200, size: 22),
+                    SizedBox(width: 8),
+                    Text('Developer Support',
+                        style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Nocturne.text)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                    'Describe what went wrong or suggest a feature. '
+                    'Recent error logs are attached automatically.',
+                    style:
+                        TextStyle(fontSize: 12.5, color: Nocturne.neutral500)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reportCtrl,
+                  maxLines: 4,
+                  maxLength: 5000,
+                  style: const TextStyle(fontSize: 13.5, color: Nocturne.text),
+                  decoration: InputDecoration(
+                    hintText: 'Describe the issue or feedback...',
+                    hintStyle: const TextStyle(color: Nocturne.neutral600),
+                    filled: true,
+                    fillColor: Nocturne.bg,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: screenshot == null
+                      ? attach
+                      : () => setSheet(() => screenshot = null),
+                  icon: Icon(
+                      screenshot == null ? PhRegular.image : PhRegular.x,
+                      size: 16),
+                  label: Text(screenshot == null
+                      ? 'Attach screenshot'
+                      : 'Screenshot attached — remove'),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: sending ? null : send,
+                    icon: sending
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Nocturne.bg))
+                        : const Icon(PhRegular.shareNetwork, size: 16),
+                    label: const Text('Send',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Nocturne.accent,
+                      foregroundColor: Nocturne.bg,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 6),
-            const Text('Describe what went wrong or suggest a feature:',
-                style: TextStyle(fontSize: 12.5, color: Nocturne.neutral500)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reportCtrl,
-              maxLines: 4,
-              style: const TextStyle(fontSize: 13.5, color: Nocturne.text),
-              decoration: InputDecoration(
-                hintText: 'Describe the issue or feedback...',
-                hintStyle: const TextStyle(color: Nocturne.neutral600),
-                filled: true,
-                fillColor: Nocturne.bg,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final msg = reportCtrl.text.trim();
-                  Navigator.pop(ctx);
-                  final body = StringBuffer()
-                    ..writeln(msg.isNotEmpty
-                        ? msg
-                        : '(no description provided)')
-                    ..writeln()
-                    ..writeln('---')
-                    ..writeln('Recent errors:')
-                    ..writeln(
-                        AppLog.hasEntries ? AppLog.dump() : '(none captured)');
-                  final uri = Uri.parse(
-                    'https://github.com/${UpdateService.githubRepo}/issues/new'
-                    '?title=${Uri.encodeComponent('App error report')}'
-                    '&body=${Uri.encodeComponent(body.toString())}',
-                  );
-                  await launchUrl(uri,
-                      mode: LaunchMode.externalApplication);
-                },
-                icon: const Icon(PhRegular.shareNetwork, size: 16),
-                label: const Text('Send Error Log',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Nocturne.accent,
-                  foregroundColor: Nocturne.bg,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

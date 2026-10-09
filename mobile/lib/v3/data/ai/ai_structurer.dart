@@ -85,6 +85,11 @@ Return only JSON matching the schema.''';
         return const AiResult.failed('Could not read the model’s reply');
       }
       return AiResult.ok(blocks);
+    } on _ApiError catch (err) {
+      // The provider answered: show its own reason (bad key, unknown model,
+      // quota) instead of a generic "could not reach".
+      AppLog.error('AiStructurer.structure', err);
+      return AiResult.failed(err.toString());
     } on http.ClientException catch (err) {
       AppLog.error('AiStructurer.structure', err);
       return const AiResult.failed('Could not reach the AI service');
@@ -237,9 +242,20 @@ Return only JSON matching the schema.''';
 
   static void _check(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) return;
-    throw http.ClientException(
-      'HTTP ${response.statusCode}: ${_briefly(response.body)}',
-    );
+    throw _ApiError(response.statusCode, _apiMessage(response.body));
+  }
+
+  /// Gemini, OpenAI and Anthropic all report failures as `{"error":{"message"}}`.
+  static String _apiMessage(String body) {
+    try {
+      final message = jsonDecode(body)['error']['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return _briefly(message.trim());
+      }
+    } catch (_) {
+      // Not the usual error shape; fall back to the raw body.
+    }
+    return _briefly(body);
   }
 
   static String _briefly(String body) =>
@@ -398,5 +414,25 @@ Return only JSON matching the schema.''';
     } catch (_) {
       return null;
     }
+  }
+}
+
+/// A non-2xx reply from the provider, carrying the provider's own message.
+class _ApiError implements Exception {
+  final int status;
+  final String message;
+  const _ApiError(this.status, this.message);
+
+  @override
+  String toString() {
+    final reason = switch (status) {
+      400 when message.toLowerCase().contains('api key') =>
+        'That API key was rejected',
+      401 || 403 => 'That API key was rejected',
+      404 => 'Model not found',
+      429 => 'Rate limited or out of quota',
+      _ => 'AI request failed',
+    };
+    return '$reason (HTTP $status): $message';
   }
 }
