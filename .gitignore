@@ -31,4 +31,6 @@ Thumbs.db
 .env
 .env.local
 
-releases/FamilySpendTracker-debug.apk
+# Release binaries (APKs should be published to GitHub Releases, not tracked in git)
+*.apk
+/releases/
