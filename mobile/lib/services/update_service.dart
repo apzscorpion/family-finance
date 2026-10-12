@@ -65,12 +65,12 @@ class UpdateService {
         _showUpdateDialog(
           context,
           latestTag,
-          'A newer version (v$latestTag) of Family Spend Tracker is available with the latest improvements and fixes.',
+          'A newer version (v$latestTag) of Sampio is available with the latest improvements and fixes.',
           latestApkUrl,
         );
       } else if (!silent && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Family Spend Tracker is up to date (v$currentVersion).')),
+          SnackBar(content: Text('Sampio is up to date (v$currentVersion).')),
         );
       }
     } catch (e) {

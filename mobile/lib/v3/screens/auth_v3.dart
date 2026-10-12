@@ -138,34 +138,19 @@ class _AuthV3State extends State<AuthV3> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Nocturne.accent500, Nocturne.accent800],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Nocturne.mix(Nocturne.accent, 40),
-                            blurRadius: 28),
-                      ],
-                    ),
-                    child: const Icon(PhRegular.wallet,
-                        size: 30, color: Nocturne.accent100),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset('assets/branding/sampio.png',
+                        width: 72, height: 72, semanticLabel: 'Sampio'),
                   ),
                   const SizedBox(height: 18),
-                  const Text('Family Spend Tracker',
+                  const Text('Sampio',
                       style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w500,
                           color: Nocturne.text)),
                   const SizedBox(height: 6),
-                  const Text('Collaborative finances for your household',
+                  const Text('Your Money Companion',
                       style: TextStyle(
                           fontSize: 13, color: Nocturne.neutral500)),
                   const SizedBox(height: 24),

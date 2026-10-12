@@ -70,7 +70,7 @@ class V3App extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PrayerController()..load()),
       ],
       child: MaterialApp(
-        title: 'Family Spend Tracker',
+        title: 'Sampio',
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: v3Theme,

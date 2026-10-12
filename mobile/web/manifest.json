@@ -1,11 +1,11 @@
 {
-    "name": "family_finance",
-    "short_name": "family_finance",
+    "name": "Sampio: Your Money Companion",
+    "short_name": "Sampio",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FEFBF3",
+    "theme_color": "#0E5C3A",
+    "description": "Sampio: Your Money Companion",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

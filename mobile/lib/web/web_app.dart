@@ -51,7 +51,7 @@ class WebApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Family Spend Tracker — Web',
+        title: 'Sampio — Your Money Companion',
         debugShowCheckedModeBanner: false,
         theme: v3Theme,
         home: const WebRoot(),

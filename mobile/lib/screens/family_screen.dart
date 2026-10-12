@@ -281,12 +281,12 @@ class FamilyScreen extends StatelessWidget {
                         ElevatedButton.icon(
                           onPressed: () {
                             final msg =
-                                'Join our "${provider.familyName}" workspace on Family Spend Tracker!\n\n'
+                                'Join our "${provider.familyName}" workspace on Sampio!\n\n'
                                 'Family Invite Code: ${provider.familyCode}\n\n'
                                 'Open the app -> Select "Join via Code" -> Enter ${provider.familyCode}.';
                             NoteImportService.shareExternally(
                               text: msg,
-                              title: 'Join ${provider.familyName} on Family Spend Tracker',
+                              title: 'Join ${provider.familyName} on Sampio',
                             );
                           },
                           icon: const Icon(Icons.share_rounded, size: 13),

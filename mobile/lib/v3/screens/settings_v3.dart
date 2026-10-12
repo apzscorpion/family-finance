@@ -441,7 +441,7 @@ class SettingsV3 extends StatelessWidget {
                   final ok = await DataExport.share(
                     csv,
                     'transactions-${_stamp()}.csv',
-                    subject: 'Family Spend Tracker transactions',
+                    subject: 'Sampio transactions',
                   );
                   if (!ok) {
                     messenger.showSnackBar(const SnackBar(
@@ -463,7 +463,7 @@ class SettingsV3 extends StatelessWidget {
                   final ok = await DataExport.share(
                     DataExport.notesMarkdown(s.notes),
                     'notes-${_stamp()}.md',
-                    subject: 'Family Spend Tracker notes',
+                    subject: 'Sampio notes',
                   );
                   if (!ok) {
                     messenger.showSnackBar(const SnackBar(

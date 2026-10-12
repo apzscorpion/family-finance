@@ -5,7 +5,7 @@ import 'dart:js_interop_unsafe';
 import 'package:flutter/services.dart';
 
 void Function(String senderId)? _webOnTapSender;
-const String _baseTitle = 'Family Spend Tracker';
+const String _baseTitle = 'Sampio';
 
 String get chatNotificationPermissionStatus {
   try {

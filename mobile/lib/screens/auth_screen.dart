@@ -479,7 +479,7 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
               ),
               const SizedBox(height: 20),
               const Text(
-                'Family Spend Tracker',
+                'Sampio',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.text, letterSpacing: -0.3),
               ),
               const SizedBox(height: 6),
