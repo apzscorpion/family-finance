@@ -6,11 +6,13 @@ Usage: python scripts/update_release.py
 ==============================================================================
 """
 
+import json
 import os
 import re
-import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 # Ensure UTF-8 stdout output
@@ -24,7 +26,7 @@ MOBILE_DIR = REPO_ROOT / "mobile"
 PUBSPEC_PATH = MOBILE_DIR / "pubspec.yaml"
 UPDATE_SERVICE_PATH = MOBILE_DIR / "lib" / "services" / "update_service.dart"
 README_PATH = REPO_ROOT / "README.md"
-RELEASES_DIR = REPO_ROOT / "releases"
+GITHUB_REPO = "apzscorpion/family-finance"
 FLUTTER_APK_DIR = MOBILE_DIR / "build" / "app" / "outputs" / "flutter-apk"
 
 # Only the `standard` flavour ships. It carries no notification listener, which
@@ -36,10 +38,15 @@ FLUTTER_APK_DIR = MOBILE_DIR / "build" / "app" / "outputs" / "flutter-apk"
 # detection. It is not built here because it can only be installed over adb,
 # which makes it useless to hand out. Set RELEASE_DETECT=1 to build and publish
 # it too — worth doing once there is a Play Store listing to put it behind.
+#
+# APKs are uploaded to a GitHub Release, never committed: every committed APK
+# stayed in git history forever and made each clone gigabytes. The app's
+# updater downloads releases/latest/download/<asset name>, so the asset names
+# below must not change.
 BUILT_APK_PATH = FLUTTER_APK_DIR / "app-standard-release.apk"
-TARGET_APK_PATH = RELEASES_DIR / "FamilySpendTracker-latest.apk"
+ASSET_NAME = "FamilySpendTracker-latest.apk"
 DETECT_APK_PATH = FLUTTER_APK_DIR / "app-detect-release.apk"
-DETECT_TARGET_PATH = RELEASES_DIR / "FamilySpendTracker-detect.apk"
+DETECT_ASSET_NAME = "FamilySpendTracker-detect.apk"
 
 RELEASE_DETECT = os.environ.get("RELEASE_DETECT") == "1"
 
@@ -94,20 +101,8 @@ def main():
             print(f"Error: Built APK at {path} not found.")
             sys.exit(1)
 
-    # 2. Clean releases directory & copy latest APK
-    print("[3/5] Cleaning old APKs in releases/ directory...")
-    RELEASES_DIR.mkdir(parents=True, exist_ok=True)
-    for apk_file in RELEASES_DIR.glob("*.apk"):
-        apk_file.unlink()
-
-    shutil.copy2(BUILT_APK_PATH, TARGET_APK_PATH)
-    print(f"  Mapped latest build to {TARGET_APK_PATH}")
-    if RELEASE_DETECT:
-        shutil.copy2(DETECT_APK_PATH, DETECT_TARGET_PATH)
-        print(f"  Mapped detection build to {DETECT_TARGET_PATH}")
-
     # 3. Update README.md
-    print("[4/5] Auto-updating README.md...")
+    print("[3/5] Auto-updating README.md...")
     readme_text = README_PATH.read_text(encoding="utf-8")
     updated_readme = re.sub(
         r"⚡_Download_Android_APK-v[0-9]+\.[0-9]+\.[0-9]+",
@@ -117,16 +112,77 @@ def main():
     README_PATH.write_text(updated_readme, encoding="utf-8")
     print(f"  README.md updated with badge v{version}")
 
-    # 4. Git Commit and Tag
-    print("[5/5] Committing and pushing to GitHub...")
-    subprocess.run(["git", "add", "."], cwd=REPO_ROOT, check=True)
-    subprocess.run(["git", "commit", "-m", f"Release v{version}: Map latest APK and update README"], cwd=REPO_ROOT, check=True)
+    # 4. Commit, tag and push (never force: that would discard others' work)
+    print("[4/5] Committing and pushing to GitHub...")
+    subprocess.run(["git", "add", "README.md", "mobile/pubspec.yaml",
+                    str(UPDATE_SERVICE_PATH.relative_to(REPO_ROOT))],
+                   cwd=REPO_ROOT, check=True)
+    subprocess.run(["git", "commit", "-m", f"Release v{version}: update README"],
+                   cwd=REPO_ROOT, check=False)
     subprocess.run(["git", "tag", "-f", f"v{version}"], cwd=REPO_ROOT, check=True)
-    subprocess.run(["git", "push", "origin", "main", "--force"], cwd=REPO_ROOT, check=True)
+    subprocess.run(["git", "push", "origin", "main"], cwd=REPO_ROOT, check=True)
     subprocess.run(["git", "push", "origin", f"v{version}", "--force"], cwd=REPO_ROOT, check=True)
 
-    print(f"\nSUCCESS: Release v{version} built, mapped to FamilySpendTracker-latest.apk, and pushed to GitHub!")
+    # 5. Publish the APK(s) on the GitHub Release for the tag
+    print("[5/5] Uploading APK to GitHub Releases...")
+    assets = [(BUILT_APK_PATH, ASSET_NAME)]
+    if RELEASE_DETECT:
+        assets.append((DETECT_APK_PATH, DETECT_ASSET_NAME))
+    publish_release(f"v{version}", assets)
 
+    print(f"\nSUCCESS: Release v{version} built and published to "
+          f"https://github.com/{GITHUB_REPO}/releases/tag/v{version}")
+
+
+def github_token():
+    """GITHUB_TOKEN if set, otherwise the token git already stores for github.com."""
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    out = subprocess.run(
+        ["git", "credential", "fill"],
+        input="protocol=https\nhost=github.com\n\n",
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    ).stdout
+    for line in out.splitlines():
+        if line.startswith("password="):
+            return line[len("password="):]
+    print("Error: no GitHub token. Set GITHUB_TOKEN (repo scope) and re-run.")
+    sys.exit(1)
+
+
+def github_api(method, url, token, body=None, content_type="application/json"):
+    req = urllib.request.Request(url, data=body, method=method, headers={
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "Content-Type": content_type,
+    })
+    with urllib.request.urlopen(req) as resp:
+        data = resp.read()
+        return json.loads(data) if data else None
+
+
+def publish_release(tag, assets):
+    """Creates the release for [tag] (or reuses it) and replaces its assets."""
+    token = github_token()
+    api = f"https://api.github.com/repos/{GITHUB_REPO}"
+    try:
+        release = github_api("GET", f"{api}/releases/tags/{tag}", token)
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise
+        release = github_api("POST", f"{api}/releases", token, json.dumps({
+            "tag_name": tag, "name": tag, "make_latest": "true",
+        }).encode())
+
+    existing = {a["name"]: a["id"] for a in release.get("assets", [])}
+    for path, name in assets:
+        if name in existing:
+            github_api("DELETE", f"{api}/releases/assets/{existing[name]}", token)
+        upload = release["upload_url"].split("{")[0] + f"?name={name}"
+        github_api("POST", upload, token, path.read_bytes(),
+                   "application/vnd.android.package-archive")
+        print(f"  Uploaded {name}")
 
 if __name__ == "__main__":
     main()

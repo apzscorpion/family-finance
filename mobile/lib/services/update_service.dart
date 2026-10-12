@@ -6,20 +6,23 @@ import '../theme/app_theme.dart';
 class UpdateService {
   static const String currentVersion = '1.10.0';
   static const String githubRepo = 'apzscorpion/family-finance';
-  static const String pubspecUrl =
-      'https://raw.githubusercontent.com/$githubRepo/main/mobile/pubspec.yaml';
+  // APKs live on GitHub Releases, not in the repo, so clones stay small. The
+  // version comes from the same release, so it always matches the download.
+  static const String latestReleaseUrl =
+      'https://api.github.com/repos/$githubRepo/releases/latest';
   static const String latestApkUrl =
-      'https://github.com/$githubRepo/raw/main/releases/FamilySpendTracker-latest.apk';
+      'https://github.com/$githubRepo/releases/latest/download/FamilySpendTracker-latest.apk';
 
-  /// The version published on main, or null if GitHub could not be reached.
+  /// The latest published release's version, or null if GitHub could not be
+  /// reached.
   ///
   /// Split out from [checkForUpdates] so the v3 sheet can present the result
   /// itself while the version and URLs stay defined in one place — the release
   /// script rewrites [currentVersion] here on every release.
   static Future<String?> fetchLatestVersion() async {
-    final response = await http.get(Uri.parse(pubspecUrl));
+    final response = await http.get(Uri.parse(latestReleaseUrl));
     if (response.statusCode != 200) return null;
-    final match = RegExp(r'^version:\s*(\d+\.\d+\.\d+)', multiLine: true)
+    final match = RegExp(r'"tag_name"\s*:\s*"v?(\d+\.\d+\.\d+)"')
         .firstMatch(response.body);
     return match?.group(1);
   }
@@ -29,9 +32,9 @@ class UpdateService {
 
   static Future<void> checkForUpdates(BuildContext context, {bool silent = true}) async {
     try {
-      final response = await http.get(Uri.parse(pubspecUrl));
+      final latest = await fetchLatestVersion();
 
-      if (response.statusCode != 200) {
+      if (latest == null) {
         if (!silent && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('App is up to date.')),
@@ -40,9 +43,7 @@ class UpdateService {
         return;
       }
 
-      final match = RegExp(r'^version:\s*(\d+\.\d+\.\d+)', multiLine: true)
-          .firstMatch(response.body);
-      final String latestTag = match?.group(1) ?? currentVersion;
+      final String latestTag = latest;
 
       if (_isNewerVersion(currentVersion, latestTag) && context.mounted) {
         _showUpdateDialog(
