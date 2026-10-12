@@ -939,7 +939,7 @@ void main() {
       expect(repo.transactionsList.first.occurredAt.toLocal().day, equals(15));
     });
 
-    testWidgets('V3AddSheet renders date picker row and explanatory subheaders', (tester) async {
+    testWidgets('V3AddSheet renders a compact date chip without long headers', (tester) async {
       final repo = _TestRepo();
       final state = _buildSeededState(repo);
       state.sources = [
@@ -968,10 +968,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Today'), findsOneWidget);
-      expect(find.text('Change'), findsOneWidget);
+      expect(find.text('Paid via'), findsOneWidget);
 
-      expect(find.textContaining('DEBIT SOURCE'), findsOneWidget);
-      expect(find.textContaining('PAYMENT CHANNEL'), findsOneWidget);
+      expect(find.textContaining('DEBIT SOURCE'), findsNothing);
+      expect(find.textContaining('PAYMENT CHANNEL'), findsNothing);
     });
 
     testWidgets('ImportV3 header contains format and AI prompt help button which opens _CsvHelpSheet', (tester) async {

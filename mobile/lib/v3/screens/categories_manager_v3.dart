@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/nocturne.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
+import '../v3_design.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
 
@@ -18,45 +19,153 @@ class CategoriesManagerV3 extends StatefulWidget {
         MaterialPageRoute(builder: (_) => const CategoriesManagerV3()),
       );
 
-  /// Asks for a name. Returns null when cancelled or left blank.
-  static Future<String?> promptName(BuildContext context, String title,
-      {String initial = ''}) async {
-    final name = TextEditingController(text: initial);
+  /// Name, icon and colour for a category. Returns null when cancelled or
+  /// the name is left blank.
+  static Future<({String name, String icon, String color})?> promptCategory(
+    BuildContext context,
+    String title, {
+    String name = '',
+    String? icon,
+    String? color,
+  }) async {
+    final controller = TextEditingController(text: name);
+    var pickedIcon = icon ?? 'sparkle';
+    var pickedColor = color ?? V3Design.customCategoryColors.first;
+
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
-        title: Text(title,
-            style: const TextStyle(fontSize: 17, color: Nocturne.text)),
-        content: TextField(
-          controller: name,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          style: const TextStyle(fontSize: 14, color: Nocturne.text),
-          cursorColor: Nocturne.accent,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Nocturne.bg,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) {
+          final tint = V3Design.parseHex(pickedColor) ?? Nocturne.accent;
+          return AlertDialog(
+            backgroundColor: Nocturne.surface,
+            title: Text(title,
+                style: const TextStyle(fontSize: 17, color: Nocturne.text)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      V3IconTile(
+                          icon: V3Design.iconFromName(pickedIcon),
+                          color: tint,
+                          size: 40,
+                          radius: 12),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: controller,
+                          autofocus: name.isEmpty,
+                          textCapitalization: TextCapitalization.words,
+                          style: const TextStyle(
+                              fontSize: 14, color: Nocturne.text),
+                          cursorColor: Nocturne.accent,
+                          decoration: InputDecoration(
+                            hintText: 'Name',
+                            hintStyle: const TextStyle(
+                                fontSize: 14, color: Nocturne.neutral600),
+                            filled: true,
+                            fillColor: Nocturne.bg,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final e in V3Design.categoryIconRegistry.entries)
+                        GestureDetector(
+                          onTap: () => setLocal(() => pickedIcon = e.key),
+                          behavior: HitTestBehavior.opaque,
+                          child: Semantics(
+                            button: true,
+                            selected: pickedIcon == e.key,
+                            label: e.key,
+                            child: Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: pickedIcon == e.key
+                                    ? Nocturne.mix(tint, 22)
+                                    : Nocturne.bg,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: pickedIcon == e.key
+                                      ? tint
+                                      : Nocturne.neutral800,
+                                ),
+                              ),
+                              child: Icon(e.value,
+                                  size: 18,
+                                  color: pickedIcon == e.key
+                                      ? tint
+                                      : Nocturne.neutral400),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final hex in V3Design.customCategoryColors)
+                        GestureDetector(
+                          onTap: () => setLocal(() => pickedColor = hex),
+                          behavior: HitTestBehavior.opaque,
+                          child: Semantics(
+                            button: true,
+                            selected: pickedColor == hex,
+                            label: 'Colour $hex',
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: V3Design.parseHex(hex),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: pickedColor == hex
+                                      ? Nocturne.text
+                                      : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Nocturne.neutral400))),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save',
-                  style: TextStyle(color: Nocturne.accent300))),
-        ],
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Nocturne.neutral400))),
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Save',
+                      style: TextStyle(color: Nocturne.accent300))),
+            ],
+          );
+        },
       ),
     );
-    final v = name.text.trim();
-    return ok == true && v.isNotEmpty ? v : null;
+    final v = controller.text.trim();
+    return ok == true && v.isNotEmpty
+        ? (name: v, icon: pickedIcon, color: pickedColor)
+        : null;
   }
 
   @override
@@ -130,9 +239,12 @@ class _CategoriesManagerV3State extends State<CategoriesManagerV3> {
                   padding: const EdgeInsets.only(top: 12),
                   child: GestureDetector(
                     onTap: () async {
-                      final name = await CategoriesManagerV3.promptName(
+                      final r = await CategoriesManagerV3.promptCategory(
                           context, 'New category');
-                      if (name != null) await s.addCategory(name, kind: _kind);
+                      if (r != null) {
+                        await s.addCategory(r.name,
+                            kind: _kind, icon: r.icon, color: r.color);
+                      }
                     },
                     behavior: HitTestBehavior.opaque,
                     child: Container(
@@ -236,6 +348,8 @@ class _CategoryTile extends StatelessWidget {
                     V3Chip(
                       label: sub.name,
                       height: 26,
+                      icon: s.catStyle(sub.key).icon,
+                      iconColor: s.catStyle(sub.key).color,
                       onTap: () => _menu(context, s, sub, canAddSub: false),
                     ),
                 ],
@@ -273,23 +387,32 @@ class _CategoryTile extends StatelessWidget {
                     style: TextStyle(fontSize: 14, color: Nocturne.text)),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final name = await CategoriesManagerV3.promptName(
-                      context, 'New subcategory of ${c.name}');
-                  if (name != null) {
-                    await s.addCategory(name, kind: c.kind, parentId: c.id);
+                  final r = await CategoriesManagerV3.promptCategory(
+                      context, 'New subcategory of ${c.name}',
+                      icon: c.icon, color: c.color);
+                  if (r != null) {
+                    await s.addCategory(r.name,
+                        kind: c.kind,
+                        parentId: c.id,
+                        icon: r.icon,
+                        color: r.color);
                   }
                 },
               ),
             ListTile(
               leading: const Icon(PhRegular.pencilSimple,
                   size: 18, color: Nocturne.text),
-              title: const Text('Rename',
+              title: const Text('Edit name & icon',
                   style: TextStyle(fontSize: 14, color: Nocturne.text)),
               onTap: () async {
                 Navigator.pop(ctx);
-                final name = await CategoriesManagerV3.promptName(
-                    context, 'Rename', initial: c.name);
-                if (name != null) await s.renameCategory(c, name);
+                final r = await CategoriesManagerV3.promptCategory(
+                    context, 'Edit ${c.name}',
+                    name: c.name, icon: c.icon, color: c.color);
+                if (r != null) {
+                  await s.editCategory(c,
+                      name: r.name, icon: r.icon, color: r.color);
+                }
               },
             ),
             ListTile(

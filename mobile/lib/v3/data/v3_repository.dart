@@ -379,7 +379,7 @@ class V3Repository {
     if (shares != null && shares.isNotEmpty) {
       await _db.from('transaction_shares').insert([
         for (final e in shares.entries)
-          if (e.value > 0)
+          if (e.value >= 0)
             {
               'transaction_id': created.id,
               'user_id': e.key,
@@ -390,7 +390,7 @@ class V3Repository {
         ...Map<String, dynamic>.from(row),
         'transaction_shares': [
           for (final e in shares.entries)
-            if (e.value > 0) {'user_id': e.key, 'amount': e.value},
+            if (e.value >= 0) {'user_id': e.key, 'amount': e.value},
         ],
       });
     }
@@ -435,7 +435,7 @@ class V3Repository {
     await _db.from('transaction_shares').delete().eq('transaction_id', id);
     final rows = [
       for (final e in (shares ?? const <String, double>{}).entries)
-        if (e.value > 0)
+        if (e.value >= 0)
           {'transaction_id': id, 'user_id': e.key, 'amount': e.value},
     ];
     if (rows.isNotEmpty) await _db.from('transaction_shares').insert(rows);

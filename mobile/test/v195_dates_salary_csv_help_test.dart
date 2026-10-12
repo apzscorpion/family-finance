@@ -213,7 +213,7 @@ void main() {
       expect(repo.transactionsList.first.occurredAt.toUtc().day, equals(customDate.toUtc().day));
     });
 
-    testWidgets('V3AddSheet renders date picker row and explanatory subheaders', (tester) async {
+    testWidgets('V3AddSheet renders a compact date chip and source/method rows', (tester) async {
       final repo = _TestRepo();
       final state = _buildSeededState(repo);
       state.sources = [
@@ -241,13 +241,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Date selector row with Today / change button
+      // Compact date chip (tap to change) instead of a full-width row
       expect(find.textContaining('Today'), findsOneWidget);
-      expect(find.text('Change'), findsOneWidget);
 
-      // Explanatory headers
-      expect(find.textContaining('DEBIT SOURCE'), findsOneWidget);
-      expect(find.textContaining('PAYMENT CHANNEL'), findsOneWidget);
+      // Source and method rows keep their short labels; the long
+      // explanatory headers were removed to save space.
+      expect(find.text('From'), findsOneWidget);
+      expect(find.text('Paid via'), findsOneWidget);
+      expect(find.textContaining('DEBIT SOURCE'), findsNothing);
+      expect(find.textContaining('PAYMENT CHANNEL'), findsNothing);
     });
 
     testWidgets('ImportV3 header contains format and AI prompt help button which opens _CsvHelpSheet', (tester) async {

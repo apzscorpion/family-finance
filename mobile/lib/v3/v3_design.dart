@@ -192,6 +192,13 @@ class V3Design {
     'calendar': PhRegular.calendar,
     'target': PhRegular.target,
     'circle': PhRegular.circle,
+    // The seeded Refund category uses this one; the rest widen the picker.
+    'arrow-counter-clockwise': PhRegular.arrowCounterClockwise,
+    'house': PhRegular.house,
+    'users': PhRegular.users,
+    'currency-inr': PhRegular.currencyInr,
+    'moon-stars': PhRegular.moonStars,
+    'note': PhRegular.note,
   };
 
   static const List<String> customCategoryColors = [

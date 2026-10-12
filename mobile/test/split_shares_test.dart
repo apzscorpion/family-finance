@@ -54,4 +54,12 @@ void main() {
       {'a': 0, 'me': 50},
     );
   });
+
+  test('nil records who it was for, nobody owes', () {
+    expect(shares(amount: 100, payer: 'me', selected: {'wife'}, nil: true),
+        {'wife': 0});
+    expect(
+        shares(amount: 300, payer: 'me', selected: {'me', 'a', 'b'}, nil: true),
+        {'a': 0, 'b': 0});
+  });
 }

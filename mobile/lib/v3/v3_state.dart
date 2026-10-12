@@ -986,7 +986,10 @@ class V3State extends ChangeNotifier {
   /// Creates a category (or a subcategory under [parentId]) at the end of its
   /// list. Returns null when it could not be saved.
   Future<CategoryRow?> addCategory(String name,
-      {required String kind, String? parentId}) async {
+      {required String kind,
+      String? parentId,
+      String? icon,
+      String? color}) async {
     final base = name
         .trim()
         .toLowerCase()
@@ -1006,6 +1009,8 @@ class V3State extends ChangeNotifier {
         key: key,
         kind: kind,
         parentId: parentId,
+        icon: icon,
+        color: color,
         sortOrder: siblings.fold(0, (m, c) => c.sortOrder > m ? c.sortOrder : m) + 1,
       ),
     );
@@ -1015,14 +1020,15 @@ class V3State extends ChangeNotifier {
     return created;
   }
 
-  Future<void> renameCategory(CategoryRow c, String name) async {
+  Future<void> editCategory(CategoryRow c,
+      {required String name, String? icon, String? color}) async {
     await V3Repository.guard(
-      'renameCategory',
+      'editCategory',
       () => _repo.updateCategory(
           id: c.id,
           name: name,
-          icon: c.icon,
-          color: c.color,
+          icon: icon ?? c.icon,
+          color: color ?? c.color,
           parentId: c.parentId),
     );
     unawaited(refresh());
@@ -1208,14 +1214,18 @@ class V3State extends ChangeNotifier {
   /// stored colour when it is a custom category.
   V3Cat catStyle(String key) {
     final design = V3Design.cats[key];
-    if (design != null) return design;
     final row = categoryByKey(key);
+    if (row == null) return design ?? V3Design.cat(key);
+    final base = design ?? V3Design.cat(key);
+    // The row's own icon/colour/name win, so edits in Settings show up even
+    // on built-in categories; an unchanged built-in keeps its short label.
+    final renamed = design == null || row.name != design.name;
     return V3Cat(
       key,
-      row?.name ?? key,
-      null,
-      V3Design.cat(key).icon,
-      V3Design.parseHex(row?.color) ?? V3Design.cat(key).color,
+      row.name,
+      renamed ? null : design.short,
+      V3Design.categoryIconRegistry[row.icon?.trim()] ?? base.icon,
+      V3Design.parseHex(row.color) ?? base.color,
     );
   }
 
