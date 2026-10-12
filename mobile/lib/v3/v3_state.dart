@@ -40,6 +40,7 @@ class V3State extends ChangeNotifier {
   List<NoteRow> notes = [];
   List<FolderRow> folders = [];
   List<SettlementRow> settlements = [];
+  List<WalletMoveRow> walletMoves = [];
   List<ApprovalRow> approvals = [];
   List<DetectedRow> detected = [];
   PrefsRow prefs = const PrefsRow();
@@ -184,6 +185,7 @@ class V3State extends ChangeNotifier {
       V3Repository.guard('approvals', () => _repo.approvals(familyId)),
       V3Repository.guard('detected', () => _repo.detected(familyId)),
       V3Repository.guard('prefs', () => _repo.prefs(familyId)),
+      V3Repository.guard('walletMoves', () => _repo.walletMoves(familyId)),
     ]);
 
     members = (results[0] as List<MemberRow>?) ?? members;
@@ -199,6 +201,7 @@ class V3State extends ChangeNotifier {
     approvals = (results[10] as List<ApprovalRow>?) ?? approvals;
     detected = (results[11] as List<DetectedRow>?) ?? detected;
     prefs = (results[12] as PrefsRow?) ?? prefs;
+    walletMoves = (results[13] as List<WalletMoveRow>?) ?? walletMoves;
 
     if (!_scopeChosen) {
       final mine = myId;
@@ -442,6 +445,67 @@ class V3State extends ChangeNotifier {
     }
     list.sort((a, b) => b.value.compareTo(a.value));
     return list;
+  }
+
+  /// What [sourceId] holds right now, split into cash and bank. Cash-method
+  /// entries move the cash part, every other method (UPI, bank, card) the bank
+  /// part; withdrawals and deposits move money between the two. All-time and
+  /// for the whole family: it is the account's money, not one member's.
+  ({double cash, double bank}) wallet(String sourceId) {
+    final src = sourceById(sourceId);
+    var cash = src?.openingCash ?? 0.0;
+    var bank = (src?.openingBalance ?? 0.0) - cash;
+    for (final t in txns) {
+      if (sourceOf(t) != sourceId) continue;
+      final v = t.isExpense ? -t.amount : t.amount;
+      if (t.method.toLowerCase() == 'cash') {
+        cash += v;
+      } else {
+        bank += v;
+      }
+    }
+    for (final m in walletMoves) {
+      if (m.sourceId != sourceId) continue;
+      final v = m.toCash ? m.amount : -m.amount;
+      cash += v;
+      bank -= v;
+    }
+    return (cash: cash, bank: bank);
+  }
+
+  /// Sets what the source holds now; the opening amounts are back-calculated
+  /// so every past entry stays as it is.
+  Future<void> setWalletBalance(
+      String sourceId, double cash, double bank) async {
+    final src = sourceById(sourceId);
+    if (src == null) return;
+    final now = wallet(sourceId);
+    final openingCash = src.openingCash + (cash - now.cash);
+    final openingBank = (src.openingBalance - src.openingCash) + (bank - now.bank);
+    await V3Repository.guard(
+      'setWalletBalance',
+      () => _repo.updateSource(sourceId,
+          openingBalance: openingCash + openingBank, openingCash: openingCash),
+    );
+    await refresh();
+  }
+
+  /// Withdraw ([toCash]) or deposit inside one source.
+  Future<bool> moveMoney(String sourceId, double amount,
+      {required bool toCash}) async {
+    if (amount <= 0) return false;
+    final created = await V3Repository.guard(
+      'moveMoney',
+      () => _repo.addWalletMove(
+          familyId: familyId,
+          sourceId: sourceId,
+          amount: amount,
+          toCash: toCash),
+    );
+    if (created == null) return false;
+    walletMoves = [...walletMoves, created];
+    notifyListeners();
+    return true;
   }
 
   ({double inAmt, double outAmt}) sourceTotals(String sourceId) {

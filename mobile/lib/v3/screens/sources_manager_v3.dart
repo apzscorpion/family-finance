@@ -249,6 +249,7 @@ class _SourceRowTile extends StatelessWidget {
     final src = s.sources[index];
     final design = src.design;
     final totals = s.sourceTotals(src.id);
+    final w = s.wallet(src.id);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -267,6 +268,13 @@ class _SourceRowTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 13.5, color: Nocturne.text)),
+                Text(
+                  'Cash ${s.moneyShort(w.cash)} · Bank ${s.moneyShort(w.bank)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12, color: Nocturne.accent200),
+                ),
                 Text(
                   '${_kindLabel(src.kind)} · In ${s.moneyShort(totals.inAmt)}'
                   ' · Spent ${s.moneyShort(totals.outAmt)}',
@@ -321,6 +329,39 @@ class _SourceRowTile extends StatelessWidget {
                     color: Nocturne.text)),
             const SizedBox(height: 8),
             ListTile(
+              leading: const Icon(PhRegular.wallet,
+                  size: 18, color: Nocturne.text),
+              title: const Text('Set cash & bank balance',
+                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
+              subtitle: const Text('What this account holds right now',
+                  style:
+                      TextStyle(fontSize: 11.5, color: Nocturne.neutral500)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _setBalances(context, s, src.id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(PhRegular.arrowCircleDown,
+                  size: 18, color: Nocturne.text),
+              title: const Text('Withdraw to cash',
+                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _move(context, s, src.id, toCash: true);
+              },
+            ),
+            ListTile(
+              leading: const Icon(PhRegular.bank,
+                  size: 18, color: Nocturne.text),
+              title: const Text('Deposit cash to bank',
+                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _move(context, s, src.id, toCash: false);
+              },
+            ),
+            ListTile(
               leading: const Icon(PhRegular.pencilSimple,
                   size: 18, color: Nocturne.text),
               title: const Text('Rename',
@@ -358,6 +399,104 @@ class _SourceRowTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static InputDecoration _amountField(String label) => InputDecoration(
+        labelText: label,
+        prefixText: '₹ ',
+        labelStyle: const TextStyle(fontSize: 13, color: Nocturne.neutral400),
+        filled: true,
+        fillColor: Nocturne.bg,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+      );
+
+  static Future<void> _setBalances(
+      BuildContext context, V3State s, String sourceId) async {
+    final now = s.wallet(sourceId);
+    final cash = TextEditingController(text: now.cash.toStringAsFixed(0));
+    final bank = TextEditingController(text: now.bank.toStringAsFixed(0));
+    const keyboard = TextInputType.numberWithOptions(decimal: true);
+    const style = TextStyle(fontSize: 14, color: Nocturne.text);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Nocturne.surface,
+        title: Text('${s.sourceById(sourceId)?.name ?? 'Account'} balance',
+            style: const TextStyle(fontSize: 17, color: Nocturne.text)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+                controller: cash,
+                keyboardType: keyboard,
+                style: style,
+                decoration: _amountField('Cash in hand')),
+            const SizedBox(height: 10),
+            TextField(
+                controller: bank,
+                keyboardType: keyboard,
+                style: style,
+                decoration: _amountField('In the bank')),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Nocturne.neutral400))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save',
+                  style: TextStyle(color: Nocturne.accent300))),
+        ],
+      ),
+    );
+    final c = double.tryParse(cash.text.trim());
+    final b = double.tryParse(bank.text.trim());
+    if (ok != true || c == null || b == null) return;
+    await s.setWalletBalance(sourceId, c, b);
+  }
+
+  static Future<void> _move(BuildContext context, V3State s, String sourceId,
+      {required bool toCash}) async {
+    final amount = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Nocturne.surface,
+        title: Text(toCash ? 'Withdraw to cash' : 'Deposit cash to bank',
+            style: const TextStyle(fontSize: 17, color: Nocturne.text)),
+        content: TextField(
+          controller: amount,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: const TextStyle(fontSize: 14, color: Nocturne.text),
+          decoration: _amountField('Amount'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Nocturne.neutral400))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(toCash ? 'Withdraw' : 'Deposit',
+                  style: const TextStyle(color: Nocturne.accent300))),
+        ],
+      ),
+    );
+    final v = double.tryParse(amount.text.trim()) ?? 0;
+    if (ok != true || v <= 0) return;
+    final moved = await s.moveMoney(sourceId, v, toCash: toCash);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(moved
+          ? (toCash ? 'Moved to cash' : 'Moved to bank')
+          : 'Could not save — check your connection'),
+    ));
   }
 
   static Future<void> _rename(

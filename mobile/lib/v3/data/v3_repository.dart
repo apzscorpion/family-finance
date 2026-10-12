@@ -199,7 +199,7 @@ class V3Repository {
   Future<List<SourceRow>> sources(String familyId) async {
     final rows = await _db
         .from('money_sources')
-        .select('id,name,kind,opening_balance,sort_order')
+        .select('id,name,kind,opening_balance,opening_cash,sort_order')
         .eq('family_id', familyId)
         .eq('archived', false)
         .order('sort_order');
@@ -223,7 +223,7 @@ class V3Repository {
           'opening_balance': openingBalance,
           'sort_order': 99,
         })
-        .select('id,name,kind,opening_balance,sort_order')
+        .select('id,name,kind,opening_balance,opening_cash,sort_order')
         .single();
     return SourceRow.fromJson(Map<String, dynamic>.from(row));
   }
@@ -233,12 +233,43 @@ class V3Repository {
     String? name,
     String? kind,
     double? openingBalance,
+    double? openingCash,
   }) async {
     await _db.from('money_sources').update({
       'name': ?name,
       'kind': ?kind,
       'opening_balance': ?openingBalance,
+      'opening_cash': ?openingCash,
     }).eq('id', id);
+  }
+
+  Future<List<WalletMoveRow>> walletMoves(String familyId) async {
+    final rows = await _db
+        .from('wallet_moves')
+        .select('id,source_id,amount,to_cash,occurred_at')
+        .eq('family_id', familyId);
+    return (rows as List)
+        .map((r) => WalletMoveRow.fromJson(Map<String, dynamic>.from(r as Map)))
+        .toList();
+  }
+
+  Future<WalletMoveRow> addWalletMove({
+    required String familyId,
+    required String sourceId,
+    required double amount,
+    required bool toCash,
+  }) async {
+    final row = await _db
+        .from('wallet_moves')
+        .insert({
+          'family_id': familyId,
+          'source_id': sourceId,
+          'amount': amount,
+          'to_cash': toCash,
+        })
+        .select('id,source_id,amount,to_cash,occurred_at')
+        .single();
+    return WalletMoveRow.fromJson(Map<String, dynamic>.from(row));
   }
 
   /// True when nothing references this source, so it is safe to delete rather

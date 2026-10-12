@@ -89,12 +89,16 @@ class SourceRow {
   final double openingBalance;
   final int sortOrder;
 
+  /// Part of [openingBalance] held as cash; the rest was in the bank.
+  final double openingCash;
+
   const SourceRow({
     required this.id,
     required this.name,
     required this.kind,
     required this.openingBalance,
     required this.sortOrder,
+    this.openingCash = 0,
   });
 
   factory SourceRow.fromJson(Map<String, dynamic> j) => SourceRow(
@@ -103,6 +107,7 @@ class SourceRow {
         kind: j['kind']?.toString() ?? 'savings',
         openingBalance: _num(j['opening_balance']),
         sortOrder: (j['sort_order'] as num?)?.toInt() ?? 0,
+        openingCash: _num(j['opening_cash']),
       );
 
   /// Falls back to the design's icon/hue for the seeded source names.
@@ -110,6 +115,35 @@ class SourceRow {
       V3Design.sources.firstWhere(
         (s) => s.name.toLowerCase() == name.toLowerCase(),
         orElse: () => V3Design.sources.last,
+      );
+}
+
+/// Money moved between bank and cash inside one source: not spending.
+class WalletMoveRow {
+  final String id;
+  final String sourceId;
+  final double amount;
+
+  /// true: withdrawn from the bank as cash; false: cash deposited.
+  final bool toCash;
+  final DateTime occurredAt;
+
+  const WalletMoveRow({
+    required this.id,
+    required this.sourceId,
+    required this.amount,
+    required this.toCash,
+    required this.occurredAt,
+  });
+
+  factory WalletMoveRow.fromJson(Map<String, dynamic> j) => WalletMoveRow(
+        id: j['id'].toString(),
+        sourceId: j['source_id'].toString(),
+        amount: _num(j['amount']),
+        toCash: j['to_cash'] == true,
+        occurredAt:
+            DateTime.tryParse(j['occurred_at']?.toString() ?? '')?.toLocal() ??
+                DateTime.now(),
       );
 }
 

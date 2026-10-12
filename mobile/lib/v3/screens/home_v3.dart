@@ -758,7 +758,9 @@ class _MoneySources extends StatelessWidget {
         itemBuilder: (context, i) {
           final src = s.sources[i];
           final t = s.sourceTotals(src.id);
-          final left = src.openingBalance + t.inAmt - t.outAmt;
+          final w = s.wallet(src.id);
+          // What the account holds now (all-time), not just this period.
+          final left = w.cash + w.bank;
           final denom = src.openingBalance + t.inAmt;
           final frac = denom <= 0 ? 0.0 : (t.outAmt / denom).clamp(0.0, 1.0);
           final selected = s.srcFilter == src.id;
@@ -823,7 +825,7 @@ class _MoneySources extends StatelessWidget {
                       track: Nocturne.neutral900),
                   const SizedBox(height: 6),
                   Text(
-                    'In ${s.moneyShort(t.inAmt)}',
+                    'Cash ${s.moneyShort(w.cash)} · Bank ${s.moneyShort(w.bank)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
