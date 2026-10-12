@@ -18,6 +18,7 @@ import 'import_v3.dart';
 import '../v3_design.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
+import 'categories_manager_v3.dart';
 import 'sources_manager_v3.dart';
 import '../sheets/v3_sheets.dart';
 import '../widgets/v3_primitives.dart';
@@ -123,6 +124,12 @@ class SettingsV3 extends StatelessWidget {
                 icon: PhRegular.wallet,
                 label: 'Money sources (${s.sources.length})',
                 onTap: () => SourcesManagerV3.open(context),
+              ),
+              const V3RowDivider(),
+              _DataRow(
+                icon: PhRegular.listBullets,
+                label: 'Categories',
+                onTap: () => CategoriesManagerV3.open(context),
               ),
               const V3RowDivider(),
               _DataRow(

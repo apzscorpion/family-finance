@@ -247,7 +247,15 @@ class V3State extends ChangeNotifier {
     return null;
   }
 
+  /// Top-level categories of [kind] ('expense' / 'income'), in Settings order.
+  List<CategoryRow> topCategories(String kind) => categories
+      .where((c) => c.kind == kind && !c.isSubCategory)
+      .toList()
+    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
+  List<CategoryRow> subcategoriesOf(String parentId) =>
+      categories.where((c) => c.parentId == parentId).toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
   SourceRow? sourceById(String? id) {
     if (id == null) return null;
@@ -546,13 +554,10 @@ class V3State extends ChangeNotifier {
       'paid_by': paidBy ?? myId,
       if (occurredAt != null)
         'occurred_at': occurredAt.toUtc().toIso8601String(),
-      'split_with':
-          shares == null || shares.isEmpty ? null : shares.keys.toList(),
-      'shares': shares,
       'note': ?note,
     };
     final ok = await V3Repository.guard('updateTransaction', () async {
-      await _repo.updateTransaction(id, patch);
+      await _repo.updateTransaction(id, patch, shares: shares);
       return true;
     });
     if (ok != true) return false;
@@ -976,6 +981,84 @@ class V3State extends ChangeNotifier {
         () => _repo.setDetectedStatus(d.id, status, transactionId: txnId));
     detected = detected.where((x) => x.id != d.id).toList();
     notifyListeners();
+  }
+
+  /// Creates a category (or a subcategory under [parentId]) at the end of its
+  /// list. Returns null when it could not be saved.
+  Future<CategoryRow?> addCategory(String name,
+      {required String kind, String? parentId}) async {
+    final base = name
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    var key = base.isEmpty ? 'cat' : base;
+    for (var n = 2; categoryByKey(key) != null; n++) {
+      key = '${base}_$n';
+    }
+    final siblings =
+        parentId == null ? topCategories(kind) : subcategoriesOf(parentId);
+    final created = await V3Repository.guard(
+      'addCategory',
+      () => _repo.addCategory(
+        familyId: familyId,
+        name: name,
+        key: key,
+        kind: kind,
+        parentId: parentId,
+        sortOrder: siblings.fold(0, (m, c) => c.sortOrder > m ? c.sortOrder : m) + 1,
+      ),
+    );
+    if (created == null) return null;
+    categories = [...categories, created];
+    notifyListeners();
+    return created;
+  }
+
+  Future<void> renameCategory(CategoryRow c, String name) async {
+    await V3Repository.guard(
+      'renameCategory',
+      () => _repo.updateCategory(
+          id: c.id,
+          name: name,
+          icon: c.icon,
+          color: c.color,
+          parentId: c.parentId),
+    );
+    unawaited(refresh());
+  }
+
+  /// Past entries keep their amount but lose the category (set null in DB);
+  /// subcategories are removed with it.
+  Future<void> deleteCategory(String id) async {
+    await V3Repository.guard('deleteCategory', () => _repo.deleteCategory(id));
+    categories =
+        categories.where((c) => c.id != id && c.parentId != id).toList();
+    notifyListeners();
+  }
+
+  /// Saves a new order for one list (top-level of a kind, or one parent's
+  /// subcategories). Updates locally first so the drag feels instant.
+  Future<void> reorderCategories(List<CategoryRow> ordered) async {
+    final pos = {for (var i = 0; i < ordered.length; i++) ordered[i].id: i + 1};
+    categories = [
+      for (final c in categories)
+        pos.containsKey(c.id)
+            ? CategoryRow(
+                id: c.id,
+                key: c.key,
+                name: c.name,
+                icon: c.icon,
+                color: c.color,
+                parentId: c.parentId,
+                kind: c.kind,
+                sortOrder: pos[c.id]!,
+              )
+            : c,
+    ];
+    notifyListeners();
+    await V3Repository.guard('reorderCategories',
+        () => _repo.reorderCategories([for (final c in ordered) c.id]));
   }
 
   Future<bool> addSource(String name, {String kind = 'income'}) async {

@@ -121,6 +121,12 @@ class CategoryRow {
   final String? color;
   final String? parentId;
 
+  /// Position set in Settings; the add screen lists categories in this order.
+  final int sortOrder;
+
+  /// 'expense' or 'income'.
+  final String kind;
+
   const CategoryRow({
     required this.id,
     required this.key,
@@ -128,6 +134,8 @@ class CategoryRow {
     this.icon,
     this.color,
     this.parentId,
+    this.sortOrder = 0,
+    this.kind = 'expense',
   });
 
   bool get isSubCategory => parentId != null && parentId!.isNotEmpty;
@@ -147,6 +155,8 @@ class CategoryRow {
       icon: icon ?? this.icon,
       color: color ?? this.color,
       parentId: parentId ?? this.parentId,
+      sortOrder: sortOrder,
+      kind: kind,
     );
   }
 
@@ -157,6 +167,8 @@ class CategoryRow {
         icon: j['icon']?.toString(),
         color: j['color']?.toString(),
         parentId: j['parent_id']?.toString(),
+        sortOrder: (j['sort_order'] as num?)?.toInt() ?? 0,
+        kind: j['kind']?.toString() ?? 'expense',
       );
 
   Map<String, dynamic> toJson() => {

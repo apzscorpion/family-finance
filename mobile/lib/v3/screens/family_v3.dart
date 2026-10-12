@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
 import '../data/chat_controller.dart';
+import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
 import '../v3_design.dart';
@@ -456,7 +457,10 @@ class _MemberRowTile extends StatelessWidget {
     final isMe = m.userId == s.myId;
     final canManage = (s.isOwner || s.me?.role == 'admin') && !isMe;
 
-    return Padding(
+    return GestureDetector(
+      onTap: isMe ? null : () => _SharedWithSheet.open(context, m.userId),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
@@ -565,6 +569,7 @@ class _MemberRowTile extends StatelessWidget {
               ),
             ),
         ],
+      ),
       ),
     );
   }
@@ -685,4 +690,221 @@ class _MemberRowTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The money picture between me and one other member: what I paid for them,
+/// what they paid for me, what we split, and who owes whom now.
+class _SharedWithSheet extends StatefulWidget {
+  final String otherId;
+  const _SharedWithSheet({required this.otherId});
+
+  static Future<void> open(BuildContext context, String otherId) =>
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Nocturne.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) => _SharedWithSheet(otherId: otherId),
+      );
+
+  @override
+  State<_SharedWithSheet> createState() => _SharedWithSheetState();
+}
+
+class _SharedWithSheetState extends State<_SharedWithSheet> {
+  // Server-side so recorded settlements are netted off.
+  late Future<double> _balance =
+      context.read<V3State>().pairBalance(widget.otherId);
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<V3State>();
+    final other = s.memberById(widget.otherId);
+    final name = other?.name ?? 'Them';
+    final ledger = s.ledgerWith(widget.otherId);
+    var paidForThem = 0.0, paidForMe = 0.0, together = 0.0;
+    for (final t in ledger) {
+      together += t.amount;
+      final v = s.signedShare(t, widget.otherId);
+      if (v > 0) {
+        paidForThem += v;
+      } else {
+        paidForMe -= v;
+      }
+    }
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
+          children: [
+            Row(
+              children: [
+                V3Avatar(
+                    initial: other?.initial ?? '?',
+                    color: other?.color ?? Nocturne.neutral700,
+                    size: 40,
+                    fontSize: 15),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('You & $name',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Nocturne.text)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            FutureBuilder<double>(
+              future: _balance,
+              builder: (_, snap) {
+                final b = snap.data;
+                final settled = b != null && b.abs() < 0.5;
+                final text = b == null
+                    ? 'Working out the balance…'
+                    : settled
+                        ? 'All settled up'
+                        : b > 0
+                            ? '$name owes you ${s.money(b)}'
+                            : 'You owe $name ${s.money(-b)}';
+                return Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Nocturne.bg,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(text,
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: b == null || settled
+                                    ? Nocturne.neutral300
+                                    : b > 0
+                                        ? NocturneSemantic.income
+                                        : NocturneSemantic.expense)),
+                      ),
+                      if (b != null && !settled)
+                        TextButton(
+                          onPressed: () async {
+                            final ok = await s.settleWith(widget.otherId, b);
+                            if (!mounted || !ok) return;
+                            setState(() =>
+                                _balance = s.pairBalance(widget.otherId));
+                          },
+                          child: const Text('Settle up',
+                              style: TextStyle(color: Nocturne.accent300)),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _stat('You paid for $name', s.moneyShort(paidForThem)),
+                const SizedBox(width: 8),
+                _stat('$name paid for you', s.moneyShort(paidForMe)),
+                const SizedBox(width: 8),
+                _stat('Split together', s.moneyShort(together)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text('SHARED ENTRIES',
+                style: TextStyle(
+                    fontSize: 11,
+                    letterSpacing: 0.8,
+                    color: Nocturne.neutral500)),
+            const SizedBox(height: 6),
+            if (ledger.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 18),
+                child: Text('Nothing shared yet.',
+                    style:
+                        TextStyle(fontSize: 13, color: Nocturne.neutral500)),
+              ),
+            for (final t in ledger) _entry(s, t, name),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _entry(V3State s, TxnRow t, String name) {
+    final v = s.signedShare(t, widget.otherId);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        const TextStyle(fontSize: 13.5, color: Nocturne.text)),
+                Text(
+                  '${t.paidBy == s.myId ? 'You' : name} paid '
+                  '${s.moneyShort(t.amount)}',
+                  style: const TextStyle(
+                      fontSize: 11.5, color: Nocturne.neutral500),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            v >= 0 ? '+${s.moneyShort(v)}' : '−${s.moneyShort(-v)}',
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: v >= 0
+                    ? NocturneSemantic.income
+                    : NocturneSemantic.expense),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stat(String label, String value) => Expanded(
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Nocturne.bg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  maxLines: 2,
+                  style: const TextStyle(
+                      fontSize: 10.5, color: Nocturne.neutral500)),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(value,
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Nocturne.text)),
+              ),
+            ],
+          ),
+        ),
+      );
 }

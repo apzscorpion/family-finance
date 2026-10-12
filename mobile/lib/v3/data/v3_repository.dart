@@ -120,8 +120,9 @@ class V3Repository {
   Future<List<CategoryRow>> categories(String familyId) async {
     final rows = await _db
         .from('categories')
-        .select('id,key,name,icon,color,parent_id')
+        .select('id,key,name,icon,color,parent_id,sort_order,kind')
         .eq('family_id', familyId)
+        .order('sort_order')
         .order('name');
     return (rows as List)
         .map((r) => CategoryRow.fromJson(Map<String, dynamic>.from(r as Map)))
@@ -135,18 +136,22 @@ class V3Repository {
     String? icon,
     String? color,
     String? parentId,
+    String kind = 'expense',
+    int sortOrder = 0,
   }) async {
     final row = await _db
         .from('categories')
         .insert({
           'family_id': familyId,
+          'kind': kind,
+          'sort_order': sortOrder,
           'name': name.trim(),
           'key': key.trim(),
           if (icon != null && icon.isNotEmpty) 'icon': icon,
           if (color != null && color.isNotEmpty) 'color': color,
           if (parentId != null && parentId.isNotEmpty) 'parent_id': parentId,
         })
-        .select('id,key,name,icon,color,parent_id')
+        .select('id,key,name,icon,color,parent_id,sort_order,kind')
         .single();
     return CategoryRow.fromJson(Map<String, dynamic>.from(row as Map));
   }
@@ -168,13 +173,23 @@ class V3Repository {
         .from('categories')
         .update(patch)
         .eq('id', id)
-        .select('id,key,name,icon,color,parent_id')
+        .select('id,key,name,icon,color,parent_id,sort_order,kind')
         .single();
     return CategoryRow.fromJson(Map<String, dynamic>.from(row as Map));
   }
 
   Future<void> deleteCategory(String id) async {
     await _db.from('categories').delete().eq('id', id);
+  }
+
+  /// Writes each category's position as its index in [orderedIds].
+  Future<void> reorderCategories(List<String> orderedIds) async {
+    await Future.wait([
+      for (var i = 0; i < orderedIds.length; i++)
+        _db
+            .from('categories')
+            .update({'sort_order': i + 1}).eq('id', orderedIds[i]),
+    ]);
   }
 
   Future<List<SourceRow>> sources(String familyId) async {
@@ -406,8 +421,20 @@ class V3Repository {
     });
   }
 
-  Future<void> updateTransaction(String id, Map<String, dynamic> patch) async {
+  /// [shares] replaces the entry's whole split; null or empty clears it.
+  Future<void> updateTransaction(
+    String id,
+    Map<String, dynamic> patch, {
+    Map<String, double>? shares,
+  }) async {
     await _db.from('transactions').update(patch).eq('id', id);
+    await _db.from('transaction_shares').delete().eq('transaction_id', id);
+    final rows = [
+      for (final e in (shares ?? const <String, double>{}).entries)
+        if (e.value > 0)
+          {'transaction_id': id, 'user_id': e.key, 'amount': e.value},
+    ];
+    if (rows.isNotEmpty) await _db.from('transaction_shares').insert(rows);
   }
 
   /// Patches many transactions in chunks, like [deleteTransactionsBulk].

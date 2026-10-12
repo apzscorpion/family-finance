@@ -6,6 +6,7 @@ import '../../theme/nocturne.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../v3_design.dart';
+import '../screens/categories_manager_v3.dart';
 import '../screens/sources_manager_v3.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
@@ -472,6 +473,32 @@ class V3AddSheet extends StatefulWidget {
   final TxnRow? edit;
   const V3AddSheet({super.key, this.edit});
 
+  /// Who owes the payer what. One other person owes the full amount; with
+  /// more, it is split equally, or the payer's own part comes off first.
+  static Map<String, double>? computeShares({
+    required double amount,
+    required String? payer,
+    required Set<String> selected,
+    bool partial = false,
+    double myPart = 0,
+    bool myPartIsPct = false,
+  }) {
+    final others = selected.where((m) => m != payer).toList();
+    if (others.isEmpty || amount <= 0) return null;
+    if (selected.length == 1) return {others.first: amount};
+    if (!partial) {
+      final each = amount / selected.length;
+      return {for (final m in selected) m: each};
+    }
+    final mine =
+        (myPartIsPct ? amount * myPart / 100 : myPart).clamp(0.0, amount);
+    final each = (amount - mine) / others.length;
+    return {
+      for (final m in others) m: each,
+      if (payer != null && selected.contains(payer)) payer: mine,
+    };
+  }
+
   @override
   State<V3AddSheet> createState() => _V3AddSheetState();
 }
@@ -490,14 +517,18 @@ class _V3AddSheetState extends State<V3AddSheet> {
   /// Single "For" selector members. Defaults to logged-in user.
   final Set<String> _selectedMembers = {};
 
-  /// Split mode:
-  /// - 'gift': "I pay for them / no return" (nobody owes anything)
-  /// - 'full_owe': "They owe 100%"
-  /// - 'equal': divided equally among all selected
-  /// - 'partial': custom partial amount
-  String _splitMode = 'equal';
-  double _partialOwed = 0;
-  final Map<String, double> _customShares = {};
+  /// Only used when two or more people are selected:
+  /// - 'full': split equally, each owes the payer their part
+  /// - 'partial': the payer covers [_myPart] (₹ or %), the rest is split
+  ///   equally among the others
+  String _splitMode = 'full';
+  double _myPart = 0;
+  bool _myPartIsPct = false;
+
+
+  /// Who actually paid. Null means the person logging it. The entry is always
+  /// filed under the payer; [_selectedMembers] only decides who owes them.
+  String? _payer;
 
   /// Toggle to repeat monthly on this day of month
   bool _repeatMonthly = false;
@@ -505,6 +536,31 @@ class _V3AddSheetState extends State<V3AddSheet> {
   bool _saving = false;
 
   static const _methods = ['UPI', 'Cash', 'Card', 'Bank', 'Loan'];
+
+  /// Payment methods that make sense for each money-source kind. A source
+  /// kind not listed here (or no source) offers every method.
+  static const _methodsByKind = {
+    'income': ['UPI', 'Cash', 'Bank'],
+    'savings': ['UPI', 'Cash', 'Bank'],
+    'loan': ['UPI', 'Cash'],
+    'card': ['Card'],
+    'cash': ['Cash'],
+  };
+
+  Future<void> _newCategory(V3State s, {CategoryRow? parent}) async {
+    final name = await CategoriesManagerV3.promptName(
+        context, parent == null ? 'New category' : 'New subcategory of ${parent.name}');
+    if (name == null) return;
+    final created =
+        await s.addCategory(name, kind: _type, parentId: parent?.id);
+    if (!mounted) return;
+    if (created == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not add category')));
+      return;
+    }
+    setState(() => _catKey = created.key);
+  }
 
   @override
   void initState() {
@@ -518,14 +574,22 @@ class _V3AddSheetState extends State<V3AddSheet> {
       _method = e.method;
       _sourceId = e.sourceId;
       _note.text = e.title;
+      _payer = e.paidBy ?? e.userId;
+      // Income paid_by is who paid you; "me" there means nobody recorded.
+      if (e.type == 'income' && _payer == e.userId) _payer = '';
       if (e.shares.isNotEmpty) {
         _selectedMembers.addAll(e.shares.keys);
-        _splitMode = 'equal';
+        final values = e.shares.values.toList();
+        final equal = values.every((v) => (v - values.first).abs() < 0.01);
+        if (_selectedMembers.length > 1 && !equal) {
+          _splitMode = 'partial';
+          final othersOwe = e.shares.entries
+              .where((x) => x.key != _payer)
+              .fold(0.0, (t, x) => t + x.value);
+          _myPart = e.amount - othersOwe;
+        }
       } else if (e.userId != null) {
         _selectedMembers.add(e.userId!);
-        if (e.paidBy != null && e.paidBy != e.userId) {
-          _splitMode = 'gift';
-        }
       }
     }
   }
@@ -607,47 +671,23 @@ class _V3AddSheetState extends State<V3AddSheet> {
     if (amountToSave <= 0 || _saving) return;
     setState(() => _saving = true);
 
-    final myId = s.myId;
-    final isMulti = _selectedMembers.length > 1;
-    final isOnlyMe = _selectedMembers.length == 1 && _selectedMembers.contains(myId);
-    final isOtherSingle = _selectedMembers.length == 1 && !isOnlyMe;
-
-    Map<String, double>? shares;
-    String? forUserId;
-    String? paidBy = myId;
-
-    if (isOnlyMe) {
-      forUserId = myId;
-      paidBy = myId;
-      shares = null;
-    } else if (isOtherSingle) {
-      final otherId = _selectedMembers.first;
-      forUserId = otherId;
-      paidBy = myId;
-      if (_splitMode == 'gift') {
-        // "No return, paying for them"
-        shares = null;
-      } else if (_splitMode == 'full_owe') {
-        // "They owe 100%"
-        shares = {otherId: amountToSave};
-      } else if (_splitMode == 'partial') {
-        final owed = _partialOwed > 0 ? _partialOwed : (amountToSave / 2);
-        shares = {otherId: owed};
-      }
-    } else if (isMulti) {
-      forUserId = myId;
-      paidBy = myId;
-      if (_splitMode == 'gift') {
-        shares = null;
-      } else if (_splitMode == 'equal') {
-        final each = amountToSave / _selectedMembers.length;
-        shares = {for (final m in _selectedMembers) m: each};
-      } else if (_splitMode == 'partial') {
-        shares = _customShares.isNotEmpty
-            ? _customShares
-            : {for (final m in _selectedMembers) m: amountToSave / _selectedMembers.length};
-      }
-    }
+    // The entry stays under whoever paid; "For" only creates what others owe.
+    final isIncome = _type == 'income';
+    final payer = isIncome ? s.myId : (_payer ?? s.myId);
+    final forUserId = payer;
+    // Income: paid_by is who paid you; empty means someone outside the family.
+    final paidBy =
+        isIncome ? ((_payer?.isNotEmpty ?? false) ? _payer : s.myId) : payer;
+    final shares = isIncome
+        ? null
+        : V3AddSheet.computeShares(
+            amount: amountToSave,
+            payer: payer,
+            selected: _selectedMembers,
+            partial: _splitMode == 'partial',
+            myPart: _myPart,
+            myPartIsPct: _myPartIsPct,
+          );
 
     final title = _note.text.trim();
     final ok = widget.edit != null
@@ -713,18 +753,40 @@ class _V3AddSheetState extends State<V3AddSheet> {
       '7', '8', '9', '×',
       '.', '0', '<', '=',
     ];
-    final catKeys =
-        _type == 'expense' ? V3Design.expenseCats : V3Design.incomeCats;
+    // Settings order; the hardcoded list only covers the first load.
+    final topCats = s.topCategories(_type);
+    final catKeys = topCats.isNotEmpty
+        ? [for (final c in topCats) c.key]
+        : (_type == 'expense' ? V3Design.expenseCats : V3Design.incomeCats);
+    final selCat = s.categoryByKey(_catKey);
+    final parentCat =
+        selCat?.isSubCategory == true ? s.categoryById(selCat!.parentId) : selCat;
+    final subCats =
+        parentCat == null ? const <CategoryRow>[] : s.subcategoriesOf(parentCat.id);
+    // Payment methods that fit the chosen account; all of them when none is.
+    final srcKind = s.sourceById(_sourceId)?.kind;
+    final allowed = _methodsByKind[srcKind] ?? _methods;
+    final methods = [...allowed, if (!allowed.contains(_method)) _method];
     final members = s.members.where((m) => m.isActive).toList();
 
-    // Default to me if empty
-    if (_selectedMembers.isEmpty && s.myId != null) {
-      _selectedMembers.add(s.myId!);
+    final payer = _type == 'income' ? s.myId : (_payer ?? s.myId);
+    final payerIsMe = payer == s.myId;
+    final payerName = payerIsMe
+        ? 'You'
+        : members
+                .where((m) => m.userId == payer)
+                .map((m) => m.name)
+                .firstOrNull ??
+            'They';
+
+    // Default the "For" selection to the payer.
+    if (_selectedMembers.isEmpty && payer != null) {
+      _selectedMembers.add(payer);
     }
 
     final isMulti = _selectedMembers.length > 1;
     final isOtherSingle =
-        _selectedMembers.length == 1 && !_selectedMembers.contains(s.myId);
+        _selectedMembers.length == 1 && !_selectedMembers.contains(payer);
     final otherMember = isOtherSingle
         ? members.firstWhere((m) => m.userId == _selectedMembers.first,
             orElse: () => members.first)
@@ -755,7 +817,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 onChanged: (i) => setState(() {
                   _type = i == 0 ? 'expense' : 'income';
-                  _catKey = i == 0 ? 'groceries' : 'salary';
+                  final first = s.topCategories(_type).firstOrNull;
+                  _catKey = first?.key ?? (i == 0 ? 'groceries' : 'salary');
+                  _payer = null;
                 }),
               ),
               const SizedBox(width: 10),
@@ -852,6 +916,77 @@ class _V3AddSheetState extends State<V3AddSheet> {
           ),
           const SizedBox(height: 8),
 
+          // ── Paid by (rare: someone else paid) / income: who paid you ──────
+          if (_type == 'income' && members.length > 1) ...[
+            Row(
+              children: [
+                const SizedBox(
+                  width: 52,
+                  child: Text('From',
+                      style: TextStyle(
+                          fontSize: 11.5, color: Nocturne.neutral500)),
+                ),
+                DropdownButton<String>(
+                  value: members.any((m) => m.userId == _payer && m.userId != s.myId)
+                      ? _payer
+                      : '',
+                  isDense: true,
+                  dropdownColor: Nocturne.surface,
+                  underline: const SizedBox.shrink(),
+                  style: const TextStyle(
+                      fontSize: 12.5, color: Nocturne.accent200),
+                  items: [
+                    const DropdownMenuItem(
+                        value: '', child: Text('Outside family')),
+                    for (final m in members)
+                      if (m.userId != s.myId)
+                        DropdownMenuItem(value: m.userId, child: Text(m.name)),
+                  ],
+                  onChanged: (v) => setState(() => _payer = v),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
+          if (_type == 'expense' && members.length > 1) ...[
+            Row(
+              children: [
+                const SizedBox(
+                  width: 52,
+                  child: Text('Paid by',
+                      style: TextStyle(
+                          fontSize: 11.5, color: Nocturne.neutral500)),
+                ),
+                DropdownButton<String>(
+                  value: members.any((m) => m.userId == payer) ? payer : null,
+                  isDense: true,
+                  dropdownColor: Nocturne.surface,
+                  underline: const SizedBox.shrink(),
+                  style: const TextStyle(
+                      fontSize: 12.5, color: Nocturne.accent200),
+                  items: [
+                    for (final m in members)
+                      DropdownMenuItem(
+                        value: m.userId,
+                        child: Text(m.userId == s.myId ? 'You' : m.name),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() {
+                    // Keep the "just for the payer" default following the payer.
+                    if (_selectedMembers.length == 1 &&
+                        _selectedMembers.contains(payer)) {
+                      _selectedMembers
+                        ..clear()
+                        ..add(v!);
+                    }
+                    _payer = v;
+                  }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
+
           // ── Note / Merchant text field ────────────────────────────────────
           Container(
             height: 40,
@@ -872,11 +1007,13 @@ class _V3AddSheetState extends State<V3AddSheet> {
                     style: const TextStyle(
                         fontSize: 13.5, color: Nocturne.text),
                     cursorColor: Nocturne.accent,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
-                      hintText: 'Merchant or note (optional)',
-                      hintStyle: TextStyle(
+                      hintText: _type == 'income'
+                          ? 'What it was for (optional)'
+                          : 'Merchant or note (optional)',
+                      hintStyle: const TextStyle(
                           fontSize: 13.5, color: Nocturne.neutral600),
                     ),
                   ),
@@ -892,12 +1029,15 @@ class _V3AddSheetState extends State<V3AddSheet> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              itemCount: catKeys.length,
+              itemCount: catKeys.length + 1,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (_, i) {
+                if (i == catKeys.length) {
+                  return _NewCatTile(onTap: () => _newCategory(s));
+                }
                 final k = catKeys[i];
                 final c = s.catStyle(k);
-                final sel = _catKey == k;
+                final sel = (parentCat?.key ?? _catKey) == k;
                 return GestureDetector(
                   onTap: () => setState(() => _catKey = k),
                   behavior: HitTestBehavior.opaque,
@@ -940,6 +1080,30 @@ class _V3AddSheetState extends State<V3AddSheet> {
               },
             ),
           ),
+          // ── Subcategories of the chosen category ──────────────────────────
+          if (parentCat != null) ...[
+            const SizedBox(height: 8),
+            _ChipRow(
+              label: 'Sub',
+              children: [
+                for (final sub in subCats)
+                  V3Chip(
+                    label: sub.name,
+                    height: 28,
+                    selected: _catKey == sub.key,
+                    // Tapping the chosen one again goes back to the parent.
+                    onTap: () => setState(() => _catKey =
+                        _catKey == sub.key ? parentCat.key : sub.key),
+                  ),
+                V3Chip(
+                  label: 'New',
+                  icon: PhRegular.plus,
+                  height: 28,
+                  onTap: () => _newCategory(s, parent: parentCat),
+                ),
+              ],
+            ),
+          ],
           // ── From / Into Source chips with explanation ─────────────────────
           if (s.sources.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -971,8 +1135,13 @@ class _V3AddSheetState extends State<V3AddSheet> {
                         selected: _sourceId == src.id,
                         icon: src.design.icon,
                         iconColor: src.design.color,
-                        onTap: () => setState(() =>
-                            _sourceId = _sourceId == src.id ? null : src.id),
+                        onTap: () => setState(() {
+                          _sourceId = _sourceId == src.id ? null : src.id;
+                          final ok = _methodsByKind[
+                                  s.sourceById(_sourceId)?.kind] ??
+                              _methods;
+                          if (!ok.contains(_method)) _method = ok.first;
+                        }),
                       ),
                   ],
                 ),
@@ -1001,7 +1170,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
               _ChipRow(
                 label: 'Paid via',
                 children: [
-                  for (final m in _methods)
+                  for (final m in methods)
                     V3Chip(
                       label: m,
                       height: 28,
@@ -1123,67 +1292,57 @@ class _V3AddSheetState extends State<V3AddSheet> {
           ],
 
           // ── Split / Paying for someone section ─────────────────────────────
-          if (isOtherSingle && otherMember != null) ...[
+          if (_type == 'expense' && isOtherSingle && otherMember != null) ...[
             const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Nocturne.bg,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Nocturne.neutral800, width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+            _splitBox(
+              icon: PhRegular.user,
+              title: 'Paid for ${otherMember.name}',
+              children: [
+                Text(
+                  '${otherMember.name} owes ${payerIsMe ? 'you' : payerName} the full ${V3Design.inr(evaluated)}.',
+                  style: const TextStyle(
+                      fontSize: 11.5, color: Nocturne.accent200),
+                ),
+              ],
+            ),
+          ] else if (_type == 'expense' && isMulti) ...[
+            const SizedBox(height: 10),
+            Builder(builder: (_) {
+              final preview = V3AddSheet.computeShares(
+                    amount: evaluated,
+                    payer: payer,
+                    selected: _selectedMembers,
+                    partial: _splitMode == 'partial',
+                    myPart: _myPart,
+                    myPartIsPct: _myPartIsPct,
+                  ) ??
+                  const <String, double>{};
+              final owed = preview.entries.where((e) => e.key != payer);
+              final each = owed.isEmpty ? 0.0 : owed.first.value;
+              return _splitBox(
+                icon: PhRegular.usersThree,
+                title: 'Split among ${_selectedMembers.length} people',
                 children: [
                   Row(
                     children: [
-                      const Icon(PhRegular.gift,
-                          size: 16, color: Nocturne.accent300),
-                      const SizedBox(width: 6),
-                      Text('Paying for ${otherMember.name}',
-                          style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: Nocturne.text)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _splitChip('I cover it (Gift)', 'gift'),
-                      const SizedBox(width: 6),
-                      _splitChip('They owe 100%', 'full_owe'),
+                      _splitChip('Full', 'full'),
                       const SizedBox(width: 6),
                       _splitChip('Partial', 'partial'),
                     ],
                   ),
-                  if (_splitMode == 'gift') ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'You pay for ${otherMember.name}. They owe ₹0.',
-                      style: const TextStyle(
-                          fontSize: 11.5, color: Nocturne.accent200),
-                    ),
-                  ] else if (_splitMode == 'full_owe') ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      '${otherMember.name} owes you the full amount (${V3Design.inr(evaluated)}).',
-                      style: const TextStyle(
-                          fontSize: 11.5, color: Nocturne.accent200),
-                    ),
-                  ] else if (_splitMode == 'partial') ...[
+                  if (_splitMode == 'partial') ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Text('Amount ${otherMember.name} owes you: ',
+                        Text(payerIsMe ? 'Your part' : '$payerName\'s part',
                             style: const TextStyle(
                                 fontSize: 12, color: Nocturne.neutral400)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Container(
                             height: 32,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8),
                             decoration: BoxDecoration(
                               color: Nocturne.surface,
                               borderRadius: BorderRadius.circular(8),
@@ -1191,84 +1350,47 @@ class _V3AddSheetState extends State<V3AddSheet> {
                                   color: Nocturne.neutral700, width: 1),
                             ),
                             child: TextField(
-                              keyboardType: TextInputType.number,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               style: const TextStyle(
                                   fontSize: 13, color: Nocturne.text),
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 isDense: true,
                                 border: InputBorder.none,
-                                hintText: evaluated > 0
-                                    ? (evaluated / 2).toStringAsFixed(0)
-                                    : '0',
-                                hintStyle: const TextStyle(
-                                    fontSize: 13, color: Nocturne.neutral600),
+                                hintText: '0',
+                                hintStyle: TextStyle(
+                                    fontSize: 13,
+                                    color: Nocturne.neutral600),
                               ),
-                              onChanged: (v) => _partialOwed =
-                                  double.tryParse(v) ?? 0,
+                              onChanged: (v) => setState(
+                                  () => _myPart = double.tryParse(v) ?? 0),
                             ),
                           ),
+                        ),
+                        const SizedBox(width: 6),
+                        V3Segmented(
+                          labels: const ['₹', '%'],
+                          selected: _myPartIsPct ? 1 : 0,
+                          onChanged: (i) =>
+                              setState(() => _myPartIsPct = i == 1),
                         ),
                       ],
                     ),
                   ],
-                ],
-              ),
-            ),
-          ] else if (isMulti) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Nocturne.bg,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Nocturne.neutral800, width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(PhRegular.usersThree,
-                          size: 16, color: Nocturne.accent300),
-                      const SizedBox(width: 6),
-                      Text('Split among ${_selectedMembers.length} members',
-                          style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: Nocturne.text)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _splitChip('Equal share', 'equal'),
-                      const SizedBox(width: 6),
-                      _splitChip('I cover all (Gift)', 'gift'),
-                      const SizedBox(width: 6),
-                      _splitChip('Partial', 'partial'),
-                    ],
-                  ),
-                  if (_splitMode == 'equal' && evaluated > 0) ...[
+                  if (evaluated > 0 && owed.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
-                      '${V3Design.inr(evaluated / _selectedMembers.length)} each (${_selectedMembers.length} people)',
+                      'Each of ${owed.length} owes ${payerIsMe ? 'you' : payerName} ${V3Design.inr(each)}',
                       style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: Nocturne.accent200),
                     ),
-                  ] else if (_splitMode == 'gift') ...[
-                    const SizedBox(height: 6),
-                    const Text(
-                      'You pay for everyone. No one owes anything back.',
-                      style: TextStyle(
-                          fontSize: 11.5, color: Nocturne.accent200),
-                    ),
                   ],
                 ],
-              ),
-            ),
+              );
+            }),
           ],
 
           // ── Repeat monthly (Recurring) toggle ─────────────────────────────
@@ -1387,6 +1509,39 @@ class _V3AddSheetState extends State<V3AddSheet> {
     );
   }
 
+  Widget _splitBox({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) =>
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Nocturne.bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Nocturne.neutral800, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: Nocturne.accent300),
+                const SizedBox(width: 6),
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Nocturne.text)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...children,
+          ],
+        ),
+      );
+
   Widget _splitChip(String label, String mode) {
     final sel = _splitMode == mode;
     return GestureDetector(
@@ -1473,6 +1628,35 @@ class _CalcKey extends StatelessWidget {
   }
 }
 
+/// Trailing "+ New" tile in the add sheet's category strip.
+class _NewCatTile extends StatelessWidget {
+  final VoidCallback onTap;
+  const _NewCatTile({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 62,
+          decoration: BoxDecoration(
+            color: Nocturne.bg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Nocturne.accent700, width: 1.2),
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(PhRegular.plus, size: 20, color: Nocturne.accent300),
+              SizedBox(height: 3),
+              Text('New',
+                  style: TextStyle(fontSize: 10, color: Nocturne.accent200)),
+            ],
+          ),
+        ),
+      );
+}
+
 class _ChipRow extends StatelessWidget {
   final String label;
   final List<Widget> children;
@@ -1546,6 +1730,8 @@ class V3DetailSheet extends StatelessWidget {
     final rows = <(String, String)>[
       ('Who', who?.name ?? '—'),
       ('When', '${_dateLabel(txn.occurredAt)} · ${txn.timeLabel}'),
+      if (txn.paidBy != null && txn.paidBy != txn.userId)
+        (txn.isExpense ? 'Paid by' : 'From', s.memberName(txn.paidBy)),
       ('Paid via', txn.method),
       if (src != null) ('Source', src.name),
       ('Added by', txn.origin == 'manual' ? 'Entered manually' : 'Detected'),
@@ -1645,8 +1831,8 @@ class V3DetailSheet extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Split ${txn.splitWith.length + 1} ways · '
-                      '${V3Design.inr(txn.amount / (txn.splitWith.length + 1))} each',
+                      'Owes ${s.memberName(txn.paidBy)}: '
+                      '${txn.splitWith.map((id) => '${s.memberName(id)} ${V3Design.inr(txn.shareOf(id))}').join(' · ')}',
                       style: const TextStyle(
                           fontSize: 12.5, color: Nocturne.accent100),
                     ),

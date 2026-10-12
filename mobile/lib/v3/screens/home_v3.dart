@@ -465,76 +465,62 @@ class _HeroCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      s.isFamily ? 'FAMILY SPENT' : '${s.scopeName.toUpperCase()} SPENT',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 11, color: Nocturne.accent300, letterSpacing: 0.88),
-                    ),
-                    const SizedBox(height: 2),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: V3Num(
-                        s.money(spent),
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w600,
-                          color: Nocturne.text,
-                          letterSpacing: -0.8,
-                          height: 1.1,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      source != null ? '${source.name.toUpperCase()} BALANCE' : 'TOTAL BALANCE',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: s.balance >= 0 ? NocturneSemantic.income : NocturneSemantic.expense,
-                        letterSpacing: 0.88,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerRight,
-                      child: V3Num(
-                        s.money(s.balance),
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w600,
-                          color: s.balance >= 0 ? NocturneSemantic.income : NocturneSemantic.expense,
-                          letterSpacing: -0.8,
-                          height: 1.1,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          // Spent is the hero on its own line; balance sits below, smaller, so
+          // 7-digit amounts never fight for the same row.
+          Text(
+            s.isFamily ? 'FAMILY SPENT' : '${s.scopeName.toUpperCase()} SPENT',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                fontSize: 11, color: Nocturne.accent300, letterSpacing: 0.88),
           ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: V3Num(
+              s.money(spent),
+              style: const TextStyle(
+                fontSize: 38,
+                fontWeight: FontWeight.w600,
+                color: Nocturne.text,
+                letterSpacing: -0.9,
+                height: 1.1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Builder(builder: (_) {
+            final balColor = s.balance >= 0
+                ? NocturneSemantic.income
+                : NocturneSemantic.expense;
+            return Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    source != null
+                        ? '${source.name.toUpperCase()} BALANCE'
+                        : 'TOTAL BALANCE',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 11, color: balColor, letterSpacing: 0.88),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                V3Num(
+                  s.money(s.balance),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: balColor,
+                    letterSpacing: -0.3,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            );
+          }),
           const SizedBox(height: 8),
           if (limit > 0)
             Row(
