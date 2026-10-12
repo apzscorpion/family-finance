@@ -120,7 +120,7 @@ class V3Repository {
   Future<List<CategoryRow>> categories(String familyId) async {
     final rows = await _db
         .from('categories')
-        .select('id,key,name,icon,color,parent_id,sort_order,kind')
+        .select('*')
         .eq('family_id', familyId)
         .order('sort_order')
         .order('name');
@@ -139,20 +139,24 @@ class V3Repository {
     String kind = 'expense',
     int sortOrder = 0,
   }) async {
-    final row = await _db
-        .from('categories')
-        .insert({
-          'family_id': familyId,
-          'kind': kind,
-          'sort_order': sortOrder,
-          'name': name.trim(),
-          'key': key.trim(),
-          if (icon != null && icon.isNotEmpty) 'icon': icon,
-          if (color != null && color.isNotEmpty) 'color': color,
-          if (parentId != null && parentId.isNotEmpty) 'parent_id': parentId,
-        })
-        .select('id,key,name,icon,color,parent_id,sort_order,kind')
-        .single();
+    final base = {
+      'family_id': familyId,
+      'name': name.trim(),
+      'key': key.trim(),
+      if (icon != null && icon.isNotEmpty) 'icon': icon,
+      if (color != null && color.isNotEmpty) 'color': color,
+      if (parentId != null && parentId.isNotEmpty) 'parent_id': parentId,
+    };
+    Future<dynamic> insert(Map<String, dynamic> values) =>
+        _db.from('categories').insert(values).select('*').single();
+    dynamic row;
+    try {
+      row = await insert({...base, 'kind': kind, 'sort_order': sortOrder});
+    } on PostgrestException catch (e) {
+      // PGRST204: the category migration has not added these columns yet.
+      if (e.code != 'PGRST204') rethrow;
+      row = await insert(base);
+    }
     return CategoryRow.fromJson(Map<String, dynamic>.from(row as Map));
   }
 
@@ -173,7 +177,7 @@ class V3Repository {
         .from('categories')
         .update(patch)
         .eq('id', id)
-        .select('id,key,name,icon,color,parent_id,sort_order,kind')
+        .select('*')
         .single();
     return CategoryRow.fromJson(Map<String, dynamic>.from(row as Map));
   }

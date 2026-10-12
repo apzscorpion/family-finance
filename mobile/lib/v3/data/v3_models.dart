@@ -167,9 +167,17 @@ class CategoryRow {
         icon: j['icon']?.toString(),
         color: j['color']?.toString(),
         parentId: j['parent_id']?.toString(),
-        sortOrder: (j['sort_order'] as num?)?.toInt() ?? 0,
-        kind: j['kind']?.toString() ?? 'expense',
+        // Fallbacks keep the old built-in order and split until the
+        // category migration has run.
+        sortOrder: (j['sort_order'] as num?)?.toInt() ?? _builtInOrder(j['key']),
+        kind: j['kind']?.toString() ??
+            (V3Design.incomeCats.contains(j['key']) ? 'income' : 'expense'),
       );
+
+  static int _builtInOrder(Object? key) {
+    final i = [...V3Design.expenseCats, ...V3Design.incomeCats].indexOf('$key');
+    return i < 0 ? 100 : i + 1;
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
