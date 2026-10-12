@@ -20,7 +20,11 @@ import 'screens/home_v3.dart';
 import 'screens/insights_v3.dart';
 import 'screens/notes_v3.dart';
 import 'screens/notifications_v3.dart';
+import 'data/prayer/prayer_platform_io.dart'
+    if (dart.library.js_interop) 'data/prayer/prayer_platform_web.dart'
+    as prayer_platform;
 import 'screens/onboarding_v3.dart';
+import 'screens/prayer_alert_v3.dart';
 import 'screens/prayer_settings_v3.dart';
 import 'screens/prayer_v3.dart';
 import 'screens/settings_v3.dart';
@@ -34,10 +38,21 @@ import 'widgets/v3_motion.dart';
 class V3App extends StatelessWidget {
   const V3App({super.key});
 
+  static final navigatorKey = GlobalKey<NavigatorState>();
+  static bool _prayerAlertsWired = false;
+
+  static void _showPrayerAlert(String slot) =>
+      navigatorKey.currentState?.push(PrayerAlertV3.route(slot));
+
   @override
   Widget build(BuildContext context) {
     final db = Supabase.instance.client;
     final repo = V3Repository(db);
+    if (!_prayerAlertsWired) {
+      _prayerAlertsWired = true;
+      WidgetsBinding.instance.addPostFrameCallback(
+          (_) => prayer_platform.listenForPrayerAlerts(_showPrayerAlert));
+    }
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
@@ -56,6 +71,7 @@ class V3App extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Family Spend Tracker',
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: v3Theme,
         home: const V3Root(),

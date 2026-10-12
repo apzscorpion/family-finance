@@ -12,6 +12,8 @@
          scheduling is the default precisely because exact alarms are the
          expensive option for battery. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Prayer alert: the prayer's name full screen, over the lock screen. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
     <!-- Coarse location only, and only ever read once, behind the optional
          "Use my location" button in prayer settings. The city picker is the

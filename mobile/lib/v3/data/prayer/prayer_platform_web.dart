@@ -15,3 +15,7 @@ Future<void> postPrayerBanner({
 Future<void> cancelPrayerBanner() async {}
 
 Future<bool> requestExactPrayerAlarms() async => false;
+
+Future<bool> requestFullScreenPrayerAlerts() async => false;
+
+Future<void> listenForPrayerAlerts(void Function(String slot) show) async {}

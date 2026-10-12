@@ -120,6 +120,13 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> setHijriOffset(int days) =>
       update(_config.copyWith(hijriOffset: days.clamp(-2, 2)));
 
+  /// Turning it on asks Android for full-screen permission (needed from
+  /// Android 14); without it the alert falls back to a normal notification.
+  Future<void> setFullScreenAlert(bool on) async {
+    if (on) await prayer_platform.requestFullScreenPrayerAlerts();
+    await update(_config.copyWith(fullScreenAlert: on));
+  }
+
   Future<void> setBannerEnabled(bool on) =>
       update(_config.copyWith(bannerEnabled: on));
 

@@ -185,6 +185,9 @@ class PrayerConfig {
   /// battery lever here, so it is opt-in rather than the default.
   final bool exactAlarms;
 
+  /// At prayer time, show the prayer's name full screen, over the lock screen.
+  final bool fullScreenAlert;
+
   /// Show the next prayer inside the ongoing lock-screen notification.
   final bool showInLiveNotification;
 
@@ -235,6 +238,7 @@ class PrayerConfig {
     },
     this.offsets = const {},
     this.exactAlarms = false,
+    this.fullScreenAlert = true,
     this.showInLiveNotification = true,
     this.showOnHome = true,
     this.bannerEnabled = true,
@@ -268,6 +272,7 @@ class PrayerConfig {
     Map<String, bool>? notify,
     Map<String, int>? offsets,
     bool? exactAlarms,
+    bool? fullScreenAlert,
     bool? showInLiveNotification,
     bool? showOnHome,
     bool? bannerEnabled,
@@ -289,6 +294,7 @@ class PrayerConfig {
         notify: notify ?? this.notify,
         offsets: offsets ?? this.offsets,
         exactAlarms: exactAlarms ?? this.exactAlarms,
+        fullScreenAlert: fullScreenAlert ?? this.fullScreenAlert,
         showInLiveNotification:
             showInLiveNotification ?? this.showInLiveNotification,
         showOnHome: showOnHome ?? this.showOnHome,
@@ -339,6 +345,7 @@ class PrayerConfig {
         'notify': notify,
         'offsets': offsets,
         'exact_alarms': exactAlarms,
+        'full_screen_alert': fullScreenAlert,
         'live_notification': showInLiveNotification,
         'show_on_home': showOnHome,
         'banner_enabled': bannerEnabled,
@@ -371,6 +378,7 @@ class PrayerConfig {
       notify: _boolMap(j['notify']) ?? fallback.notify,
       offsets: _intMap(j['offsets']) ?? const {},
       exactAlarms: _bool(j['exact_alarms']) ?? false,
+      fullScreenAlert: _bool(j['full_screen_alert']) ?? true,
       showInLiveNotification: _bool(j['live_notification']) ?? true,
       showOnHome: _bool(j['show_on_home']) ?? true,
       bannerEnabled: _bool(j['banner_enabled']) ?? true,

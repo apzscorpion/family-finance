@@ -44,13 +44,23 @@ class PrayerNotifier {
 
       for (var i = 0; i < times.length && i < _slots; i++) {
         final t = times[i];
+        // Gone once the next prayer (or sunrise) arrives; the last one in the
+        // window has no successor, so it gets a few hours.
+        final until = i + 1 < times.length
+            ? times[i + 1].time.difference(t.time)
+            : const Duration(hours: 6);
         await AppNotifications.scheduleAt(
           id: AppNotifications.prayerBase + i,
           title: _title(t),
           body: _body(t, config),
           when: t.time,
-          channel: AppNotifications.prayer,
+          channel: AppNotifications.prayerAlert(
+            timeout: until,
+            fullScreen:
+                config.fullScreenAlert && t.slot != PrayerSlot.sunrise,
+          ),
           exact: exact,
+          payload: 'prayer:${t.slot.name}',
         );
       }
     } catch (err, stack) {

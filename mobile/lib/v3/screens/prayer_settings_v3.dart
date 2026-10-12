@@ -130,6 +130,17 @@ class PrayerSettingsV3 extends StatelessWidget {
                 value: config.exactAlarms,
                 onChanged: (on) => _setExact(context, on),
               ),
+            ),
+          ),
+          _Card(
+            child: _Row(
+              icon: PhRegular.moonStars,
+              label: 'Full-screen alert',
+              sub: 'Shows the prayer name full screen, even when locked',
+              trailing: V3SettingsSwitch(
+                value: config.fullScreenAlert,
+                onChanged: prayer.setFullScreenAlert,
+              ),
               last: true,
             ),
           ),

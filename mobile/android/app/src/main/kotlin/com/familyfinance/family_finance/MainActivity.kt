@@ -7,6 +7,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.view.WindowManager
 import android.provider.OpenableColumns
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -38,6 +41,11 @@ class MainActivity : FlutterActivity() {
                     "openNotificationSettings" ->
                         result.success(DetectionSupport.openSettings(this))
                     "drainQueue" -> result.success(DetectionSupport.drainQueue(this))
+                    "leaveLockScreen" -> {
+                        setOverLockScreen(false)
+                        moveTaskToBack(true)
+                        result.success(null)
+                    }
                     "peekQueueSize" -> result.success(DetectionSupport.queueSize(this))
                     else -> result.notImplemented()
                 }
@@ -91,9 +99,32 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (isPrayerAlert(intent)) setOverLockScreen(true)
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIncomingShareIntent(intent)
+        if (isPrayerAlert(intent)) setOverLockScreen(true)
+    }
+
+    // Only the prayer alert may show over the lock screen; closing it turns
+    // this off again so the finance screens always need an unlock.
+    private fun isPrayerAlert(i: Intent?) =
+        i?.getStringExtra("payload")?.startsWith("prayer:") == true
+
+    private fun setOverLockScreen(on: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(on)
+            setTurnScreenOn(on)
+        } else {
+            @Suppress("DEPRECATION")
+            val flags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            if (on) window.addFlags(flags) else window.clearFlags(flags)
+        }
     }
 
     private fun handleIncomingShareIntent(intent: Intent?) {

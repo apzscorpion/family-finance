@@ -109,6 +109,69 @@ class AppNotifications {
   /// Invoked when the user taps a Direct Message / Poke notification.
   static void Function(String senderId)? onTapDirectMessage;
 
+  /// Shows the full-screen prayer alert for a [PrayerSlot] name. Set by the
+  /// app; until then an alert waits in [pendingPrayerAlert].
+  static void Function(String slot)? onPrayerAlert;
+  static String? pendingPrayerAlert;
+
+  static void _deliverPrayer(String payload) {
+    final slot = payload.substring('prayer:'.length);
+    final handler = onPrayerAlert;
+    if (handler != null) {
+      handler(slot);
+    } else {
+      pendingPrayerAlert = slot;
+    }
+  }
+
+  /// A prayer alert that cold-started the app (full-screen intent while the
+  /// app was not running) arrives as launch details, not as a response.
+  static Future<void> checkLaunchedByPrayer() async {
+    await ensureInit();
+    if (!_ready) return;
+    try {
+      final details = await plugin.getNotificationAppLaunchDetails();
+      final payload = details?.notificationResponse?.payload;
+      if (details?.didNotificationLaunchApp == true &&
+          payload != null &&
+          payload.startsWith('prayer:')) {
+        _deliverPrayer(payload);
+      }
+    } catch (err, stack) {
+      AppLog.error('AppNotifications.checkLaunchedByPrayer', err, stack);
+    }
+  }
+
+  static Future<bool> requestFullScreen() async {
+    await ensureInit();
+    try {
+      return await _android?.requestFullScreenIntentPermission() ?? false;
+    } catch (err, stack) {
+      AppLog.error('AppNotifications.requestFullScreen', err, stack);
+      return false;
+    }
+  }
+
+  /// One prayer alert. [timeout] removes it when the next prayer arrives, so
+  /// the shade only ever holds the current prayer instead of a pile.
+  static AndroidNotificationDetails prayerAlert({
+    required Duration timeout,
+    required bool fullScreen,
+  }) =>
+      AndroidNotificationDetails(
+        prayer.channelId,
+        prayer.channelName,
+        channelDescription: prayer.channelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        category: fullScreen
+            ? AndroidNotificationCategory.alarm
+            : AndroidNotificationCategory.reminder,
+        visibility: NotificationVisibility.public,
+        timeoutAfter: timeout.inMilliseconds,
+        fullScreenIntent: fullScreen,
+      );
+
   static Future<void> ensureInit() async {
     if (_ready) return;
     try {
@@ -134,6 +197,10 @@ class AppNotifications {
 
   static void _onResponse(NotificationResponse response) {
     final payload = response.payload;
+    if (payload != null && payload.startsWith('prayer:')) {
+      _deliverPrayer(payload);
+      return;
+    }
     if (payload != null && payload.startsWith('dm:')) {
       final senderId = payload.substring(3);
       if (senderId.isNotEmpty) {
@@ -304,6 +371,7 @@ class AppNotifications {
     required DateTime when,
     required AndroidNotificationDetails channel,
     bool exact = false,
+    String? payload,
   }) async {
     await ensureInit();
     if (!_ready) return;
@@ -326,6 +394,7 @@ class AppNotifications {
       // already zoned, so it is interpreted as an absolute instant.
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
     );
   }
 

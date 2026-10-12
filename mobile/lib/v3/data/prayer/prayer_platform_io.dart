@@ -26,3 +26,16 @@ Future<void> cancelPrayerBanner() => PrayerBanner.cancel();
 
 Future<bool> requestExactPrayerAlarms() =>
     AppNotifications.requestExactAlarms();
+
+Future<bool> requestFullScreenPrayerAlerts() =>
+    AppNotifications.requestFullScreen();
+
+/// Routes full-screen prayer alerts to [show], including one that launched
+/// the app or arrived before this was called.
+Future<void> listenForPrayerAlerts(void Function(String slot) show) async {
+  AppNotifications.onPrayerAlert = show;
+  await AppNotifications.checkLaunchedByPrayer();
+  final pending = AppNotifications.pendingPrayerAlert;
+  AppNotifications.pendingPrayerAlert = null;
+  if (pending != null) show(pending);
+}
