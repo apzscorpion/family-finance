@@ -120,7 +120,7 @@ def main():
     subprocess.run(["git", "commit", "-m", f"Release v{version}: update README"],
                    cwd=REPO_ROOT, check=False)
     subprocess.run(["git", "tag", "-f", f"v{version}"], cwd=REPO_ROOT, check=True)
-    subprocess.run(["git", "push", "origin", "main"], cwd=REPO_ROOT, check=True)
+    subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=REPO_ROOT, check=True)
     subprocess.run(["git", "push", "origin", f"v{version}", "--force"], cwd=REPO_ROOT, check=True)
 
     # 5. Publish the APK(s) on the GitHub Release for the tag
