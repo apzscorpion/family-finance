@@ -23,18 +23,29 @@ class UpdateSheetV3 {
   ///
   /// [silent] suppresses the "you are up to date" message, for checks the user
   /// did not ask for. A newer version is always shown.
+  static bool _launchChecked = false;
+
+  /// Quiet check once per app launch: only speaks up when there is a newer
+  /// release, so people hear about updates without visiting Settings.
+  static void checkOnLaunch(BuildContext context) {
+    if (_launchChecked) return;
+    _launchChecked = true;
+    check(context, silent: true);
+  }
+
   static Future<void> check(BuildContext context, {bool silent = false}) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
 
-    String? latest;
+    ({String version, String notes})? release;
     try {
-      latest = await UpdateService.fetchLatestVersion();
+      release = await UpdateService.fetchLatestRelease();
     } catch (err, stack) {
       AppLog.error('UpdateSheetV3.check', err, stack);
     }
 
     if (!context.mounted) return;
 
+    final latest = release?.version;
     if (latest == null) {
       if (!silent) {
         messenger?.showSnackBar(const SnackBar(
@@ -58,15 +69,16 @@ class UpdateSheetV3 {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _UpdateSheet(latest: latest!),
+      builder: (_) => _UpdateSheet(latest: latest, notes: release!.notes),
     );
   }
 }
 
 class _UpdateSheet extends StatelessWidget {
-  const _UpdateSheet({required this.latest});
+  const _UpdateSheet({required this.latest, required this.notes});
 
   final String latest;
+  final String notes;
 
   Future<void> _download(BuildContext context) async {
     Navigator.of(context).pop();
@@ -138,6 +150,23 @@ class _UpdateSheet extends StatelessWidget {
               ),
             ],
           ),
+          if (notes.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text("WHAT'S NEW",
+                style: TextStyle(
+                    fontSize: 11,
+                    letterSpacing: 0.8,
+                    color: Nocturne.neutral500)),
+            const SizedBox(height: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: SingleChildScrollView(
+                child: Text(notes,
+                    style: const TextStyle(
+                        fontSize: 13, height: 1.5, color: Nocturne.text)),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Container(
             width: double.infinity,

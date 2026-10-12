@@ -337,10 +337,18 @@ class SettingsV3 extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 3),
-                    const Text(
-                      'Direct GitHub release updates',
-                      style: TextStyle(
-                          fontSize: 12, color: Nocturne.neutral500),
+                    ValueListenableBuilder(
+                      valueListenable: UpdateService.available,
+                      builder: (_, update, _) => Text(
+                        update == null
+                            ? 'Direct GitHub release updates'
+                            : 'v${update.version} is out with new features and fixes',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: update == null
+                                ? Nocturne.neutral500
+                                : Nocturne.accent200),
+                      ),
                     ),
                   ],
                 ),
@@ -357,18 +365,23 @@ class SettingsV3 extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Nocturne.accent, width: 1),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(PhRegular.downloadSimple,
+                      const Icon(PhRegular.downloadSimple,
                           size: 15, color: Nocturne.accent200),
-                      SizedBox(width: 6),
-                      Text(
-                        'Check now',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w500,
-                          color: Nocturne.accent200,
+                      const SizedBox(width: 6),
+                      ValueListenableBuilder(
+                        valueListenable: UpdateService.available,
+                        builder: (_, update, _) => Text(
+                          update == null
+                              ? 'Check now'
+                              : 'Update to v${update.version}',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: Nocturne.accent200,
+                          ),
                         ),
                       ),
                     ],

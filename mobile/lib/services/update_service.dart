@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -13,19 +15,33 @@ class UpdateService {
   static const String latestApkUrl =
       'https://github.com/$githubRepo/releases/latest/download/FamilySpendTracker-latest.apk';
 
-  /// The latest published release's version, or null if GitHub could not be
-  /// reached.
+  /// The newer release this build could update to, or null when up to date
+  /// or not checked yet. Settings listens to it to show the update button.
+  static final available =
+      ValueNotifier<({String version, String notes})?>(null);
+
+  /// The latest published release (version + release notes), or null if
+  /// GitHub could not be reached. Also refreshes [available].
   ///
-  /// Split out from [checkForUpdates] so the v3 sheet can present the result
-  /// itself while the version and URLs stay defined in one place — the release
-  /// script rewrites [currentVersion] here on every release.
-  static Future<String?> fetchLatestVersion() async {
+  /// The release script rewrites [currentVersion] above on every release.
+  static Future<({String version, String notes})?> fetchLatestRelease() async {
     final response = await http.get(Uri.parse(latestReleaseUrl));
     if (response.statusCode != 200) return null;
-    final match = RegExp(r'"tag_name"\s*:\s*"v?(\d+\.\d+\.\d+)"')
-        .firstMatch(response.body);
-    return match?.group(1);
+    final j = jsonDecode(response.body) as Map<String, dynamic>;
+    final m = RegExp(r'(\d+\.\d+\.\d+)')
+        .firstMatch(j['tag_name']?.toString() ?? '');
+    if (m == null) return null;
+    final release = (
+      version: m.group(1)!,
+      notes: (j['body'] ?? '').toString().trim(),
+    );
+    available.value =
+        _isNewerVersion(currentVersion, release.version) ? release : null;
+    return release;
   }
+
+  static Future<String?> fetchLatestVersion() async =>
+      (await fetchLatestRelease())?.version;
 
   static bool isNewer(String current, String latest) =>
       _isNewerVersion(current, latest);

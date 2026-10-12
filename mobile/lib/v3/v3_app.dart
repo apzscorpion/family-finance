@@ -24,6 +24,7 @@ import 'screens/onboarding_v3.dart';
 import 'screens/prayer_settings_v3.dart';
 import 'screens/prayer_v3.dart';
 import 'screens/settings_v3.dart';
+import 'sheets/update_sheet_v3.dart';
 import 'sheets/v3_sheets.dart';
 import 'v3_nav.dart';
 import 'v3_state.dart';
@@ -159,6 +160,9 @@ class V3Shell extends StatelessWidget {
         );
       });
     }
+
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => UpdateSheetV3.checkOnLaunch(context));
 
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

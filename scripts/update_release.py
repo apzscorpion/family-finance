@@ -128,10 +128,20 @@ def main():
     assets = [(BUILT_APK_PATH, ASSET_NAME)]
     if RELEASE_DETECT:
         assets.append((DETECT_APK_PATH, DETECT_ASSET_NAME))
-    publish_release(f"v{version}", assets)
+    publish_release(f"v{version}", assets, release_notes(f"v{version}"))
 
     print(f"\nSUCCESS: Release v{version} built and published to "
           f"https://github.com/{GITHUB_REPO}/releases/tag/v{version}")
+
+
+def release_notes(tag):
+    """Commit titles since the previous tag; the app shows them as "What's new"."""
+    prev = subprocess.run(["git", "describe", "--tags", "--abbrev=0", f"{tag}^"],
+                          capture_output=True, text=True, cwd=REPO_ROOT).stdout.strip()
+    rng = f"{prev}..{tag}" if prev else tag
+    titles = subprocess.run(["git", "log", rng, "--format=%s"],
+                            capture_output=True, text=True, cwd=REPO_ROOT).stdout.splitlines()
+    return "\n".join(f"- {t}" for t in titles if not t.startswith("Release v"))
 
 
 def github_token():
@@ -162,7 +172,7 @@ def github_api(method, url, token, body=None, content_type="application/json"):
         return json.loads(data) if data else None
 
 
-def publish_release(tag, assets):
+def publish_release(tag, assets, notes=""):
     """Creates the release for [tag] (or reuses it) and replaces its assets."""
     token = github_token()
     api = f"https://api.github.com/repos/{GITHUB_REPO}"
@@ -172,8 +182,11 @@ def publish_release(tag, assets):
         if e.code != 404:
             raise
         release = github_api("POST", f"{api}/releases", token, json.dumps({
-            "tag_name": tag, "name": tag, "make_latest": "true",
+            "tag_name": tag, "name": tag, "body": notes, "make_latest": "true",
         }).encode())
+    if notes and release.get("body") != notes:
+        release = github_api("PATCH", f"{api}/releases/{release['id']}", token,
+                             json.dumps({"body": notes}).encode())
 
     existing = {a["name"]: a["id"] for a in release.get("assets", [])}
     for path, name in assets:
