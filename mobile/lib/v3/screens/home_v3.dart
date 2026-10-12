@@ -6,6 +6,7 @@ import '../data/chat_controller.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
+import 'sources_manager_v3.dart';
 import '../v3_design.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
@@ -494,7 +495,24 @@ class _HeroCard extends StatelessWidget {
             final balColor = s.balance >= 0
                 ? NocturneSemantic.income
                 : NocturneSemantic.expense;
-            return Row(
+            final ids = source != null
+                ? [source.id]
+                : [for (final src in s.sources) src.id];
+            var cash = 0.0, bank = 0.0;
+            for (final id in ids) {
+              final w = s.wallet(id);
+              cash += w.cash;
+              bank += w.bank;
+            }
+            return GestureDetector(
+              onTap: ids.isEmpty
+                  ? null
+                  : () => SourcesManagerV3.openWallet(context, ids),
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
               children: [
                 Flexible(
                   child: Text(
@@ -519,6 +537,31 @@ class _HeroCard extends StatelessWidget {
                   ),
                 ),
               ],
+                  ),
+                  if (ids.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(PhRegular.coins,
+                            size: 13, color: Nocturne.accent300),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Cash ${s.moneyShort(cash)}  ·  Bank ${s.moneyShort(bank)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 12, color: Nocturne.accent200),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(PhBold.caretRight,
+                            size: 10, color: Nocturne.accent300),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
             );
           }),
           const SizedBox(height: 8),

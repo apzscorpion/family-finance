@@ -133,6 +133,19 @@ class SourcesManagerV3 extends StatelessWidget {
     );
   }
 
+  /// The cash / bank split of [sourceIds] (one source, or every source),
+  /// with withdraw, deposit and set-balance actions.
+  static Future<void> openWallet(BuildContext context, List<String> sourceIds) =>
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Nocturne.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) => _WalletSheet(sourceIds: sourceIds),
+      );
+
   static Future<void> _addDialog(BuildContext context, V3State s) async {
     final name = TextEditingController();
     var kind = 'income';
@@ -338,7 +351,7 @@ class _SourceRowTile extends StatelessWidget {
                       TextStyle(fontSize: 11.5, color: Nocturne.neutral500)),
               onTap: () async {
                 Navigator.pop(ctx);
-                await _setBalances(context, s, src.id);
+                await setBalances(context, s, src.id);
               },
             ),
             ListTile(
@@ -348,7 +361,7 @@ class _SourceRowTile extends StatelessWidget {
                   style: TextStyle(fontSize: 14, color: Nocturne.text)),
               onTap: () async {
                 Navigator.pop(ctx);
-                await _move(context, s, src.id, toCash: true);
+                await moveMoney(context, s, src.id, toCash: true);
               },
             ),
             ListTile(
@@ -358,7 +371,7 @@ class _SourceRowTile extends StatelessWidget {
                   style: TextStyle(fontSize: 14, color: Nocturne.text)),
               onTap: () async {
                 Navigator.pop(ctx);
-                await _move(context, s, src.id, toCash: false);
+                await moveMoney(context, s, src.id, toCash: false);
               },
             ),
             ListTile(
@@ -413,7 +426,8 @@ class _SourceRowTile extends StatelessWidget {
         ),
       );
 
-  static Future<void> _setBalances(
+  /// Asks for the cash and bank amounts the source holds now.
+  static Future<void> setBalances(
       BuildContext context, V3State s, String sourceId) async {
     final now = s.wallet(sourceId);
     final cash = TextEditingController(text: now.cash.toStringAsFixed(0));
@@ -460,7 +474,8 @@ class _SourceRowTile extends StatelessWidget {
     await s.setWalletBalance(sourceId, c, b);
   }
 
-  static Future<void> _move(BuildContext context, V3State s, String sourceId,
+  /// Withdraw ([toCash]) or deposit inside one source.
+  static Future<void> moveMoney(BuildContext context, V3State s, String sourceId,
       {required bool toCash}) async {
     final amount = TextEditingController();
     final ok = await showDialog<bool>(
@@ -539,5 +554,160 @@ class _SourceRowTile extends StatelessWidget {
     if (ok == true && name.text.trim().isNotEmpty) {
       await s.renameSource(src.id, name.text.trim());
     }
+  }
+}
+
+class _WalletSheet extends StatelessWidget {
+  final List<String> sourceIds;
+  const _WalletSheet({required this.sourceIds});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+          children: [
+            const Text('Cash & bank',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Nocturne.text)),
+            const SizedBox(height: 4),
+            const Text(
+                'Cash entries change the cash part; UPI, bank and card change '
+                'the bank part.',
+                style: TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+            for (final id in sourceIds) ...[
+              const SizedBox(height: 14),
+              _WalletCard(sourceId: id),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WalletCard extends StatelessWidget {
+  final String sourceId;
+  const _WalletCard({required this.sourceId});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<V3State>();
+    final src = s.sourceById(sourceId);
+    if (src == null) return const SizedBox.shrink();
+    final w = s.wallet(sourceId);
+
+    Widget amount(String label, double v, IconData icon) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Nocturne.bg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Icon(icon, size: 14, color: Nocturne.neutral400),
+                  const SizedBox(width: 6),
+                  Text(label,
+                      style: const TextStyle(
+                          fontSize: 11.5, color: Nocturne.neutral400)),
+                ]),
+                const SizedBox(height: 4),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: V3Num(s.money(v),
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: v >= 0
+                              ? Nocturne.text
+                              : NocturneSemantic.expense)),
+                ),
+              ],
+            ),
+          ),
+        );
+
+    Widget action(String label, IconData icon, VoidCallback onTap) => Expanded(
+          child: GestureDetector(
+            onTap: onTap,
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Nocturne.accent700, width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 14, color: Nocturne.accent200),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 12, color: Nocturne.accent200)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          V3IconTile(
+              icon: src.design.icon,
+              color: src.design.color,
+              size: 28,
+              radius: 9,
+              iconSize: 15),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(src.name,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Nocturne.text)),
+          ),
+          V3Num(s.money(w.cash + w.bank),
+              style: const TextStyle(
+                  fontSize: 13.5, color: Nocturne.neutral300)),
+        ]),
+        const SizedBox(height: 8),
+        Row(children: [
+          amount('Cash', w.cash, PhRegular.coins),
+          const SizedBox(width: 8),
+          amount('Bank', w.bank, PhRegular.bank),
+        ]),
+        const SizedBox(height: 8),
+        Row(children: [
+          action('Withdraw', PhRegular.arrowCircleDown,
+              () => _SourceRowTile.moveMoney(context, s, sourceId,
+                  toCash: true)),
+          const SizedBox(width: 6),
+          action('Deposit', PhRegular.bank,
+              () => _SourceRowTile.moveMoney(context, s, sourceId,
+                  toCash: false)),
+          const SizedBox(width: 6),
+          action('Set balance', PhRegular.pencilSimple,
+              () => _SourceRowTile.setBalances(context, s, sourceId)),
+        ]),
+      ],
+    );
   }
 }
