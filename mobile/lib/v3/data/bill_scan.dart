@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -18,20 +20,29 @@ const _channel = MethodChannel('com.familyfinance/file_import');
 
 /// Reads an image shared into the app (Android "Share → Sampio"), if one
 /// arrived since the last call. The cached copy is deleted after reading.
-Future<BillScan?> consumeSharedBill() async {
+/// [onWaiting] fires if the text reader is still being downloaded.
+Future<BillScan?> consumeSharedBill({VoidCallback? onWaiting}) async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+  String? path;
   try {
-    final path = await _channel.invokeMethod<String>('consumeSharedImage');
+    path = await _channel.invokeMethod<String>('consumeSharedImage');
     if (path == null) return null;
-    return parseBill(await readImageLines(path, deleteAfter: true));
+    return parseBill(await readImageLines(path, onWaiting: onWaiting));
   } on MissingPluginException {
     return null; // tests / hosts without the channel
   } catch (e, st) {
     AppLog.error('consumeSharedBill', e, st);
     // Still open the sheet: the user shared a bill and expects to add it.
     return (amount: null, payee: null, date: null, income: false);
+  } finally {
+    if (path != null) {
+      try {
+        await File(path).delete();
+      } catch (_) {}
+    }
   }
 }
+
 
 /// Plain-text form, every line the same height.
 BillScan parseBillText(String text, {DateTime? now}) => parseBill([

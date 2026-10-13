@@ -11,6 +11,10 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import android.provider.OpenableColumns
+import com.google.android.gms.common.moduleinstall.ModuleInstall
+import com.google.android.gms.common.moduleinstall.ModuleInstallRequest
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -108,6 +112,20 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (isPrayerAlert(intent)) setOverLockScreen(true)
+        prefetchTextReader()
+    }
+
+    // Play Services only fetches the OCR model at install for Play Store
+    // installs; a sideloaded APK gets it on first use, so that first shared
+    // receipt would fail. Ask for it up front instead. No-op once installed.
+    private fun prefetchTextReader() {
+        try {
+            val reader = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            ModuleInstall.getClient(this)
+                .installModules(ModuleInstallRequest.newBuilder().addApi(reader).build())
+                .addOnCompleteListener { reader.close() }
+        } catch (_: Exception) {
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

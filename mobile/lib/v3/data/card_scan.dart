@@ -31,17 +31,32 @@ typedef OcrLine = ({String text, double height});
 /// OCR lines in reading order. Used for shared payment screenshots.
 Future<List<OcrLine>> readImageLines(
   String path, {
-  bool deleteAfter = false,
+  void Function()? onWaiting,
 }) async => [
-  for (final block in (await _recognize(path, deleteAfter)).blocks)
+  for (final block in (await _recognize(path, false, onWaiting)).blocks)
     for (final line in block.lines)
       (text: line.text, height: line.boundingBox.height),
 ];
 
-Future<RecognizedText> _recognize(String path, bool deleteAfter) async {
+Future<RecognizedText> _recognize(
+  String path,
+  bool deleteAfter, [
+  void Function()? onWaiting,
+]) async {
   final reader = TextRecognizer(script: TextRecognitionScript.latin);
   try {
-    return await reader.processImage(InputImage.fromFilePath(path));
+    // The Play Services reader throws "Waiting for the text optional module
+    // to be downloaded" until its model arrives (first use after an APK
+    // install). Retry for up to a minute instead of failing that first read.
+    for (var attempt = 0; ; attempt++) {
+      try {
+        return await reader.processImage(InputImage.fromFilePath(path));
+      } catch (e) {
+        if (!'$e'.toLowerCase().contains('download') || attempt >= 20) rethrow;
+        if (attempt == 0) onWaiting?.call();
+        await Future<void>.delayed(const Duration(seconds: 3));
+      }
+    }
   } finally {
     await reader.close();
     if (deleteAfter) {

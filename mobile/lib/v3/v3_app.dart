@@ -253,7 +253,14 @@ class _SharedBillListenerState extends State<_SharedBillListener>
   }
 
   Future<void> _check() async {
-    final bill = await consumeSharedBill();
+    final bill = await consumeSharedBill(
+      onWaiting: () {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            duration: Duration(seconds: 6),
+            content: Text('Setting up the receipt reader (first time only)…')));
+      },
+    );
     if (bill == null || !mounted) return;
     if (bill.amount == null && bill.payee == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
