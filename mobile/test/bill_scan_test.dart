@@ -83,6 +83,24 @@ PRIYA S
     expect(parseBillText('Oct 2026', now: now).date, isNull);
   });
 
+  test('real supermoney receipt, OCR lines as read on Android', () {
+    // Captured from ML Kit on an emulator: the bold ₹ comes out as "T".
+    const raw = 'SUPER|29 // SUper.|56 // móney|78 // Payment Successful|46 // '
+        'T81|90 // October 13 at 10:51 AM|40 // To: BROADWAY|34 // '
+        'gpay-11265455695@okbizaxis|43 // T Axis Bank|41 // '
+        'From: ASIF MUHAMMADN|34 // XXXXXX8311a@superyes|48 // '
+        'UPI reference ID: 665280079818|40 // Super.|16 // móney|27 // '
+        'LPID/YES BANK|44 // Get assured cashback on UPI spends|39';
+    final r = parseBill([
+      for (final l in raw.split(' // '))
+        (text: l.split('|')[0], height: double.parse(l.split('|')[1])),
+    ], now: now);
+    expect(r.amount, 81);
+    expect(r.payee, 'Broadway');
+    expect(r.date, DateTime(2026, 10, 13, 10, 51));
+    expect(r.income, isFalse);
+  });
+
   test('unrelated image gives nothing', () {
     final r = parseBillText('Happy birthday!\nSee you today', now: now);
     expect(r.amount, isNull);

@@ -33,3 +33,8 @@
 -dontwarn com.google.mlkit.vision.text.devanagari.**
 -dontwarn com.google.mlkit.vision.text.japanese.**
 -dontwarn com.google.mlkit.vision.text.korean.**
+
+# ML Kit creates its component registrars by reflection; without this R8
+# strips their constructors and the text reader never starts (shared
+# receipts and card scans silently read nothing in release builds).
+-keep class com.google.mlkit.** { *; }

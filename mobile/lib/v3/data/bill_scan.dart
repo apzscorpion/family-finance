@@ -74,11 +74,12 @@ double? _amount(List<OcrLine> lines) {
     r'(?:₹|rs\.?|inr)\s*(\d[\d,]*(?:\.\d{1,2})?)',
     caseSensitive: false,
   );
-  // OCR often loses the ₹ (reads "?500", "*500" or just "500"), so a line
-  // that is only an amount also counts. Up to 7 digits, so the 12-digit UPI
-  // reference and phone numbers never match.
+  // OCR often misreads a bold ₹ ("T81" on supermoney, "?500", "*500") or
+  // drops it, so a line that is only an amount also counts, after one stray
+  // symbol or T/Z/R/F. Up to 7 digits, so the 12-digit UPI reference and
+  // phone numbers never match.
   final bare = RegExp(
-    r'^[^\w\s]?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?)$',
+    r'^(?:[^\w\s]|[TZRF])?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?)$',
   );
   final found = <({double value, double height, bool rupee})>[];
   for (final l in lines) {
