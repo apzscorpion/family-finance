@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/nocturne.dart';
+import 'data/bill_scan.dart';
 import 'data/chat_controller.dart';
 import 'data/notes_presence.dart';
 import 'data/prayer/prayer_controller.dart';
@@ -185,7 +186,8 @@ class V3Shell extends StatelessWidget {
       statusBarIconBrightness: Brightness.light,
     ));
 
-    return PopScope(
+    return _SharedBillListener(
+      child: PopScope(
       canPop: !nav.canGoBack,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
@@ -215,8 +217,54 @@ class V3Shell extends StatelessWidget {
         ),
         bottomNavigationBar: const _V3BottomBar(),
       ),
+    ),
     );
   }
+}
+
+/// Opens a pre-filled expense when a payment screenshot is shared into the
+/// app. Checked on launch and on resume, which is when a share arrives.
+class _SharedBillListener extends StatefulWidget {
+  final Widget child;
+  const _SharedBillListener({required this.child});
+
+  @override
+  State<_SharedBillListener> createState() => _SharedBillListenerState();
+}
+
+class _SharedBillListenerState extends State<_SharedBillListener>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _check();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _check();
+  }
+
+  Future<void> _check() async {
+    final bill = await consumeSharedBill();
+    if (bill == null || !mounted) return;
+    if (bill.amount == null && bill.payee == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Couldn't read a payment from that image. "
+              'Fill in the details below.')));
+    }
+    await V3Sheets.openAdd(context, prefill: bill);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _PageOverlay extends StatelessWidget {

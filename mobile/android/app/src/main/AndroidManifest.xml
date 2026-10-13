@@ -46,6 +46,10 @@
         android:label="Sampio"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Fetch the Play Services OCR model at install, not on first scan -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -68,6 +72,12 @@
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="text/plain"/>
+            </intent-filter>
+            <!-- Payment screenshots shared from GPay, PhonePe, CRED… become a pre-filled expense -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
             </intent-filter>
         </activity>
 

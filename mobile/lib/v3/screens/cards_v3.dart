@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../data/card_scan.dart';
 import '../phosphor_icons.dart';
 import '../v3_design.dart';
 import '../v3_state.dart';
@@ -147,6 +148,7 @@ class CardsV3 extends StatelessWidget {
     final label = TextEditingController();
     final last4 = TextEditingController();
     final limit = TextEditingController();
+    String? scanNote;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -154,15 +156,47 @@ class CardsV3 extends StatelessWidget {
         backgroundColor: Nocturne.surface,
         title: const Text('Add card',
             style: TextStyle(fontSize: 17, color: Nocturne.text)),
-        content: Column(
+        content: StatefulBuilder(
+          builder: (ctx, setInner) => Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            OutlinedButton.icon(
+              onPressed: () async {
+                CardScan? r;
+                try {
+                  r = await scanCard();
+                } catch (_) {
+                  r = (last4: null, expiry: null);
+                }
+                if (r == null) return;
+                if (r.last4 != null) last4.text = r.last4!;
+                setInner(() => scanNote = r!.last4 == null
+                    ? "Couldn't read the number. Try again in good light, card filling the frame."
+                    : 'Read card ending ${r.last4}'
+                        '${r.expiry == null ? '' : ', expires ${r.expiry}'}');
+              },
+              icon: const Icon(PhRegular.camera, size: 18),
+              label: const Text('Scan card (front)'),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: Nocturne.accent300,
+                  side: const BorderSide(color: Nocturne.neutral800)),
+            ),
+            if (scanNote != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(scanNote!,
+                    style: const TextStyle(
+                        fontSize: 12, color: Nocturne.neutral400)),
+              ),
+            const SizedBox(height: 10),
             _Field(controller: label, hint: 'Card name (e.g. HDFC Regalia)'),
             const SizedBox(height: 10),
             _Field(controller: last4, hint: 'Last 4 digits', digits: true),
             const SizedBox(height: 10),
             _Field(controller: limit, hint: 'Credit limit', digits: true),
           ],
+        ),
         ),
         actions: [
           TextButton(

@@ -24,6 +24,7 @@ class MainActivity : FlutterActivity() {
     private val PICK_FILE_REQ = 4091
     private var pendingResult: MethodChannel.Result? = null
     private var sharedTextFromIntent: String? = null
+    private var sharedImagePath: String? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -78,6 +79,11 @@ class MainActivity : FlutterActivity() {
                     }
                     startActivityForResult(intent, PICK_FILE_REQ)
                 }
+                "consumeSharedImage" -> {
+                    val path = sharedImagePath
+                    sharedImagePath = null
+                    result.success(path)
+                }
                 "consumeSharedText" -> {
                     val text = sharedTextFromIntent
                     sharedTextFromIntent = null
@@ -130,6 +136,24 @@ class MainActivity : FlutterActivity() {
     private fun handleIncomingShareIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true) {
             sharedTextFromIntent = intent.getStringExtra(Intent.EXTRA_TEXT)
+        } else if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("image/") == true) {
+            // The read grant on a shared uri ends with this activity, so copy
+            // it now; Dart OCRs the copy and deletes it.
+            val uri = if (Build.VERSION.SDK_INT >= 33) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            } ?: return
+            sharedImagePath = try {
+                val out = java.io.File(cacheDir, "shared_bill_${System.currentTimeMillis()}")
+                contentResolver.openInputStream(uri)?.use { input ->
+                    out.outputStream().use { input.copyTo(it) }
+                }
+                out.path
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 

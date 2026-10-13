@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../data/bill_scan.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../v3_design.dart';
@@ -52,9 +53,13 @@ class V3Sheets {
       ? _notifyReadOnly(context)
       : _show(context, const V3SourceSheet());
 
-  static Future<void> openAdd(BuildContext context, {TxnRow? edit}) => readOnly
+  static Future<void> openAdd(
+    BuildContext context, {
+    TxnRow? edit,
+    BillScan? prefill,
+  }) => readOnly
       ? _notifyReadOnly(context)
-      : _show(context, V3AddSheet(edit: edit));
+      : _show(context, V3AddSheet(edit: edit, prefill: prefill));
 
   static Future<void> openDetail(BuildContext context, TxnRow txn) =>
       _show(context, V3DetailSheet(txn: txn));
@@ -519,7 +524,10 @@ class _SourceOption extends StatelessWidget {
 
 class V3AddSheet extends StatefulWidget {
   final TxnRow? edit;
-  const V3AddSheet({super.key, this.edit});
+
+  /// Read from a shared payment screenshot; the user confirms before saving.
+  final BillScan? prefill;
+  const V3AddSheet({super.key, this.edit, this.prefill});
 
   /// Who owes the payer what. One other person owes the full amount; with
   /// more, it is split equally, or the payer's own part comes off first.
@@ -628,7 +636,19 @@ class _V3AddSheetState extends State<V3AddSheet> {
   void initState() {
     super.initState();
     final e = widget.edit;
-    _date = e?.occurredAt ?? DateTime.now();
+    _date = e?.occurredAt ?? widget.prefill?.date ?? DateTime.now();
+    final p = widget.prefill;
+    if (e == null && p != null) {
+      if (p.amount != null) _expression = CalcEngine.format(p.amount!);
+      _note.text = p.payee ?? '';
+      if (p.income) {
+        // Same as tapping the Income tab.
+        _type = 'income';
+        _catKey =
+            context.read<V3State>().topCategories('income').firstOrNull?.key ??
+            'salary';
+      }
+    }
     if (e != null) {
       _type = e.type;
       _expression = CalcEngine.format(e.amount);

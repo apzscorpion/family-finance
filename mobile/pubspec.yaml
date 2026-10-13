@@ -2,7 +2,7 @@ name: family_finance
 description: "Family & Personal Finance Manager — track income, expenses, budgets and share with trusted family members."
 publish_to: 'none'
 
-version: 1.10.6+38
+version: 1.10.7+39
 
 environment:
   sdk: ^3.13.4
@@ -59,6 +59,10 @@ dependencies:
   # Bill capture hands off to the system camera app rather than embedding a
   # preview, so there is no CAMERA permission and no GPU preview pipeline.
   image_picker: ^1.1.2
+
+  # "Scan card": on-device OCR of a card photo. Offline; the image never
+  # leaves the phone and only the last 4 digits are kept.
+  google_mlkit_text_recognition: ^0.17.1
 
 dev_dependencies:
   flutter_test:

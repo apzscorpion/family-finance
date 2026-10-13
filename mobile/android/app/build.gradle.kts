@@ -80,6 +80,14 @@ flutter {
     source = "../.."
 }
 
+// The text reader (card scan, shared receipts) normally bundles its OCR
+// engine: ~30 MB of native code across ABIs. The Play Services build has the
+// same API and keeps the engine in Play Services instead.
+configurations.all {
+    exclude(group = "com.google.mlkit", module = "text-recognition")
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
 }

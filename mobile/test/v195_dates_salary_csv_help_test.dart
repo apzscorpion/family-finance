@@ -252,6 +252,38 @@ void main() {
       expect(find.textContaining('PAYMENT CHANNEL'), findsNothing);
     });
 
+    for (final income in [false, true]) {
+      testWidgets('V3AddSheet opens pre-filled from a shared bill (income: $income)',
+          (tester) async {
+        final state = _buildSeededState(_TestRepo());
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<V3State>.value(value: state),
+              ChangeNotifierProvider<V3Nav>(create: (_) => V3Nav()),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: V3AddSheet(
+                  prefill: (
+                    amount: 1250.5,
+                    payee: 'Fresh Mart',
+                    date: DateTime(2026, 10, 5, 9, 15),
+                    income: income,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Fresh Mart'), findsOneWidget);
+        expect(find.textContaining('1250.5', findRichText: true), findsWidgets);
+        expect(find.textContaining('Today'), findsNothing); // the bill's date
+      });
+    }
+
     testWidgets('ImportV3 header contains format and AI prompt help button which opens _CsvHelpSheet', (tester) async {
       final repo = _TestRepo();
       final state = _buildSeededState(repo);

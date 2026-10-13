@@ -94,7 +94,9 @@ def main():
     for flavor, path in builds:
         print(f"  Building {flavor}...")
         result = subprocess.run(
-            [flutter_bin, "build", "apk", "--release", "--flavor", flavor],
+            [flutter_bin, "build", "apk", "--release", "--flavor", flavor,
+             # Phones only: x86_64 (emulators) added ~22 MB nobody installs.
+             "--target-platform", "android-arm,android-arm64"],
             cwd=MOBILE_DIR, env=env,
         )
         if result.returncode != 0:
