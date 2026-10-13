@@ -13,7 +13,7 @@ class UpdateService {
   static const String latestReleaseUrl =
       'https://api.github.com/repos/$githubRepo/releases/latest';
   static const String latestApkUrl =
-      'https://github.com/$githubRepo/releases/latest/download/FamilySpendTracker-latest.apk';
+      'https://github.com/$githubRepo/releases/latest/download/Sampio-latest.apk';
 
   /// The newer release this build could update to, or null when up to date
   /// or not checked yet. Settings listens to it to show the update button.

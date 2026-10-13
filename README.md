@@ -2,7 +2,7 @@
 
 # Sampio — Your Money Companion
 
-[![Download APK](https://img.shields.io/badge/⚡_Download_Android_APK-v1.10.5-9184d9?style=for-the-badge&logo=android&logoColor=white)](https://github.com/apzscorpion/family-finance/releases/latest/download/FamilySpendTracker-latest.apk)
+[![Download APK](https://img.shields.io/badge/⚡_Download_Android_APK-v1.10.5-9184d9?style=for-the-badge&logo=android&logoColor=white)](https://github.com/apzscorpion/family-finance/releases/latest/download/Sampio-latest.apk)
 [![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-Cloud_Auth_%26_DB-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
@@ -14,11 +14,11 @@ A collaborative mobile & cloud finance tracker designed for families, couples, a
 ## 📲 Quick Download & Installation (No Play Store Needed)
 
 ### 📥 Direct Download (Always Latest Version):
-👉 **[Download Latest APK (`FamilySpendTracker-latest.apk`)](https://github.com/apzscorpion/family-finance/releases/latest/download/FamilySpendTracker-latest.apk)**
+👉 **[Download Latest APK (`Sampio-latest.apk`)](https://github.com/apzscorpion/family-finance/releases/latest/download/Sampio-latest.apk)**
 
 ### 📱 Installation Steps:
 1. Tap the download link above on your Android device.
-2. Open the downloaded `FamilySpendTracker-latest.apk` file.
+2. Open the downloaded `Sampio-latest.apk` file.
 3. If prompted, tap **"Allow from this source"** to enable APK installation.
 4. Open **Family Spend Tracker**, log in or create a family workspace, and enjoy!
 

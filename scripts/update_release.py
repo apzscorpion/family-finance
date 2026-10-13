@@ -41,12 +41,15 @@ FLUTTER_APK_DIR = MOBILE_DIR / "build" / "app" / "outputs" / "flutter-apk"
 #
 # APKs are uploaded to a GitHub Release, never committed: every committed APK
 # stayed in git history forever and made each clone gigabytes. The app's
-# updater downloads releases/latest/download/<asset name>, so the asset names
-# below must not change.
+# updater downloads releases/latest/download/<asset name>, so a name, once
+# shipped, has to keep being uploaded.
 BUILT_APK_PATH = FLUTTER_APK_DIR / "app-standard-release.apk"
-ASSET_NAME = "FamilySpendTracker-latest.apk"
+ASSET_NAME = "Sampio-latest.apk"
+# Builds up to v1.10.5 update from this name; the same APK is uploaded under
+# it too. shortcut: drop it once no phone runs v1.10.5 or older.
+LEGACY_ASSET_NAMES = ["FamilySpendTracker-latest.apk"]
 DETECT_APK_PATH = FLUTTER_APK_DIR / "app-detect-release.apk"
-DETECT_ASSET_NAME = "FamilySpendTracker-detect.apk"
+DETECT_ASSET_NAME = "Sampio-detect.apk"
 
 RELEASE_DETECT = os.environ.get("RELEASE_DETECT") == "1"
 
@@ -125,7 +128,7 @@ def main():
 
     # 5. Publish the APK(s) on the GitHub Release for the tag
     print("[5/5] Uploading APK to GitHub Releases...")
-    assets = [(BUILT_APK_PATH, ASSET_NAME)]
+    assets = [(BUILT_APK_PATH, n) for n in [ASSET_NAME, *LEGACY_ASSET_NAMES]]
     if RELEASE_DETECT:
         assets.append((DETECT_APK_PATH, DETECT_ASSET_NAME))
     publish_release(f"v{version}", assets, release_notes(f"v{version}"))
