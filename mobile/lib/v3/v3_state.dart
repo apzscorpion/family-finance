@@ -1288,7 +1288,7 @@ class V3State extends ChangeNotifier {
       key,
       row.name,
       renamed ? null : design.short,
-      V3Design.categoryIconRegistry[row.icon?.trim()] ?? base.icon,
+      V3Design.iconNamed(row.icon) ?? base.icon,
       V3Design.parseHex(row.color) ?? base.color,
     );
   }

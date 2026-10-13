@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
 import '../data/v3_models.dart';
+import '../phosphor_catalog.dart';
 import '../phosphor_icons.dart';
 import '../v3_design.dart';
 import '../v3_state.dart';
@@ -31,6 +32,7 @@ class CategoriesManagerV3 extends StatefulWidget {
     final controller = TextEditingController(text: name);
     var pickedIcon = icon ?? 'sparkle';
     var pickedColor = color ?? V3Design.customCategoryColors.first;
+    var query = '';
 
     final ok = await showDialog<bool>(
       context: context,
@@ -78,42 +80,83 @@ class CategoriesManagerV3 extends StatefulWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final e in V3Design.categoryIconRegistry.entries)
-                        GestureDetector(
-                          onTap: () => setLocal(() => pickedIcon = e.key),
-                          behavior: HitTestBehavior.opaque,
-                          child: Semantics(
-                            button: true,
-                            selected: pickedIcon == e.key,
-                            label: e.key,
-                            child: Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: pickedIcon == e.key
-                                    ? Nocturne.mix(tint, 22)
-                                    : Nocturne.bg,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: pickedIcon == e.key
-                                      ? tint
-                                      : Nocturne.neutral800,
-                                ),
-                              ),
-                              child: Icon(e.value,
-                                  size: 18,
-                                  color: pickedIcon == e.key
-                                      ? tint
-                                      : Nocturne.neutral400),
-                            ),
-                          ),
-                        ),
-                    ],
+                  TextField(
+                    onChanged: (v) => setLocal(() => query = v),
+                    style: const TextStyle(fontSize: 13, color: Nocturne.text),
+                    cursorColor: Nocturne.accent,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      prefixIcon: const Icon(PhRegular.magnifyingGlass,
+                          size: 16, color: Nocturne.neutral500),
+                      hintText: 'Search icons (e.g. car, pill, coffee)',
+                      hintStyle: const TextStyle(
+                          fontSize: 13, color: Nocturne.neutral600),
+                      filled: true,
+                      fillColor: Nocturne.bg,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 8),
+                  Builder(builder: (_) {
+                    final names = iconMatches(query);
+                    if (names.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text('No icons match',
+                              style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: Nocturne.neutral500)),
+                        ),
+                      );
+                    }
+                    return SizedBox(
+                      height: 220,
+                      width: double.maxFinite,
+                      child: GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 44,
+                          mainAxisSpacing: 6,
+                          crossAxisSpacing: 6,
+                        ),
+                        itemCount: names.length,
+                        itemBuilder: (_, i) {
+                          final name = names[i];
+                          final sel = pickedIcon == name;
+                          return GestureDetector(
+                            onTap: () => setLocal(() => pickedIcon = name),
+                            behavior: HitTestBehavior.opaque,
+                            child: Semantics(
+                              button: true,
+                              selected: sel,
+                              label: name.replaceAll('-', ' '),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: sel
+                                      ? Nocturne.mix(tint, 22)
+                                      : Nocturne.bg,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color:
+                                        sel ? tint : Nocturne.neutral800,
+                                  ),
+                                ),
+                                child: Icon(V3Design.iconFromName(name),
+                                    size: 18,
+                                    color: sel
+                                        ? tint
+                                        : Nocturne.neutral400),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -166,6 +209,26 @@ class CategoriesManagerV3 extends StatefulWidget {
     return ok == true && v.isNotEmpty
         ? (name: v, icon: pickedIcon, color: pickedColor)
         : null;
+  }
+
+  /// Icon names for the picker: the curated set first, then every Phosphor
+  /// icon. A search matches words in the name ("credit card" → credit-card).
+  static List<String> iconMatches(String query) {
+    final all = [
+      ...V3Design.categoryIconRegistry.keys,
+      for (final n in phosphorCatalog.keys)
+        if (!V3Design.categoryIconRegistry.containsKey(n)) n,
+    ];
+    final words = query
+        .toLowerCase()
+        .split(RegExp(r'[\s-]+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    if (words.isEmpty) return all;
+    return [
+      for (final n in all)
+        if (words.every(n.contains)) n,
+    ];
   }
 
   @override

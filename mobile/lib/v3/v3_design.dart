@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'phosphor_catalog.dart';
 import 'phosphor_icons.dart';
 
 /// Design constants taken from `Family Spend Tracker v3.dc.html`.
@@ -218,10 +219,15 @@ class V3Design {
     '#38BDF8', // Cyan
   ];
 
-  static IconData iconFromName(String? iconName) {
-    if (iconName == null || iconName.isEmpty) return PhRegular.circle;
-    return categoryIconRegistry[iconName.trim()] ?? PhRegular.circle;
+  /// A stored icon name: the curated list first, then any Phosphor icon.
+  static IconData? iconNamed(String? iconName) {
+    final n = iconName?.trim();
+    if (n == null || n.isEmpty) return null;
+    return categoryIconRegistry[n] ?? phosphorCatalog[n];
   }
+
+  static IconData iconFromName(String? iconName) =>
+      iconNamed(iconName) ?? PhRegular.circle;
 
   static String iconNameFromData(IconData icon) {
     for (final entry in categoryIconRegistry.entries) {
