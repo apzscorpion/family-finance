@@ -479,6 +479,67 @@ class _CategoryTile extends StatelessWidget {
               },
             ),
             ListTile(
+              leading: const Icon(PhRegular.users,
+                  size: 18, color: Nocturne.text),
+              title: const Text('Linked people',
+                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
+              subtitle: Text(
+                  _names([
+                    for (final m in s.members)
+                      if (c.memberIds.contains(m.userId)) m.name,
+                  ], 'Picking this category fills in "For" with them'),
+                  style: const TextStyle(
+                      fontSize: 11.5, color: Nocturne.neutral500)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picked = await _pickMany(
+                  context,
+                  'People for ${c.name}',
+                  [
+                    for (final m in s.members)
+                      if (m.isActive) (id: m.userId, label: m.name),
+                  ],
+                  c.memberIds.toSet(),
+                );
+                if (picked != null) {
+                  await s.setCategoryLinks(c,
+                      alsoParentIds: c.alsoParentIds,
+                      memberIds: picked.toList());
+                }
+              },
+            ),
+            if (!canAddSub)
+              ListTile(
+                leading: const Icon(PhRegular.link,
+                    size: 18, color: Nocturne.text),
+                title: const Text('Also show under…',
+                    style: TextStyle(fontSize: 14, color: Nocturne.text)),
+                subtitle: Text(
+                    _names([
+                      for (final m in s.topCategories(c.kind))
+                        if (c.alsoParentIds.contains(m.id)) m.name,
+                    ], 'Use this subcategory in other categories too'),
+                    style: const TextStyle(
+                        fontSize: 11.5, color: Nocturne.neutral500)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final picked = await _pickMany(
+                    context,
+                    'Show ${c.name} under',
+                    [
+                      for (final m in s.topCategories(c.kind))
+                        if (m.id != c.parentId) (id: m.id, label: m.name),
+                    ],
+                    c.alsoParentIds.toSet(),
+                  );
+                  if (picked != null) {
+                    await s.setCategoryLinks(c,
+                        alsoParentIds: picked.toList(),
+                        memberIds: c.memberIds);
+                  }
+                },
+              ),
+            ListTile(
               leading: const Icon(PhRegular.trash,
                   size: 18, color: NocturneSemantic.expense),
               title: const Text('Delete',
@@ -496,6 +557,60 @@ class _CategoryTile extends StatelessWidget {
               },
             ),
             const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _names(List<String> names, String empty) =>
+      names.isEmpty ? empty : names.join(', ');
+
+  /// Checkbox list; null when cancelled.
+  static Future<Set<String>?> _pickMany(
+    BuildContext context,
+    String title,
+    List<({String id, String label})> options,
+    Set<String> initial,
+  ) {
+    final chosen = {...initial};
+    return showDialog<Set<String>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInner) => AlertDialog(
+          backgroundColor: Nocturne.surface,
+          title: Text(title,
+              style: const TextStyle(fontSize: 17, color: Nocturne.text)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final o in options)
+                  CheckboxListTile(
+                    value: chosen.contains(o.id),
+                    title: Text(o.label,
+                        style: const TextStyle(
+                            fontSize: 14, color: Nocturne.text)),
+                    activeColor: Nocturne.accent,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (v) => setInner(() =>
+                        v == true ? chosen.add(o.id) : chosen.remove(o.id)),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Nocturne.neutral400)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, chosen),
+              child: const Text('Save',
+                  style: TextStyle(color: Nocturne.accent300)),
+            ),
           ],
         ),
       ),

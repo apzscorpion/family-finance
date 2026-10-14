@@ -253,15 +253,25 @@ class _SharedBillListenerState extends State<_SharedBillListener>
   }
 
   Future<void> _check() async {
+    final s = context.read<V3State>();
+    final messenger = ScaffoldMessenger.of(context);
     final bill = await consumeSharedBill(
-      onWaiting: () {
+      categories: [
+        for (final kind in const ['expense', 'income'])
+          for (final c in s.topCategories(kind))
+            (key: c.key, name: c.name, income: kind == 'income'),
+      ],
+      onStatus: (msg) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            duration: Duration(seconds: 6),
-            content: Text('Setting up the receipt reader (first time only)…')));
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+              duration: const Duration(seconds: 20), content: Text(msg)));
       },
     );
-    if (bill == null || !mounted) return;
+    if (!mounted) return;
+    messenger.hideCurrentSnackBar();
+    if (bill == null) return;
     if (bill.amount == null && bill.payee == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Couldn't read a payment from that image. "

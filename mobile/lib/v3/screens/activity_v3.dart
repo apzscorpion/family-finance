@@ -27,7 +27,11 @@ class _ActivityV3State extends State<ActivityV3> {
   final _search = TextEditingController();
   String _type = 'all';
   String? _catKey;
+  String? _subId;
   String? _memberId;
+
+  /// Entries where this person has a share ("For" / spent with them).
+  String? _forId;
 
   bool _selecting = false;
   final Set<String> _selectedIds = <String>{};
@@ -74,7 +78,9 @@ class _ActivityV3State extends State<ActivityV3> {
       if (_type == 'income' && t.isExpense) return false;
       if (_type == 'imported' && t.origin != 'import') return false;
       if (_catKey != null && t.categoryKey != _catKey) return false;
+      if (_subId != null && t.subCategoryId != _subId) return false;
       if (_memberId != null && t.userId != _memberId) return false;
+      if (_forId != null && !t.shares.containsKey(_forId)) return false;
       if (q.isNotEmpty) {
         final cat = s.catStyle(t.categoryKey).name.toLowerCase();
         final who = (s.memberById(t.userId)?.name ?? '').toLowerCase();
@@ -92,7 +98,9 @@ class _ActivityV3State extends State<ActivityV3> {
         _search.clear();
         _type = 'all';
         _catKey = null;
+        _subId = null;
         _memberId = null;
+        _forId = null;
       });
 
   void _toggleRow(String id) {
@@ -304,6 +312,22 @@ class _ActivityV3State extends State<ActivityV3> {
     }
     final catKeys = counts.keys.toList()
       ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+
+    // Sub-categories in use, under the chosen main category if there is one.
+    final subCounts = <String, int>{};
+    for (final t in catSource) {
+      final id = t.subCategoryId;
+      if (id == null || (_catKey != null && t.categoryKey != _catKey)) continue;
+      subCounts[id] = (subCounts[id] ?? 0) + 1;
+    }
+    final subIds = subCounts.keys
+        .where((id) => s.categoryById(id) != null)
+        .toList()
+      ..sort((a, b) => subCounts[b]!.compareTo(subCounts[a]!));
+    final forName = s.memberById(_forId)?.name;
+    final forShare = _forId == null
+        ? 0.0
+        : items.fold(0.0, (a, t) => a + t.shareOf(_forId));
 
     final groups = <int, List<TxnRow>>{};
     for (final t in items) {
@@ -557,12 +581,6 @@ class _ActivityV3State extends State<ActivityV3> {
                   ('all', 'All'),
                   ('expense', 'Spent'),
                   ('income', 'Received'),
-                  (
-                    'imported',
-                    importedCount > 0
-                        ? 'Imported ($importedCount)'
-                        : 'Imported',
-                  ),
                 ])
                   Expanded(
                     child: GestureDetector(
@@ -778,89 +796,6 @@ class _ActivityV3State extends State<ActivityV3> {
                   ),
                 ],
               ),
-            )
-          else if (importedCount > 0)
-            // Quick banner for imported transactions so user can batch-select or
-            // delete imported data with one tap
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                color: Nocturne.surface,
-                borderRadius: BorderRadius.circular(13),
-                border: Border.all(color: Nocturne.neutral800, width: 1),
-              ),
-              child: Row(
-                children: [
-                  const Icon(PhRegular.downloadSimple,
-                      size: 15, color: Nocturne.accent200),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '$importedCount imported transaction${importedCount == 1 ? '' : 's'}',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: Nocturne.neutral300,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _selectImported(s),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Nocturne.bg,
-                        borderRadius: BorderRadius.circular(8),
-                        border:
-                            Border.all(color: Nocturne.neutral700, width: 1),
-                      ),
-                      child: const Text(
-                        'Batch select',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: Nocturne.accent200,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () => _confirmDeleteAllImported(s),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Nocturne.mix(NocturneSemantic.expense, 16),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Nocturne.mix(NocturneSemantic.expense, 45),
-                          width: 1,
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(PhRegular.trash,
-                              size: 12, color: NocturneSemantic.expense),
-                          SizedBox(width: 4),
-                          Text(
-                            'Delete imported',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: NocturneSemantic.expense,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
           if (catKeys.isNotEmpty)
             Padding(
@@ -881,8 +816,35 @@ class _ActivityV3State extends State<ActivityV3> {
                       icon: c.icon,
                       iconColor: c.color,
                       selected: _catKey == k,
-                      onTap: () =>
-                          setState(() => _catKey = _catKey == k ? null : k),
+                      onTap: () => setState(() {
+                        _catKey = _catKey == k ? null : k;
+                        _subId = null;
+                      }),
+                    );
+                  },
+                ),
+              ),
+            ),
+          if (subIds.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: SizedBox(
+                height: 28,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  itemCount: subIds.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 6),
+                  itemBuilder: (_, i) {
+                    final sub = s.categoryById(subIds[i])!;
+                    return V3Chip(
+                      label: sub.name,
+                      height: 28,
+                      icon: s.catStyle(sub.key).icon,
+                      iconColor: s.catStyle(sub.key).color,
+                      selected: _subId == sub.id,
+                      onTap: () => setState(
+                          () => _subId = _subId == sub.id ? null : sub.id),
                     );
                   },
                 ),
@@ -926,6 +888,44 @@ class _ActivityV3State extends State<ActivityV3> {
                 ],
               ),
             ),
+          if (s.isFamily && s.members.length > 1)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  const Text('For',
+                      style: TextStyle(
+                          fontSize: 11.5, color: Nocturne.neutral500)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SizedBox(
+                      height: 30,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: s.members.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) {
+                          final m = s.members[i];
+                          final on = _forId == m.userId;
+                          return GestureDetector(
+                            onTap: () =>
+                                setState(() => _forId = on ? null : m.userId),
+                            child: V3Avatar(
+                              initial: m.initial,
+                              color: m.color,
+                              size: 30,
+                              fontSize: 11.5,
+                              opacity: _forId == null || on ? 1 : 0.4,
+                              ringColor: on ? Nocturne.accent400 : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Totals
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
@@ -938,11 +938,16 @@ class _ActivityV3State extends State<ActivityV3> {
                       color: Nocturne.text),
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _MiniStat(
-                      label: 'Received · shown',
-                      value: s.money(received),
-                      color: NocturneSemantic.income),
+                  Expanded(
+                  child: forName != null
+                      ? _MiniStat(
+                          label: "$forName's share",
+                          value: s.money(forShare),
+                          color: Nocturne.accent200)
+                      : _MiniStat(
+                          label: 'Received · shown',
+                          value: s.money(received),
+                          color: NocturneSemantic.income),
                 ),
               ],
             ),

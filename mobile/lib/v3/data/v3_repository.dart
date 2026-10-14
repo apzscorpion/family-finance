@@ -160,6 +160,21 @@ class V3Repository {
     return CategoryRow.fromJson(Map<String, dynamic>.from(row as Map));
   }
 
+  /// Which main categories a sub is also under, and its linked people.
+  Future<CategoryRow> updateCategoryLinks(
+    String id, {
+    required List<String> alsoParentIds,
+    required List<String> memberIds,
+  }) async {
+    final row = await _db
+        .from('categories')
+        .update({'also_parent_ids': alsoParentIds, 'member_ids': memberIds})
+        .eq('id', id)
+        .select('*')
+        .single();
+    return CategoryRow.fromJson(Map<String, dynamic>.from(row as Map));
+  }
+
   Future<CategoryRow> updateCategory({
     required String id,
     required String name,
@@ -303,7 +318,7 @@ class V3Repository {
     final rows = await _db
         .from('transactions')
         .select(
-            'id,family_id,user_id,paid_by,source_id,category_id,card_id,title,amount,type,method,origin,occurred_at,split,note,categories(key),transaction_shares(user_id,amount)')
+            'id,family_id,user_id,paid_by,source_id,category_id,card_id,title,amount,type,method,origin,occurred_at,split,note,sub_category_id,categories!transactions_category_id_fkey(key),transaction_shares(user_id,amount)')
         .eq('family_id', familyId)
         .order('occurred_at', ascending: false)
         .limit(limit);
@@ -375,6 +390,7 @@ class V3Repository {
     String method = 'UPI',
     String origin = 'manual',
     String? categoryId,
+    String? subCategoryId,
     String? sourceId,
     String? cardId,
     String? forUserId,
@@ -395,13 +411,14 @@ class V3Repository {
           'method': method,
           'origin': origin,
           'category_id': ?categoryId,
+          'sub_category_id': ?subCategoryId,
           'source_id': ?sourceId,
           'card_id': ?cardId,
           'occurred_at': (occurredAt ?? DateTime.now()).toUtc().toIso8601String(),
           if (note != null && note.isNotEmpty) 'note': note,
         })
         .select(
-            'id,family_id,user_id,paid_by,source_id,category_id,card_id,title,amount,type,method,origin,occurred_at,split,note,categories(key),transaction_shares(user_id,amount)')
+            'id,family_id,user_id,paid_by,source_id,category_id,card_id,title,amount,type,method,origin,occurred_at,split,note,sub_category_id,categories!transactions_category_id_fkey(key),transaction_shares(user_id,amount)')
         .single();
 
     final created = TxnRow.fromJson(Map<String, dynamic>.from(row));

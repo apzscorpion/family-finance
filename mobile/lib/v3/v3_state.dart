@@ -191,7 +191,7 @@ class V3State extends ChangeNotifier {
     members = (results[0] as List<MemberRow>?) ?? members;
     categories = (results[1] as List<CategoryRow>?) ?? categories;
     sources = (results[2] as List<SourceRow>?) ?? sources;
-    txns = (results[3] as List<TxnRow>?) ?? txns;
+    txns = [for (final t in (results[3] as List<TxnRow>?) ?? txns) _refile(t)];
     budgets = (results[4] as List<BudgetRow>?) ?? budgets;
     recurring = (results[5] as List<RecurringRow>?) ?? recurring;
     cards = (results[6] as List<CardRow>?) ?? cards;
@@ -256,9 +256,36 @@ class V3State extends ChangeNotifier {
       .toList()
     ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
+  /// Subs owned by [parentId] plus those also listed under it.
   List<CategoryRow> subcategoriesOf(String parentId) =>
-      categories.where((c) => c.parentId == parentId).toList()
+      categories.where((c) => c.isUnder(parentId)).toList()
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+  /// Older entries (and older app versions) file a sub-category in
+  /// category_id; read them as (parent, sub) like new ones.
+  TxnRow _refile(TxnRow t) {
+    if (t.subCategoryId != null) return t;
+    final c = categoryById(t.categoryId);
+    final parent = c != null && c.isSubCategory ? categoryById(c.parentId) : null;
+    return parent == null ? t : t.refiled(parent, c!.id);
+  }
+
+  /// Saves which mains a sub is also under and the people linked to [c].
+  Future<bool> setCategoryLinks(
+    CategoryRow c, {
+    required List<String> alsoParentIds,
+    required List<String> memberIds,
+  }) async {
+    final saved = await V3Repository.guard(
+      'setCategoryLinks',
+      () => _repo.updateCategoryLinks(c.id,
+          alsoParentIds: alsoParentIds, memberIds: memberIds),
+    );
+    if (saved == null) return false;
+    categories = [for (final x in categories) x.id == c.id ? saved : x];
+    notifyListeners();
+    return true;
+  }
 
   SourceRow? sourceById(String? id) {
     if (id == null) return null;
@@ -545,7 +572,13 @@ class V3State extends ChangeNotifier {
       out.add((
         cat: c,
         limit: b.limitAmount,
-        spent: spentByKey[c.key] ?? 0,
+        // Entries are filed under their main category; a sub's budget
+        // counts the entries carrying that sub.
+        spent: c.isSubCategory
+            ? scoped
+                  .where((t) => t.isExpense && t.subCategoryId == c.id)
+                  .fold(0.0, (a, t) => a + t.amount)
+            : spentByKey[c.key] ?? 0,
         threshold: b.thresholdPct,
       ));
     }
@@ -560,6 +593,7 @@ class V3State extends ChangeNotifier {
     required double amount,
     required String type,
     required String categoryKey,
+    String? subCategoryKey,
     String method = 'UPI',
     String? sourceId,
     String? forUserId,
@@ -569,6 +603,7 @@ class V3State extends ChangeNotifier {
     DateTime? occurredAt,
   }) async {
     final cat = categoryByKey(categoryKey);
+    final sub = subCategoryKey == null ? null : categoryByKey(subCategoryKey);
     final created = await V3Repository.guard(
       'addTransaction',
       () => _repo.addTransaction(
@@ -578,6 +613,7 @@ class V3State extends ChangeNotifier {
         type: type,
         method: method,
         categoryId: cat?.id,
+        subCategoryId: sub?.id,
         sourceId: sourceId,
         forUserId: forUserId,
         occurredAt: occurredAt,
@@ -587,7 +623,7 @@ class V3State extends ChangeNotifier {
       ),
     );
     if (created == null) return false;
-    txns = [created, ...txns];
+    txns = [_refile(created), ...txns];
     notifyListeners();
     return true;
   }
@@ -598,6 +634,7 @@ class V3State extends ChangeNotifier {
     required double amount,
     required String type,
     required String categoryKey,
+    String? subCategoryKey,
     String method = 'UPI',
     String? sourceId,
     String? forUserId,
@@ -613,6 +650,8 @@ class V3State extends ChangeNotifier {
       'type': type,
       'method': method,
       'category_id': cat?.id,
+      'sub_category_id':
+          subCategoryKey == null ? null : categoryByKey(subCategoryKey)?.id,
       'source_id': sourceId,
       'user_id': forUserId ?? myId,
       'paid_by': paidBy ?? myId,

@@ -161,6 +161,14 @@ class CategoryRow {
   /// 'expense' or 'income'.
   final String kind;
 
+  /// Sub-categories only: other main categories this one is also listed
+  /// under ("with fam" under Food, Travel and Games).
+  final List<String> alsoParentIds;
+
+  /// People linked to this category: picking it fills "For" with them, and
+  /// picking exactly them selects it.
+  final List<String> memberIds;
+
   const CategoryRow({
     required this.id,
     required this.key,
@@ -170,9 +178,15 @@ class CategoryRow {
     this.parentId,
     this.sortOrder = 0,
     this.kind = 'expense',
+    this.alsoParentIds = const [],
+    this.memberIds = const [],
   });
 
   bool get isSubCategory => parentId != null && parentId!.isNotEmpty;
+
+  /// Whether this sub-category is listed under main category [mainId].
+  bool isUnder(String mainId) =>
+      parentId == mainId || alsoParentIds.contains(mainId);
 
   CategoryRow copyWith({
     String? id,
@@ -191,6 +205,8 @@ class CategoryRow {
       parentId: parentId ?? this.parentId,
       sortOrder: sortOrder,
       kind: kind,
+      alsoParentIds: alsoParentIds,
+      memberIds: memberIds,
     );
   }
 
@@ -206,7 +222,12 @@ class CategoryRow {
         sortOrder: (j['sort_order'] as num?)?.toInt() ?? _builtInOrder(j['key']),
         kind: j['kind']?.toString() ??
             (V3Design.incomeCats.contains(j['key']) ? 'income' : 'expense'),
+        alsoParentIds: _ids(j['also_parent_ids']),
+        memberIds: _ids(j['member_ids']),
       );
+
+  static List<String> _ids(Object? v) =>
+      v is List ? [for (final x in v) '$x'] : const [];
 
   static int _builtInOrder(Object? key) {
     final i = [...V3Design.expenseCats, ...V3Design.incomeCats].indexOf('$key');
@@ -229,6 +250,9 @@ class TxnRow {
   final String? userId;
   final String? sourceId;
   final String? categoryId;
+
+  /// Optional sub-category, alongside the main [categoryId].
+  final String? subCategoryId;
   final String? cardId;
 
   /// Who actually paid. May differ from [userId], the entry's owner.
@@ -256,6 +280,7 @@ class TxnRow {
     this.userId,
     this.sourceId,
     this.categoryId,
+    this.subCategoryId,
     this.cardId,
     this.paidBy,
     this.shares = const {},
@@ -278,6 +303,7 @@ class TxnRow {
       userId: j['user_id']?.toString(),
       sourceId: j['source_id']?.toString(),
       categoryId: j['category_id']?.toString(),
+      subCategoryId: j['sub_category_id']?.toString(),
       cardId: j['card_id']?.toString(),
       paidBy: (j['paid_by'] ?? j['user_id'])?.toString(),
       shares: {
@@ -300,6 +326,28 @@ class TxnRow {
   }
 
   bool get isExpense => type == 'expense';
+
+  /// Same entry filed under main category [main] with sub-category [subId].
+  TxnRow refiled(CategoryRow main, String subId) => TxnRow(
+    id: id,
+    familyId: familyId,
+    userId: userId,
+    sourceId: sourceId,
+    categoryId: main.id,
+    subCategoryId: subId,
+    cardId: cardId,
+    paidBy: paidBy,
+    shares: shares,
+    title: title,
+    amount: amount,
+    type: type,
+    method: method,
+    origin: origin,
+    occurredAt: occurredAt,
+    split: split,
+    note: note,
+    categoryKey: main.key,
+  );
 
   /// Whole calendar days between this transaction and today.
   int get ageInDays {

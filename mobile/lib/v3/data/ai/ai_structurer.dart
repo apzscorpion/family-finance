@@ -222,13 +222,18 @@ Return only JSON matching the schema.''';
     required String input,
     required Map<String, dynamic> Function({required bool strict}) schema,
     required Map<String, dynamic> example,
+    AiImage? image,
   }) async {
     if (!config.isConfigured) {
       return (data: null, error: 'Set up an AI provider in settings first');
     }
     try {
       final raw = await _call(config,
-          system: system, input: input, schema: schema, example: example);
+          system: system,
+          input: input,
+          schema: schema,
+          example: example,
+          image: image);
       final decoded = raw == null ? null : _extractJson(raw);
       if (decoded is! Map) {
         return (data: null, error: 'Could not read the model’s reply');
@@ -265,11 +270,12 @@ Return only JSON matching the schema.''';
     required String input,
     required _SchemaFn schema,
     required Map<String, dynamic> example,
+    AiImage? image,
   }) => switch (config.provider) {
-    AiProvider.gemini => _gemini(input, config, system, schema),
-    AiProvider.claude => _claude(input, config, system, schema),
-    AiProvider.openai ||
-    AiProvider.compatible => _openAiCompatible(input, config, system, example),
+    AiProvider.gemini => _gemini(input, config, system, schema, image),
+    AiProvider.claude => _claude(input, config, system, schema, image),
+    AiProvider.openai || AiProvider.compatible =>
+      _openAiCompatible(input, config, system, example, image),
   };
 
   /// Gemini supports a native response schema, so the reply is already JSON.
@@ -277,8 +283,9 @@ Return only JSON matching the schema.''';
     String input,
     AiConfig config,
     String system,
-    _SchemaFn schema,
-  ) async {
+    _SchemaFn schema, [
+    AiImage? image,
+  ]) async {
     final uri = Uri.parse(
       'https://generativelanguage.googleapis.com/v1beta/models/'
       '${config.effectiveModel}:generateContent',
@@ -301,6 +308,13 @@ Return only JSON matching the schema.''';
               {
                 'parts': [
                   {'text': input},
+                  if (image != null)
+                    {
+                      'inline_data': {
+                        'mime_type': image.mime,
+                        'data': image.base64,
+                      },
+                    },
                 ],
               },
             ],
@@ -328,8 +342,9 @@ Return only JSON matching the schema.''';
     String input,
     AiConfig config,
     String system,
-    _SchemaFn schema,
-  ) async {
+    _SchemaFn schema, [
+    AiImage? image,
+  ]) async {
     final response = await http
         .post(
           Uri.parse('https://api.anthropic.com/v1/messages'),
@@ -348,7 +363,22 @@ Return only JSON matching the schema.''';
               'format': {'type': 'json_schema', 'schema': schema(strict: true)},
             },
             'messages': [
-              {'role': 'user', 'content': input},
+              {
+                'role': 'user',
+                'content': image == null
+                    ? input
+                    : [
+                        {
+                          'type': 'image',
+                          'source': {
+                            'type': 'base64',
+                            'media_type': image.mime,
+                            'data': image.base64,
+                          },
+                        },
+                        {'type': 'text', 'text': input},
+                      ],
+              },
             ],
           }),
         )
@@ -375,8 +405,9 @@ Return only JSON matching the schema.''';
     String input,
     AiConfig config,
     String system,
-    Map<String, dynamic> example,
-  ) async {
+    Map<String, dynamic> example, [
+    AiImage? image,
+  ]) async {
     final base = config.provider == AiProvider.openai
         ? 'https://api.openai.com/v1'
         : config.baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
@@ -400,7 +431,20 @@ Return only JSON matching the schema.''';
                     'Reply with a JSON object of exactly this shape:\n'
                     '${jsonEncode(example)}',
               },
-              {'role': 'user', 'content': input},
+              {
+                'role': 'user',
+                'content': image == null
+                    ? input
+                    : [
+                        {'type': 'text', 'text': input},
+                        {
+                          'type': 'image_url',
+                          'image_url': {
+                            'url': 'data:${image.mime};base64,${image.base64}',
+                          },
+                        },
+                      ],
+              },
             ],
           }),
         )
@@ -614,6 +658,9 @@ Return only JSON matching the schema.''';
 }
 
 typedef _SchemaFn = Map<String, dynamic> Function({required bool strict});
+
+/// An image sent alongside the text input, e.g. a payment screenshot.
+typedef AiImage = ({String mime, String base64});
 
 /// A non-2xx reply from the provider, carrying the provider's own message.
 class _ApiError implements Exception {

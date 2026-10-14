@@ -567,7 +567,9 @@ class V3AddSheet extends StatefulWidget {
 class _V3AddSheetState extends State<V3AddSheet> {
   String _type = 'expense';
   String _expression = '';
+  /// Main category; [_subKey] is the optional sub-category beside it.
   String _catKey = 'groceries';
+  String? _subKey;
   String _method = 'UPI';
   String? _sourceId;
   final _note = TextEditingController();
@@ -629,7 +631,62 @@ class _V3AddSheetState extends State<V3AddSheet> {
       ).showSnackBar(const SnackBar(content: Text('Could not add category')));
       return;
     }
-    setState(() => _catKey = created.key);
+    setState(() {
+      if (parent == null) {
+        _pickMain(s, created.key);
+      } else {
+        _subKey = created.key;
+      }
+    });
+  }
+
+  void _pickMain(V3State s, String key) {
+    _catKey = key;
+    _subKey = null;
+    _applyPeople(s, s.categoryByKey(key));
+  }
+
+  void _pickSub(V3State s, String? key) {
+    _subKey = key;
+    if (key != null) _applyPeople(s, s.categoryByKey(key));
+  }
+
+  /// A category with linked people sets "For" to exactly them.
+  void _applyPeople(V3State s, CategoryRow? c) {
+    final active = {
+      for (final m in s.members)
+        if (m.isActive) m.userId,
+    };
+    final ids = [
+      for (final id in c?.memberIds ?? const <String>[])
+        if (active.contains(id)) id,
+    ];
+    if (ids.isEmpty) return;
+    _selectedMembers
+      ..clear()
+      ..addAll(ids);
+  }
+
+  /// After "For" changes, selects the sub (under the current main) or else
+  /// the main category linked to exactly these people, if there is one.
+  void _matchCategory(V3State s) {
+    bool same(CategoryRow c) =>
+        c.memberIds.isNotEmpty &&
+        c.memberIds.length == _selectedMembers.length &&
+        _selectedMembers.containsAll(c.memberIds);
+    final main = s.categoryByKey(_catKey);
+    final sub = main == null
+        ? null
+        : s.subcategoriesOf(main.id).where(same).firstOrNull;
+    if (sub != null) {
+      _subKey = sub.key;
+      return;
+    }
+    final other = s.topCategories(_type).where(same).firstOrNull;
+    if (other != null) {
+      _catKey = other.key;
+      _subKey = s.subcategoriesOf(other.id).where(same).firstOrNull?.key;
+    }
   }
 
   @override
@@ -641,18 +698,21 @@ class _V3AddSheetState extends State<V3AddSheet> {
     if (e == null && p != null) {
       if (p.amount != null) _expression = CalcEngine.format(p.amount!);
       _note.text = p.payee ?? '';
+      final s = context.read<V3State>();
       if (p.income) {
         // Same as tapping the Income tab.
         _type = 'income';
-        _catKey =
-            context.read<V3State>().topCategories('income').firstOrNull?.key ??
-            'salary';
+        _catKey = s.topCategories('income').firstOrNull?.key ?? 'salary';
       }
+      // The AI reader's category guess, if it fits the entry's type.
+      final guess = p.category == null ? null : s.categoryByKey(p.category!);
+      if (guess != null && guess.kind == _type) _pickMain(s, guess.key);
     }
     if (e != null) {
       _type = e.type;
       _expression = CalcEngine.format(e.amount);
       _catKey = e.categoryKey;
+      _subKey = context.read<V3State>().categoryById(e.subCategoryId)?.key;
       _method = e.method;
       _sourceId = e.sourceId;
       _note.text = e.title;
@@ -782,6 +842,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
             amount: amountToSave,
             type: _type,
             categoryKey: _catKey,
+            subCategoryKey: _subKey,
             method: _method,
             sourceId: _sourceId,
             forUserId: forUserId,
@@ -794,6 +855,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
             amount: amountToSave,
             type: _type,
             categoryKey: _catKey,
+            subCategoryKey: _subKey,
             method: _method,
             sourceId: _sourceId,
             forUserId: forUserId,
@@ -858,10 +920,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
     final catKeys = topCats.isNotEmpty
         ? [for (final c in topCats) c.key]
         : (_type == 'expense' ? V3Design.expenseCats : V3Design.incomeCats);
-    final selCat = s.categoryByKey(_catKey);
-    final parentCat = selCat?.isSubCategory == true
-        ? s.categoryById(selCat!.parentId)
-        : selCat;
+    final parentCat = s.categoryByKey(_catKey);
     final subCats = parentCat == null
         ? const <CategoryRow>[]
         : s.subcategoriesOf(parentCat.id);
@@ -928,6 +987,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                   _type = i == 0 ? 'expense' : 'income';
                   final first = s.topCategories(_type).firstOrNull;
                   _catKey = first?.key ?? (i == 0 ? 'groceries' : 'salary');
+                  _subKey = null;
                   _payer = null;
                 }),
               ),
@@ -1139,9 +1199,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
                 }
                 final k = catKeys[i];
                 final c = s.catStyle(k);
-                final sel = (parentCat?.key ?? _catKey) == k;
+                final sel = _catKey == k;
                 return GestureDetector(
-                  onTap: () => setState(() => _catKey = k),
+                  onTap: () => setState(() => _pickMain(s, k)),
                   behavior: HitTestBehavior.opaque,
                   child: Container(
                     width: 62,
@@ -1197,12 +1257,10 @@ class _V3AddSheetState extends State<V3AddSheet> {
                     height: 28,
                     icon: s.catStyle(sub.key).icon,
                     iconColor: s.catStyle(sub.key).color,
-                    selected: _catKey == sub.key,
-                    // Tapping the chosen one again goes back to the parent.
+                    selected: _subKey == sub.key,
+                    // Tapping the chosen one again clears it.
                     onTap: () => setState(
-                      () => _catKey = _catKey == sub.key
-                          ? parentCat.key
-                          : sub.key,
+                      () => _pickSub(s, _subKey == sub.key ? null : sub.key),
                     ),
                   ),
                 V3Chip(
@@ -1301,6 +1359,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                             } else {
                               _selectedMembers.add(m.userId);
                             }
+                            _matchCategory(s);
                           }),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
