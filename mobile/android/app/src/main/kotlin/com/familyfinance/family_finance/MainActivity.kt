@@ -25,6 +25,7 @@ import java.util.zip.Inflater
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.familyfinance/file_import"
     private val NOTIF_CHANNEL = "com.familyfinance/notifications"
+    private val NOWBAR_CHANNEL = "com.familyfinance/prayer_nowbar"
     private val PICK_FILE_REQ = 4091
     private var pendingResult: MethodChannel.Result? = null
     private var sharedTextFromIntent: String? = null
@@ -33,6 +34,37 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         handleIncomingShareIntent(intent)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NOWBAR_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "schedule" -> {
+                        @Suppress("UNCHECKED_CAST")
+                        val windows = call.argument<List<Map<String, Any?>>>("windows") ?: emptyList()
+                        PrayerNowBar.schedule(this, windows, call.argument<Int>("repeatMinutes") ?: 5)
+                        result.success(null)
+                    }
+                    "canPromote" -> result.success(PrayerNowBar.canPromote(this))
+                    "openPromoteSettings" -> {
+                        // Settings.ACTION_MANAGE_APP_PROMOTED_NOTIFICATIONS
+                        // (Android 16), else the app's notification settings.
+                        val pkg = android.provider.Settings.EXTRA_APP_PACKAGE
+                        try {
+                            startActivity(
+                                Intent("android.settings.MANAGE_APP_PROMOTED_NOTIFICATIONS")
+                                    .putExtra(pkg, packageName),
+                            )
+                        } catch (_: Exception) {
+                            startActivity(
+                                Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                    .putExtra(pkg, packageName),
+                            )
+                        }
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NOTIF_CHANNEL)
             .setMethodCallHandler { call, result ->

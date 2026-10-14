@@ -219,6 +219,16 @@ class PrayerConfig {
   /// authoritative, this lets the date be nudged to match the local mosque.
   final int hijriOffset;
 
+  /// "Ending soon" reminder: shown in the Now Bar / as a live notification
+  /// [endingSoonLead] minutes before a prayer's time runs out, re-alerting
+  /// every [endingSoonRepeat] minutes until marked prayed.
+  final bool endingSoon;
+  final int endingSoonLead;
+  final int endingSoonRepeat;
+
+  /// Per prayer, keyed by [PrayerSlot.name].
+  final Map<String, bool> endingSoonFor;
+
   const PrayerConfig({
     this.enabled = false,
     this.cityId,
@@ -247,10 +257,21 @@ class PrayerConfig {
     this.bannerTint = true,
     this.bannerOnLockScreen = true,
     this.hijriOffset = 0,
+    this.endingSoon = true,
+    this.endingSoonLead = 20,
+    this.endingSoonRepeat = 5,
+    this.endingSoonFor = const {
+      'fajr': true,
+      'dhuhr': true,
+      'asr': true,
+      'maghrib': true,
+      'isha': true,
+    },
   });
 
   bool notifyFor(PrayerSlot slot) => notify[slot.name] ?? false;
   int offsetFor(PrayerSlot slot) => offsets[slot.name] ?? 0;
+  bool endingSoonOn(PrayerSlot slot) => endingSoonFor[slot.name] ?? false;
 
   /// True when at least one slot would produce an alert.
   bool get anyNotifications =>
@@ -281,6 +302,10 @@ class PrayerConfig {
     bool? bannerTint,
     bool? bannerOnLockScreen,
     int? hijriOffset,
+    bool? endingSoon,
+    int? endingSoonLead,
+    int? endingSoonRepeat,
+    Map<String, bool>? endingSoonFor,
   }) =>
       PrayerConfig(
         enabled: enabled ?? this.enabled,
@@ -304,6 +329,10 @@ class PrayerConfig {
         bannerTint: bannerTint ?? this.bannerTint,
         bannerOnLockScreen: bannerOnLockScreen ?? this.bannerOnLockScreen,
         hijriOffset: hijriOffset ?? this.hijriOffset,
+        endingSoon: endingSoon ?? this.endingSoon,
+        endingSoonLead: endingSoonLead ?? this.endingSoonLead,
+        endingSoonRepeat: endingSoonRepeat ?? this.endingSoonRepeat,
+        endingSoonFor: endingSoonFor ?? this.endingSoonFor,
       );
 
   /// Applies a bundled city, dropping any previous device fix.
@@ -354,6 +383,10 @@ class PrayerConfig {
         'banner_tint': bannerTint,
         'banner_lock_screen': bannerOnLockScreen,
         'hijri_offset': hijriOffset,
+        'ending_soon': endingSoon,
+        'ending_soon_lead': endingSoonLead,
+        'ending_soon_repeat': endingSoonRepeat,
+        'ending_soon_for': endingSoonFor,
       };
 
   /// Every field is read defensively. This blob is on disk across upgrades and
@@ -390,6 +423,17 @@ class PrayerConfig {
       bannerTint: _bool(j['banner_tint']) ?? true,
       bannerOnLockScreen: _bool(j['banner_lock_screen']) ?? true,
       hijriOffset: (_int(j['hijri_offset']) ?? 0).clamp(-2, 2),
+      endingSoon: _bool(j['ending_soon']) ?? true,
+      endingSoonLead: (_int(j['ending_soon_lead']) ?? 20).clamp(5, 90),
+      endingSoonRepeat: (_int(j['ending_soon_repeat']) ?? 5).clamp(1, 30),
+      endingSoonFor: _boolMap(j['ending_soon_for']) ??
+          const {
+            'fajr': true,
+            'dhuhr': true,
+            'asr': true,
+            'maghrib': true,
+            'isha': true,
+          },
     );
   }
 

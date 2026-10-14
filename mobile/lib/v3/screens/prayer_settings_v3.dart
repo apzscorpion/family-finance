@@ -5,6 +5,7 @@ import '../../theme/nocturne.dart';
 import '../data/notifications_core.dart';
 import '../data/prayer/prayer_cities.dart';
 import '../data/prayer/prayer_config.dart';
+import '../data/prayer/prayer_ending_soon.dart';
 import '../data/prayer/prayer_controller.dart';
 import '../phosphor_icons.dart';
 import '../widgets/prayer_ring.dart';
@@ -144,6 +145,94 @@ class PrayerSettingsV3 extends StatelessWidget {
               last: true,
             ),
           ),
+
+          const _Kicker('Ending soon'),
+          _Card(
+            child: Column(
+              children: [
+                _Row(
+                  icon: PhRegular.bellRinging,
+                  label: 'Remind before a prayer ends',
+                  sub: 'In the Now Bar with a countdown, repeating until '
+                      'you tap "I prayed"',
+                  trailing: V3SettingsSwitch(
+                    value: config.endingSoon,
+                    onChanged: (on) =>
+                        prayer.update(config.copyWith(endingSoon: on)),
+                  ),
+                  last: !config.endingSoon,
+                ),
+                if (config.endingSoon) ...[
+                  _Row(
+                    icon: PhRegular.clock,
+                    label: 'Start',
+                    sub: 'Minutes before the prayer time ends',
+                    trailing: _Stepper(
+                      value: config.endingSoonLead,
+                      min: 5,
+                      max: 90,
+                      step: 5,
+                      suffix: 'm',
+                      onChanged: (v) =>
+                          prayer.update(config.copyWith(endingSoonLead: v)),
+                    ),
+                  ),
+                  _Row(
+                    icon: PhRegular.arrowsClockwise,
+                    label: 'Remind again every',
+                    sub: 'Until you mark it prayed',
+                    trailing: _Stepper(
+                      value: config.endingSoonRepeat,
+                      min: 1,
+                      max: 30,
+                      step: 1,
+                      suffix: 'm',
+                      onChanged: (v) =>
+                          prayer.update(config.copyWith(endingSoonRepeat: v)),
+                    ),
+                  ),
+                  for (final slot in PrayerSlot.values.where((s) => s.isPrayer))
+                    _Row(
+                      icon: PhRegular.moonStars,
+                      label: slot.label,
+                      sub: switch (slot) {
+                        PrayerSlot.fajr => 'Ends at sunrise',
+                        PrayerSlot.isha => 'Ends at the middle of the night',
+                        _ => null,
+                      },
+                      trailing: V3SettingsSwitch(
+                        value: config.endingSoonOn(slot),
+                        onChanged: (on) => prayer.update(config.copyWith(
+                          endingSoonFor: {
+                            ...config.endingSoonFor,
+                            slot.name: on,
+                          },
+                        )),
+                      ),
+                      last: slot == PrayerSlot.isha,
+                    ),
+                ],
+              ],
+            ),
+          ),
+          if (config.endingSoon)
+            FutureBuilder<bool>(
+              future: canShowInNowBar(),
+              builder: (context, snap) => snap.data == false
+                  ? _Card(
+                      child: _Row(
+                        icon: PhRegular.warning,
+                        label: 'Allow in Now Bar',
+                        sub: 'Android needs your OK to show it in the Now Bar '
+                            'and status bar',
+                        trailing: const Icon(PhRegular.caretRight,
+                            size: 16, color: Nocturne.neutral500),
+                        onTap: openNowBarSettings,
+                        last: true,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
 
           const _Kicker('Banner'),
           _Card(

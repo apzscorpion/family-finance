@@ -1,13 +1,20 @@
 ﻿import '../notifications_core.dart';
 import 'prayer_banner.dart';
 import 'prayer_config.dart';
+import 'prayer_ending_soon.dart';
 import 'prayer_notifier.dart';
 import 'prayer_service.dart';
 
-Future<void> syncPrayerNotifications(PrayerConfig config) =>
-    PrayerNotifier.sync(config);
+Future<void> syncPrayerNotifications(PrayerConfig config) async {
+  await PrayerNotifier.sync(config);
+  await syncEndingSoon(config);
+}
 
-Future<void> cancelAllPrayerNotifications() => PrayerNotifier.cancelAll();
+Future<void> cancelAllPrayerNotifications() async {
+  await PrayerNotifier.cancelAll();
+  // Disabled config: no windows, so Android clears its reminder too.
+  await syncEndingSoon(const PrayerConfig());
+}
 
 Future<void> postPrayerBanner({
   required PrayerConfig config,

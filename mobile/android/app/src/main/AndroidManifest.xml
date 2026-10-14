@@ -12,6 +12,8 @@
          scheduling is the default precisely because exact alarms are the
          expensive option for battery. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Android 16 Live Updates: the prayer "ending soon" reminder in the Now Bar -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS"/>
     <!-- Prayer alert: the prayer's name full screen, over the lock screen. -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
@@ -88,6 +90,15 @@
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false"/>
+        <!-- Prayer "ending soon" reminder: alarm ticks, its buttons, re-arm after reboot -->
+        <receiver
+            android:name=".PrayerNowBarReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
             android:exported="false"/>
