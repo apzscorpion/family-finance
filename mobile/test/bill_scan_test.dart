@@ -1,4 +1,5 @@
 import 'package:family_finance/v3/data/bill_scan.dart';
+import 'package:family_finance/v3/data/card_scan.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -48,13 +49,13 @@ Oct 3, 2026''', now: now);
   test('screenshot: status-bar clock and battery, cashback in small print',
       () {
     final r = parseBill([
-      (text: '9:52', height: 12), // status bar clock
-      (text: '94', height: 12), // battery
-      (text: 'Paid to', height: 16),
-      (text: 'Anitha Stores', height: 22),
-      (text: '₹2,340', height: 60), // headline
-      (text: 'You won ₹15 cashback', height: 14),
-      (text: '8 Oct 2026', height: 14),
+      (text: '9:52', height: 12, top: 0, left: 0), // status bar clock
+      (text: '94', height: 12, top: 0, left: 300), // battery
+      (text: 'Paid to', height: 16, top: 100, left: 20),
+      (text: 'Anitha Stores', height: 22, top: 130, left: 20),
+      (text: '₹2,340', height: 60, top: 170, left: 20), // headline
+      (text: 'You won ₹15 cashback', height: 14, top: 250, left: 20),
+      (text: '8 Oct 2026', height: 14, top: 280, left: 20),
     ], now: now);
     expect(r.amount, 2340);
     expect(r.payee, 'Anitha Stores');
@@ -91,9 +92,15 @@ PRIYA S
         'From: ASIF MUHAMMADN|34 // XXXXXX8311a@superyes|48 // '
         'UPI reference ID: 665280079818|40 // Super.|16 // móney|27 // '
         'LPID/YES BANK|44 // Get assured cashback on UPI spends|39';
+    final rows = raw.split(' // ');
     final r = parseBill([
-      for (final l in raw.split(' // '))
-        (text: l.split('|')[0], height: double.parse(l.split('|')[1])),
+      for (var i = 0; i < rows.length; i++)
+        (
+          text: rows[i].split('|')[0],
+          height: double.parse(rows[i].split('|')[1]),
+          top: i * 50.0,
+          left: 0.0,
+        ),
     ], now: now);
     expect(r.amount, 81);
     expect(r.payee, 'Broadway');
@@ -163,5 +170,57 @@ UPI Ref No: 3544454990448''', now: now);
     expect(r.payee, isNull);
     expect(r.date, isNull);
     expect(r.income, isFalse);
+  });
+
+  // Captured on an emulator from a supermoney BookMyShow receipt. OCR
+  // returns blocks out of reading order ("Paid to:" comes after the date
+  // line), so the payee is found by position: under "Paid to:" there is only
+  // a UPI ID. text|height|top|left.
+  const bookMyShow = '1:28 11:07:54|34|35|60 // B|28|202|196 // '
+      'Bigtree|39|140|289 // Entertainment|32|202|290 // '
+      'Private Limited|33|262|290 // T85.24|90|470|139 // '
+      'Payment Successful|36|578|137 // Paid to:|29|816|137 // '
+      'October 14 at 1:26 PM|26|632|137 // '
+      'You have earned 0.8% cashback|26|729|234 // '
+      'D bookmyshow@axb|39|878|152 // Axis Bank|38|954|228 // '
+      'UPI Reference ID|30|1049|158 // 665397349257 O|33|1107|137 // '
+      'Payment method|30|1191|138 // BoB 2389|34|1255|227 // '
+      'F View more|40|1436|207 // Past Transactions|38|1680|135 // '
+      "October '26|29|1785|148 // You Sent|32|1894|290 // Done|38|2088|481 // "
+      '4Gl G48|31|35|829 // Help|37|201|904 // Check balance|28|1257|684 // '
+      'Share|32|1440|726 // T85.24|36|1893|780';
+
+  List<OcrLine> lines(String raw) => [
+        for (final r in raw.split(' // '))
+          (
+            text: r.split('|')[0],
+            height: double.parse(r.split('|')[1]),
+            top: double.parse(r.split('|')[2]),
+            left: double.parse(r.split('|')[3]),
+          ),
+      ];
+
+  test('supermoney BookMyShow receipt: payee from the UPI ID under the label',
+      () {
+    final r = parseBill(lines(bookMyShow), now: DateTime(2026, 10, 14, 15));
+    expect(r.amount, 85.24);
+    expect(r.payee, 'Bookmyshow');
+    expect(r.date, DateTime(2026, 10, 14, 13, 26));
+    expect(r.ref, '665397349257');
+    expect(billNote(r), 'Bookmyshow (Txn: 665397349257)');
+  });
+
+  test('a phone reading the bold rupee sign as 7 still gets 85.24', () {
+    // What the reported phone read: "785.24" for "₹85.24".
+    final r = parseBill(
+        lines(bookMyShow.replaceAll('T85.24|90', '785.24|90')),
+        now: DateTime(2026, 10, 14, 15));
+    expect(r.amount, 85.24);
+  });
+
+  test('numeric UPI IDs never become a payee name', () {
+    expect(parseBillText('Paid to:\ngpay-11265455695@okbizaxis').payee, isNull);
+    expect(parseBillText('Paid to:\n9876543210@ybl').payee, isNull);
+    expect(parseBillText('Paid to:\nrahul.kumar@okaxis').payee, 'Rahul Kumar');
   });
 }

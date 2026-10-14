@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// What a card photo yielded. Only [last4] is ever saved; the full number is
 /// dropped with the photo.
@@ -24,26 +26,51 @@ Future<CardScan?> scanCard() async {
 Future<String> readImageText(String path, {bool deleteAfter = false}) async =>
     (await _recognize(path, deleteAfter)).text;
 
-/// A line of OCR text and its on-screen height, so callers can tell the
-/// big headline amount from small print (status bar, cashback).
-typedef OcrLine = ({String text, double height});
+/// A line of OCR text and where it sits: the height tells the big headline
+/// amount from small print, the position what is under a label (OCR returns
+/// blocks, not top-to-bottom order).
+typedef OcrLine = ({String text, double height, double top, double left});
 
-/// OCR lines in reading order. Used for shared payment screenshots.
+/// OCR lines, block by block. Used for shared payment screenshots.
 Future<List<OcrLine>> readImageLines(
   String path, {
   void Function()? onWaiting,
 }) async => [
   for (final block in (await _recognize(path, false, onWaiting)).blocks)
     for (final line in block.lines)
-      (text: line.text, height: line.boundingBox.height),
+      (
+        text: line.text,
+        height: line.boundingBox.height,
+        top: line.boundingBox.top,
+        left: line.boundingBox.left,
+      ),
 ];
+
+/// One reader for the app's lifetime: loading the engine is most of the
+/// cost of a read (seconds cold, well under one warm).
+final _reader = TextRecognizer(script: TextRecognitionScript.latin);
+
+/// Loads the reader in the background at launch, so a receipt shared later
+/// reads in a fraction of a second. Failures are ignored.
+Future<void> warmUpTextReader() async {
+  try {
+    final f = File('${(await getTemporaryDirectory()).path}/ocr_warmup.png');
+    await f.writeAsBytes(base64Decode(_blankPng));
+    await _reader.processImage(InputImage.fromFilePath(f.path));
+  } catch (_) {}
+}
+
+// A 64×64 white PNG; ML Kit rejects images under 32 px.
+const _blankPng =
+    'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAK0lEQVR42u3MMREAAAgE'
+    'oNf+nTWEmwcBqMlNRyAQCAQCgUAgEAgEAsHzYAFQLQF/OJ8+2wAAAABJRU5ErkJggg==';
 
 Future<RecognizedText> _recognize(
   String path,
   bool deleteAfter, [
   void Function()? onWaiting,
 ]) async {
-  final reader = TextRecognizer(script: TextRecognitionScript.latin);
+  final reader = _reader;
   try {
     // The Play Services reader throws "Waiting for the text optional module
     // to be downloaded" until its model arrives (first use after an APK
@@ -58,7 +85,6 @@ Future<RecognizedText> _recognize(
       }
     }
   } finally {
-    await reader.close();
     if (deleteAfter) {
       try {
         await File(path).delete();

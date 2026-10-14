@@ -226,14 +226,19 @@ const _aiExample = {
 };
 
 /// Plain-text form, every line the same height.
-BillScan parseBillText(String text, {DateTime? now}) => parseBill([
-  for (final l in text.split('\n')) (text: l, height: 10.0),
-], now: now);
+BillScan parseBillText(String text, {DateTime? now}) {
+  final rows = text.split('\n');
+  return parseBill([
+    for (var i = 0; i < rows.length; i++)
+      (text: rows[i], height: 10.0, top: i * 20.0, left: 0.0),
+  ], now: now);
+}
 
 BillScan parseBill(List<OcrLine> raw, {DateTime? now}) {
   final lines = [
     for (final l in raw)
-      if (l.text.trim().isNotEmpty) (text: l.text.trim(), height: l.height),
+      if (l.text.trim().isNotEmpty)
+        (text: l.text.trim(), height: l.height, top: l.top, left: l.left),
   ];
   final texts = [for (final l in lines) l.text];
   final income = texts.any(
@@ -244,7 +249,7 @@ BillScan parseBill(List<OcrLine> raw, {DateTime? now}) {
   );
   return (
     amount: _amount(lines),
-    payee: _payee(texts, income),
+    payee: _payee(lines, income),
     date: _date(texts, now ?? DateTime.now()),
     income: income,
     category: null,
@@ -308,7 +313,7 @@ double? _amount(List<OcrLine> lines) {
   // symbol or T/Z/R/F. Up to 7 digits, so the 12-digit UPI reference and
   // phone numbers never match.
   final bare = RegExp(
-    r'^(?:[^\w\s]|[TZRF])?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?)$',
+    r'^(?:[^\w\s]|[TZRF7])?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?)$',
   );
   final found = <({double value, double height, bool rupee})>[];
   for (final l in lines) {
@@ -328,34 +333,68 @@ double? _amount(List<OcrLine> lines) {
   return (pool.where((f) => f.rupee).firstOrNull ?? pool.first).value;
 }
 
-String? _payee(List<String> lines, bool income) {
+String? _payee(List<OcrLine> lines, bool income) {
   final label = RegExp(
     income
         ? r'^(?:received from|from)\b[:\s]*(.*)$'
         : r'^(?:paid to|sent to|payment to|transferred to|to)\b[:\s]*(.*)$',
     caseSensitive: false,
   );
-  // A name, not a UPI id, amount, phone or reference number.
+  final notName = RegExp(
+    '\\d:\\d\\d|%|\\b($_mon)[a-z]* \\d|\\b(bank|successful|completed|'
+    'cashback|earned|reference|transaction|method|balance|upi|help|share|'
+    'done|view)\\b',
+    caseSensitive: false,
+  );
+  // A name, not a UPI id, amount, date, phone, bank or status text.
   bool isName(String s) =>
       s.isNotEmpty &&
       !s.contains('@') &&
       !s.contains('₹') &&
       RegExp(r'[A-Za-z]{2}').hasMatch(s) &&
-      !RegExp(r'\d{5}').hasMatch(s);
+      !RegExp(r'\d{5}').hasMatch(s) &&
+      !notName.hasMatch(s);
 
-  for (var i = 0; i < lines.length; i++) {
-    final m = label.firstMatch(lines[i]);
+  for (final l in lines) {
+    final m = label.firstMatch(l.text);
     if (m == null) continue;
     final rest = m[1]!.trim();
-    final name = isName(rest)
-        ? rest
-        : [
-            for (final l in lines.skip(i + 1).take(2))
-              if (isName(l)) l,
-          ].firstOrNull;
-    if (name != null) return _tidy(name);
+    if (isName(rest)) return _tidy(rest);
+    // OCR returns blocks, not reading order: look at what sits under the
+    // label on screen.
+    final below = [
+      for (final o in lines)
+        if (o.top > l.top + l.height / 2 &&
+            (o.left - l.left).abs() < l.height * 3)
+          o,
+    ]..sort((a, b) => a.top.compareTo(b.top));
+    String? handle;
+    for (final o in [if (rest.isNotEmpty) l, ...below.take(3)]) {
+      if (o != l && isName(o.text)) return _tidy(o.text);
+      handle ??= _upiName(o.text);
+    }
+    // Only a UPI ID under the label: "bookmyshow@axb" → "Bookmyshow".
+    if (handle != null) return handle;
   }
   return null;
+}
+
+/// A readable name from a UPI ID, or null for numeric IDs like
+/// "gpay-11265455695@okbizaxis" or "9876543210@ybl".
+String? _upiName(String text) {
+  final m = RegExp(r'([A-Za-z][A-Za-z0-9._-]{2,})@[A-Za-z]').firstMatch(text);
+  if (m == null) return null;
+  final id = m[1]!;
+  if (RegExp(r'[A-Za-z]').allMatches(id).length < 4 ||
+      RegExp(r'\d').allMatches(id).length > 2) {
+    return null;
+  }
+  return id
+      .replaceAll(RegExp(r'\d'), '')
+      .split(RegExp(r'[._-]+'))
+      .where((w) => w.isNotEmpty)
+      .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
+      .join(' ');
 }
 
 /// "RAHUL KUMAR" → "Rahul Kumar"; mixed case is left alone.

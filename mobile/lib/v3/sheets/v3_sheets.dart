@@ -578,6 +578,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
   /// True while the AI is still reading a shared receipt.
   bool _refining = false;
 
+  /// The AI read of a shared receipt failed (bad key, offline, …).
+  bool _refineFailed = false;
+
   /// Main category; [_subKey] is the optional sub-category beside it.
   String _catKey = 'groceries';
   String? _subKey;
@@ -733,7 +736,10 @@ class _V3AddSheetState extends State<V3AddSheet> {
         if (!mounted) return;
         setState(() {
           _refining = false;
-          if (ai == null) return;
+          if (ai == null) {
+            _refineFailed = true;
+            return;
+          }
           final s = context.read<V3State>();
           if (ai.amount != null && _expression == seen.expr) {
             _expression = CalcEngine.format(ai.amount!);
@@ -754,7 +760,12 @@ class _V3AddSheetState extends State<V3AddSheet> {
           }
         });
       }, onError: (_) {
-        if (mounted) setState(() => _refining = false);
+        if (mounted) {
+          setState(() {
+            _refining = false;
+            _refineFailed = true;
+          });
+        }
       });
     }
     if (e != null) {
@@ -1190,6 +1201,15 @@ class _V3AddSheetState extends State<V3AddSheet> {
             ],
           ),
           const SizedBox(height: 8),
+          if (_refineFailed)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: Text(
+                "Couldn't check this receipt with AI (see Settings → AI). "
+                'Please check the amount.',
+                style: TextStyle(fontSize: 11.5, color: NocturneSemantic.warning),
+              ),
+            ),
           if (_refining)
             const Padding(
               padding: EdgeInsets.only(bottom: 6),

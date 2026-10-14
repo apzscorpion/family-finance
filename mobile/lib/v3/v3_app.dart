@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/nocturne.dart';
 import 'data/bill_scan.dart';
+import 'data/card_scan.dart';
 import 'data/chat_controller.dart';
 import 'data/notes_presence.dart';
 import 'data/prayer/prayer_controller.dart';
@@ -239,6 +243,10 @@ class _SharedBillListenerState extends State<_SharedBillListener>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _check();
+    // Load the text reader now so a receipt shared later reads instantly.
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      unawaited(warmUpTextReader());
+    }
   }
 
   @override
