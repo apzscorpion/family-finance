@@ -427,15 +427,17 @@ class V3State extends ChangeNotifier {
   /// Running balance: opening balances across money sources plus every
   /// transaction ever, not just the visible window.
   /// If a specific source is selected via [srcFilter], computes the balance for that source.
+  /// Same numbers as the Cash & bank sheet: an account's money doesn't
+  /// depend on whose view is open.
   double get balance {
-    if (srcFilter != null) {
-      final src = sourceById(srcFilter);
-      final opening = src?.openingBalance ?? 0.0;
-      final net = txns
-          .where((t) =>
-              (isFamily || t.userId == scope) && sourceOf(t) == srcFilter)
-          .fold(0.0, (s, t) => s + (t.isExpense ? -t.amount : t.amount));
-      return opening + net;
+    if (sources.isNotEmpty) {
+      final ids = srcFilter != null
+          ? [srcFilter!]
+          : [for (final src in sources) src.id];
+      return ids.fold(0.0, (a, id) {
+        final w = wallet(id);
+        return a + w.cash + w.bank;
+      });
     }
     final opening = sources.fold(0.0, (s, m) => s + m.openingBalance);
     final net = txns
@@ -489,6 +491,15 @@ class V3State extends ChangeNotifier {
     return list;
   }
 
+  /// Whether [t] moves money in account [sourceId]. Entries without an
+  /// account fall to the main account, but only the viewer's own: another
+  /// member's account-less income is not money in this account.
+  /// shortcut: accounts have no owner, so "own" means the viewer; add an
+  /// owner column if members start keeping separate main accounts.
+  bool _inAccount(TxnRow t, String sourceId) =>
+      t.sourceId == sourceId ||
+      (t.sourceId == null && sourceId == mainSourceId && t.userId == myId);
+
   /// What [sourceId] holds right now, split into cash and bank. Cash-method
   /// entries move the cash part, every other method (UPI, bank, card) the bank
   /// part; withdrawals and deposits move money between the two. All-time and
@@ -498,7 +509,7 @@ class V3State extends ChangeNotifier {
     var cash = src?.openingCash ?? 0.0;
     var bank = (src?.openingBalance ?? 0.0) - cash;
     for (final t in txns) {
-      if (sourceOf(t) != sourceId) continue;
+      if (!_inAccount(t, sourceId)) continue;
       final v = t.isExpense ? -t.amount : t.amount;
       if (t.method.toLowerCase() == 'cash') {
         cash += v;
