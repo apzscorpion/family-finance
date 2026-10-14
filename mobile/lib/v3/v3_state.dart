@@ -43,6 +43,10 @@ class V3State extends ChangeNotifier {
   List<WalletMoveRow> walletMoves = [];
   List<ApprovalRow> approvals = [];
   List<DetectedRow> detected = [];
+
+  /// Net balance with each other member, from `pair_balance`. Positive means
+  /// they owe me.
+  Map<String, double> balances = {};
   PrefsRow prefs = const PrefsRow();
 
   // ── Selection ─────────────────────────────────────────────────────────────
@@ -202,6 +206,17 @@ class V3State extends ChangeNotifier {
     detected = (results[11] as List<DetectedRow>?) ?? detected;
     prefs = (results[12] as PrefsRow?) ?? prefs;
     walletMoves = (results[13] as List<WalletMoveRow>?) ?? walletMoves;
+
+    final others = members.where((m) => m.userId != myId).toList();
+    final bals = await Future.wait([
+      for (final m in others)
+        V3Repository.guard(
+            'pairBalance', () => _repo.pairBalance(familyId, m.userId)),
+    ]);
+    balances = {
+      for (var i = 0; i < others.length; i++)
+        if (bals[i] != null) others[i].userId: bals[i]!,
+    };
 
     if (!_scopeChosen) {
       final mine = myId;
@@ -552,14 +567,26 @@ class V3State extends ChangeNotifier {
 
   List<TxnRow> get recent => scoped.take(5).toList();
 
-  /// Open settlements that involve me, plus every pending approval.
-  List<SettlementRow> get myDebts => settlements
-      .where((d) => d.fromUser == myId || d.toUser == myId)
-      .toList();
+  /// Members I'm not settled up with. Positive means they owe me; under
+  /// half a rupee counts as settled, as in the shared-with sheet.
+  List<({String userId, double amount})> get myDebts => [
+        for (final e in balances.entries)
+          if (e.value.abs() >= 0.5) (userId: e.key, amount: e.value),
+      ];
 
   int get attentionCount => approvals.length + myDebts.length;
 
-  int get notifBadge => attentionCount + detected.length;
+  int get notifBadge =>
+      attentionCount + detected.length + budgetAlerts.length;
+
+  /// Budgets whose spend has reached their alert threshold.
+  List<({CategoryRow cat, double limit, double spent, int threshold})>
+      get budgetAlerts => budgetRows
+          .where((b) =>
+              b.limit > 0 &&
+              b.spent * 100 >=
+                  b.limit * (b.threshold > 0 ? b.threshold : 100))
+          .toList();
 
   /// Budget rows joined to their category and current spend.
   List<({CategoryRow cat, double limit, double spent, int threshold})>

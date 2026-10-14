@@ -6,6 +6,7 @@ import '../data/chat_controller.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
+import 'family_v3.dart';
 import 'sources_manager_v3.dart';
 import '../v3_design.dart';
 import '../v3_nav.dart';
@@ -930,12 +931,12 @@ class _NeedsYou extends StatelessWidget {
         _AttentionRow(
           icon: PhRegular.handCoins,
           color: Nocturne.accent300,
-          title: d.toUser == s.myId
-              ? '${s.memberName(d.fromUser)} owes you ${V3Design.inr(d.amount)}'
-              : 'You owe ${s.memberName(d.toUser)} ${V3Design.inr(d.amount)}',
-          sub: d.note ?? 'Split expense',
+          title: d.amount > 0
+              ? '${s.memberName(d.userId)} owes you ${s.money(d.amount)}'
+              : 'You owe ${s.memberName(d.userId)} ${s.money(-d.amount)}',
+          sub: 'Split expenses',
           cta: 'Settle',
-          onTap: () => s.settleDebt(d.id),
+          onTap: () => SharedWithSheet.open(context, d.userId),
         ),
     ];
 

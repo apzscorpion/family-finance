@@ -7,10 +7,11 @@ import '../sheets/v3_sheets.dart';
 import '../v3_design.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
+import 'family_v3.dart';
 import '../widgets/v3_primitives.dart';
 
 /// Notifications, assembled from the things that actually need attention:
-/// approvals, open settlements, detected payments and budget breaches.
+/// approvals, unsettled balances, detected payments and budget alerts.
 class NotificationsV3 extends StatelessWidget {
   const NotificationsV3({super.key});
 
@@ -33,12 +34,12 @@ class NotificationsV3 extends StatelessWidget {
         _Notif(
           icon: PhRegular.handCoins,
           color: Nocturne.accent300,
-          title: d.toUser == s.myId
-              ? '${s.memberName(d.fromUser)} owes you ${V3Design.inr(d.amount)}'
-              : 'You owe ${s.memberName(d.toUser)} ${V3Design.inr(d.amount)}',
-          body: d.note ?? 'From a split expense',
+          title: d.amount > 0
+              ? '${s.memberName(d.userId)} owes you ${s.money(d.amount)}'
+              : 'You owe ${s.memberName(d.userId)} ${s.money(-d.amount)}',
+          body: 'From split expenses · tap to settle up',
           time: '',
-          onTap: () => s.settleDebt(d.id),
+          onTap: () => SharedWithSheet.open(context, d.userId),
         ),
       if (s.detected.isNotEmpty)
         _Notif(
@@ -50,11 +51,16 @@ class NotificationsV3 extends StatelessWidget {
           time: '',
           onTap: () => nav.goPage(V3Page.detected),
         ),
-      for (final b in s.budgetRows.where((b) => b.spent > b.limit))
+      for (final b in s.budgetAlerts)
         _Notif(
           icon: PhRegular.warning,
-          color: NocturneSemantic.expense,
-          title: '${b.cat.name} is over budget',
+          color: b.spent > b.limit
+              ? NocturneSemantic.expense
+              : NocturneSemantic.warning,
+          title: b.spent > b.limit
+              ? '${b.cat.name} is over budget'
+              : '${b.cat.name} is at ${(b.spent * 100 / b.limit).round()}% '
+                  'of budget',
           body: '${V3Design.inr(b.spent)} spent of ${V3Design.inr(b.limit)}',
           time: '',
           onTap: () => nav.goTab(2),

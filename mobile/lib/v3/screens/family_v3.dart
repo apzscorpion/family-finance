@@ -458,7 +458,7 @@ class _MemberRowTile extends StatelessWidget {
     final canManage = (s.isOwner || s.me?.role == 'admin') && !isMe;
 
     return GestureDetector(
-      onTap: isMe ? null : () => _SharedWithSheet.open(context, m.userId),
+      onTap: isMe ? null : () => SharedWithSheet.open(context, m.userId),
       behavior: HitTestBehavior.opaque,
       child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -694,9 +694,9 @@ class _MemberRowTile extends StatelessWidget {
 
 /// The money picture between me and one other member: what I paid for them,
 /// what they paid for me, what we split, and who owes whom now.
-class _SharedWithSheet extends StatefulWidget {
+class SharedWithSheet extends StatefulWidget {
   final String otherId;
-  const _SharedWithSheet({required this.otherId});
+  const SharedWithSheet({super.key, required this.otherId});
 
   static Future<void> open(BuildContext context, String otherId) =>
       showModalBottomSheet<void>(
@@ -706,14 +706,14 @@ class _SharedWithSheet extends StatefulWidget {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        builder: (_) => _SharedWithSheet(otherId: otherId),
+        builder: (_) => SharedWithSheet(otherId: otherId),
       );
 
   @override
-  State<_SharedWithSheet> createState() => _SharedWithSheetState();
+  State<SharedWithSheet> createState() => _SharedWithSheetState();
 }
 
-class _SharedWithSheetState extends State<_SharedWithSheet> {
+class _SharedWithSheetState extends State<SharedWithSheet> {
   // Server-side so recorded settlements are netted off.
   late Future<double> _balance =
       context.read<V3State>().pairBalance(widget.otherId);
