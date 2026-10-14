@@ -99,6 +99,62 @@ PRIYA S
     expect(r.payee, 'Broadway');
     expect(r.date, DateTime(2026, 10, 13, 10, 51));
     expect(r.income, isFalse);
+    expect(r.ref, '665280079818');
+    expect(r.note, isNull);
+    expect(billNote(r), 'Broadway (Txn: 665280079818)');
+  });
+
+  test('reference numbers: UPI ref, UTR, next-line IDs', () {
+    expect(parseBillText('UPI reference ID: 665280079818').ref, '665280079818');
+    expect(parseBillText('UTR: 427812345678').ref, '427812345678');
+    expect(parseBillText('UPI transaction ID\n628512345678').ref,
+        '628512345678');
+    expect(parseBillText('Transaction ID T2410131051ABC').ref,
+        'T2410131051ABC');
+    expect(parseBillText('UPI transaction ID\nCopy').ref, isNull);
+  });
+
+  test("the payer's note fills the note field, with the reference", () {
+    final r = parseBillText('''
+Paid to
+Bavarchi Restaurant
+₹40
+Message: Tea at bavarchi
+UPI Ref No: 3544454990448''', now: now);
+    expect(r.note, 'Tea at bavarchi');
+    expect(billNote(r), 'Tea at bavarchi (Txn: 3544454990448)');
+  });
+
+  test('no note: payee name plus reference; nothing: empty', () {
+    BillScan b({String? note, String? payee, String? ref}) => (
+          amount: null,
+          payee: payee,
+          date: null,
+          income: false,
+          category: null,
+          note: note,
+          ref: ref,
+        );
+    expect(billNote(b(payee: 'Broadway', ref: '665280079818')),
+        'Broadway (Txn: 665280079818)');
+    expect(billNote(b(payee: 'Broadway')), 'Broadway');
+    expect(billNote(b(ref: '665280079818')), 'Txn: 665280079818');
+    expect(billNote(b()), '');
+  });
+
+  test('AI reply note and reference', () {
+    final r = billFromAi({
+      'amount': 40,
+      'payee': 'Bavarchi',
+      'date': '',
+      'income': false,
+      'category': '',
+      'note': 'Tea at bavarchi',
+      'reference': '3544 4549 90448',
+    }, keys: const {}, now: now);
+    expect(r.note, 'Tea at bavarchi');
+    expect(r.ref, '3544454990448');
+    expect(billFromAi({'reference': 'not an id!'}, keys: const {}).ref, isNull);
   });
 
   test('unrelated image gives nothing', () {

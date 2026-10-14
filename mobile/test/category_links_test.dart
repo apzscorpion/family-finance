@@ -115,6 +115,8 @@ Future<void> _openSheet(WidgetTester tester, V3State state) async {
                       date: null,
                       income: false,
                       category: null,
+                      note: null,
+                      ref: null,
                     ),
                   ),
                 ),

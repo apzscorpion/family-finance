@@ -273,6 +273,8 @@ void main() {
                     date: DateTime(2026, 10, 5, 9, 15),
                     income: income,
                     category: null,
+                    note: null,
+                    ref: null,
                   ),
                 ),
               ),

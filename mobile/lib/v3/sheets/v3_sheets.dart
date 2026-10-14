@@ -697,7 +697,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
     final p = widget.prefill;
     if (e == null && p != null) {
       if (p.amount != null) _expression = CalcEngine.format(p.amount!);
-      _note.text = p.payee ?? '';
+      _note.text = billNote(p);
       final s = context.read<V3State>();
       if (p.income) {
         // Same as tapping the Income tab.
