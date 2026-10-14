@@ -54,7 +54,11 @@ const BillScan _empty = (
 /// also goes to the AI, which reads the ₹ amount far more reliably (OCR
 /// turns a bold ₹ into "7" or "T") and suggests a category; its answers win.
 /// [onStatus] reports progress for a snackbar.
-Future<BillScan?> consumeSharedBill({
+/// A shared receipt: the on-phone read, available in well under a second,
+/// and with an AI key set up, the AI's slower, better read ([refined]).
+typedef SharedBill = ({BillScan bill, Future<BillScan?>? refined});
+
+Future<SharedBill?> consumeSharedBill({
   required List<BillCategory> categories,
   void Function(String message)? onStatus,
 }) async {
@@ -63,7 +67,7 @@ Future<BillScan?> consumeSharedBill({
   try {
     path = await _channel.invokeMethod<String>('consumeSharedImage');
     if (path == null) return null;
-    onStatus?.call('Reading the receipt…');
+    final bytes = await File(path).readAsBytes();
     var ocr = _empty;
     try {
       ocr = parseBill(await readImageLines(path,
@@ -73,29 +77,20 @@ Future<BillScan?> consumeSharedBill({
       AppLog.error('consumeSharedBill.ocr', e, st);
     }
     final config = await AiConfigStore.load();
-    if (!config.isConfigured) return ocr;
-    final ai = await readBillWithAi(
-      await File(path).readAsBytes(),
-      config,
-      categories: categories,
-    );
-    if (ai == null) return ocr;
+    // The sheet opens on the on-phone read; the AI fills in behind it.
     return (
-      amount: ai.amount ?? ocr.amount,
-      payee: ai.payee ?? ocr.payee,
-      date: ai.date ?? ocr.date,
-      income: ai.amount != null ? ai.income : ocr.income,
-      category: ai.category,
-      note: ai.note ?? ocr.note,
-      // Read off the image verbatim beats a model retyping 12 digits.
-      ref: ocr.ref ?? ai.ref,
+      bill: ocr,
+      refined: config.isConfigured
+          ? readBillWithAi(bytes, config, categories: categories)
+              .then((ai) => ai == null ? null : mergeBills(ocr, ai))
+          : null,
     );
   } on MissingPluginException {
     return null; // tests / hosts without the channel
   } catch (e, st) {
     AppLog.error('consumeSharedBill', e, st);
     // Still open the sheet: the user shared a bill and expects to add it.
-    return _empty;
+    return (bill: _empty, refined: null);
   } finally {
     if (path != null) {
       try {
@@ -104,6 +99,18 @@ Future<BillScan?> consumeSharedBill({
     }
   }
 }
+
+/// The AI's read over the on-phone one, field by field.
+BillScan mergeBills(BillScan ocr, BillScan ai) => (
+  amount: ai.amount ?? ocr.amount,
+  payee: ai.payee ?? ocr.payee,
+  date: ai.date ?? ocr.date,
+  income: ai.amount != null ? ai.income : ocr.income,
+  category: ai.category,
+  note: ai.note ?? ocr.note,
+  // Read off the image verbatim beats a model retyping 12 digits.
+  ref: ocr.ref ?? ai.ref,
+);
 
 /// Sends the screenshot to the user's AI model. Null on any failure, so
 /// the on-phone result stands.

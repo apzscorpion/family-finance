@@ -57,9 +57,13 @@ class V3Sheets {
     BuildContext context, {
     TxnRow? edit,
     BillScan? prefill,
+    Future<BillScan?>? refine,
   }) => readOnly
       ? _notifyReadOnly(context)
-      : _show(context, V3AddSheet(edit: edit, prefill: prefill));
+      : _show(
+          context,
+          V3AddSheet(edit: edit, prefill: prefill, refine: refine),
+        );
 
   static Future<void> openDetail(BuildContext context, TxnRow txn) =>
       _show(context, V3DetailSheet(txn: txn));
@@ -527,7 +531,11 @@ class V3AddSheet extends StatefulWidget {
 
   /// Read from a shared payment screenshot; the user confirms before saving.
   final BillScan? prefill;
-  const V3AddSheet({super.key, this.edit, this.prefill});
+
+  /// The AI's better read of the same receipt, arriving after the sheet is
+  /// open; it only replaces fields the user hasn't touched.
+  final Future<BillScan?>? refine;
+  const V3AddSheet({super.key, this.edit, this.prefill, this.refine});
 
   /// Who owes the payer what. One other person owes the full amount; with
   /// more, it is split equally, or the payer's own part comes off first.
@@ -567,6 +575,9 @@ class V3AddSheet extends StatefulWidget {
 class _V3AddSheetState extends State<V3AddSheet> {
   String _type = 'expense';
   String _expression = '';
+  /// True while the AI is still reading a shared receipt.
+  bool _refining = false;
+
   /// Main category; [_subKey] is the optional sub-category beside it.
   String _catKey = 'groceries';
   String? _subKey;
@@ -707,6 +718,44 @@ class _V3AddSheetState extends State<V3AddSheet> {
       // The AI reader's category guess, if it fits the entry's type.
       final guess = p.category == null ? null : s.categoryByKey(p.category!);
       if (guess != null && guess.kind == _type) _pickMain(s, guess.key);
+    }
+    final refine = widget.refine;
+    if (e == null && p != null && refine != null) {
+      _refining = true;
+      final seen = (
+        expr: _expression,
+        note: _note.text,
+        date: _date,
+        type: _type,
+        cat: _catKey,
+      );
+      refine.then((ai) {
+        if (!mounted) return;
+        setState(() {
+          _refining = false;
+          if (ai == null) return;
+          final s = context.read<V3State>();
+          if (ai.amount != null && _expression == seen.expr) {
+            _expression = CalcEngine.format(ai.amount!);
+          }
+          if (_note.text == seen.note) _note.text = billNote(ai);
+          if (ai.date != null && _date == seen.date) _date = ai.date!;
+          final untouchedCat = _type == seen.type && _catKey == seen.cat;
+          if (untouchedCat && ai.income != (_type == 'income')) {
+            _type = ai.income ? 'income' : 'expense';
+            _catKey = s.topCategories(_type).firstOrNull?.key ??
+                (ai.income ? 'salary' : 'groceries');
+            _subKey = null;
+          }
+          final guess =
+              ai.category == null ? null : s.categoryByKey(ai.category!);
+          if (untouchedCat && guess != null && guess.kind == _type) {
+            _pickMain(s, guess.key);
+          }
+        });
+      }, onError: (_) {
+        if (mounted) setState(() => _refining = false);
+      });
     }
     if (e != null) {
       _type = e.type;
@@ -1141,6 +1190,27 @@ class _V3AddSheetState extends State<V3AddSheet> {
             ],
           ),
           const SizedBox(height: 8),
+          if (_refining)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 11,
+                    height: 11,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      color: Nocturne.accent300,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Checking the receipt with AI…',
+                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral400),
+                  ),
+                ],
+              ),
+            ),
 
           // ── Note / Merchant text field ────────────────────────────────────
           Container(

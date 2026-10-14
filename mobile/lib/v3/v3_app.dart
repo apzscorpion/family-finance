@@ -255,7 +255,7 @@ class _SharedBillListenerState extends State<_SharedBillListener>
   Future<void> _check() async {
     final s = context.read<V3State>();
     final messenger = ScaffoldMessenger.of(context);
-    final bill = await consumeSharedBill(
+    final shared = await consumeSharedBill(
       categories: [
         for (final kind in const ['expense', 'income'])
           for (final c in s.topCategories(kind))
@@ -271,13 +271,14 @@ class _SharedBillListenerState extends State<_SharedBillListener>
     );
     if (!mounted) return;
     messenger.hideCurrentSnackBar();
-    if (bill == null) return;
-    if (bill.amount == null && bill.payee == null) {
+    if (shared == null) return;
+    final bill = shared.bill;
+    if (bill.amount == null && bill.payee == null && shared.refined == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Couldn't read a payment from that image. "
               'Fill in the details below.')));
     }
-    await V3Sheets.openAdd(context, prefill: bill);
+    await V3Sheets.openAdd(context, prefill: bill, refine: shared.refined);
   }
 
   @override

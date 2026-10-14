@@ -9,6 +9,7 @@ import '../sheets/v3_sheets.dart';
 import '../v3_design.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
+import 'family_v3.dart';
 
 /// Insights: a daily spend chart with an average line, KPI tiles, and the
 /// category breakdown.
@@ -53,6 +54,26 @@ class _InsightsV3State extends State<InsightsV3> {
     final delta = prev <= 0 ? 0.0 : ((total - prev) / prev) * 100;
 
     final cats = s.byCategory;
+    // Per person, this period: their share of what I paid, and the total
+    // of the bills we shared (the same figures as their Shared-with sheet).
+    final people = [
+      for (final m in s.members)
+        if (m.userId != s.myId && m.isActive)
+          (m: m, ledger: [
+            for (final t in s.ledgerWith(m.userId))
+              if (t.ageInDays < s.maxDays) t,
+          ]),
+    ]
+        .where((p) => p.ledger.isNotEmpty)
+        .map((p) => (
+              m: p.m,
+              forThem: p.ledger
+                  .map((t) => s.signedShare(t, p.m.userId))
+                  .where((v) => v > 0)
+                  .fold(0.0, (a, v) => a + v),
+              together: p.ledger.fold(0.0, (a, t) => a + t.amount),
+            ))
+        .toList();
     final biggest = s.scoped.where((t) => t.isExpense).fold<double>(
         0, (a, t) => math.max(a, t.amount));
 
@@ -286,6 +307,56 @@ class _InsightsV3State extends State<InsightsV3> {
               ],
             ),
           ),
+          if (people.isNotEmpty) ...[
+            const V3SectionHeader(title: 'With people'),
+            V3Panel(
+              child: Column(
+                children: [
+                  for (final p in people)
+                    GestureDetector(
+                      onTap: () => SharedWithSheet.open(context, p.m.userId),
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            V3Avatar(
+                              initial: p.m.initial,
+                              color: p.m.color,
+                              size: 30,
+                              fontSize: 11.5,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(p.m.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Nocturne.text)),
+                                  Text(
+                                    'You paid for them ${s.money(p.forThem)}'
+                                    ' · Together ${s.money(p.together)}',
+                                    style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: Nocturne.neutral400),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(PhRegular.caretRight,
+                                size: 14, color: Nocturne.neutral500),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           if (cats.isNotEmpty) ...[
             const V3SectionHeader(title: 'By category'),
             V3Panel(

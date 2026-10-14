@@ -5,6 +5,8 @@ import 'package:family_finance/v3/phosphor_icons.dart';
 import 'package:family_finance/v3/sheets/v3_sheets.dart';
 import 'package:family_finance/v3/v3_nav.dart';
 import 'package:family_finance/v3/v3_state.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -239,5 +241,57 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('with fam'), findsOneWidget);
     expect(find.text('for Sinu'), findsNothing);
+  });
+
+  testWidgets('the AI read replaces untouched fields once it arrives',
+      (tester) async {
+    final ai = Completer<BillScan?>();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<V3State>.value(value: _state(_Repo())),
+          ChangeNotifierProvider<V3Nav>(create: (_) => V3Nav()),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: V3AddSheet(
+              // The on-phone read took the bold rupee sign for a 7.
+              prefill: (
+                amount: 781,
+                payee: 'Broadway',
+                date: null,
+                income: false,
+                category: null,
+                note: null,
+                ref: '665280079818',
+              ),
+              refine: ai.future,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.textContaining('781', findRichText: true), findsWidgets);
+    expect(find.text('Checking the receipt with AI…'), findsOneWidget);
+
+    // The user rewrites the note before the AI answers; that edit stays.
+    await tester.enterText(find.text('Broadway (Txn: 665280079818)'), 'Breakfast');
+    const BillScan better = (
+      amount: 81.0,
+      payee: 'Broadway',
+      date: null,
+      income: false,
+      category: 'x_food',
+      note: null,
+      ref: '665280079818',
+    );
+    ai.complete(better);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('781', findRichText: true), findsNothing);
+    expect(find.textContaining('81', findRichText: true), findsWidgets);
+    expect(find.text('Breakfast'), findsOneWidget);
+    expect(find.text('Checking the receipt with AI…'), findsNothing);
   });
 }
