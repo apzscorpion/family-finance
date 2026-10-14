@@ -18,15 +18,17 @@ TxnRow _txn(String id, double amount, {String? sourceId, String origin = 'import
     );
 
 class _Repo extends V3Repository {
-  _Repo()
+  _Repo([this.me = 'user-asif'])
       : super(SupabaseClient(
           'https://example.supabase.co',
           'anon',
           authOptions: const AuthClientOptions(autoRefreshToken: false),
         ));
 
+  final String me;
+
   @override
-  String? get currentUserId => 'user-asif';
+  String? get currentUserId => me;
 }
 
 void main() {
@@ -63,22 +65,33 @@ void main() {
   // The reported bug: another member's income logged with no account
   // landed in this account on the Cash & bank sheet but not the dashboard.
   test("another member's account-less entries stay out of the account", () {
-    final state = V3State(_Repo());
-    state.sources = const [
-      SourceRow(id: 'sal', name: 'Salary', kind: 'income', openingBalance: 0, sortOrder: 0),
-    ];
-    state.txns = [
-      TxnRow(id: 'mine', familyId: 'fam-1', userId: 'user-asif', title: 'Pay',
-          amount: 7938, type: 'income', occurredAt: DateTime.now()),
-      TxnRow(id: 'theirs', familyId: 'fam-1', userId: 'user-sinu', title: 'Gift',
-          amount: 1900, type: 'income', occurredAt: DateTime.now()),
-      TxnRow(id: 'their-spend', familyId: 'fam-1', userId: 'user-sinu',
-          title: 'Snack', amount: 45, type: 'expense', sourceId: 'sal',
-          occurredAt: DateTime.now()),
-    ];
-    state.srcFilter = 'sal';
-    final w = state.wallet('sal');
+    V3State view(String viewer) {
+      final state = V3State(_Repo(viewer));
+      state.sources = const [
+        SourceRow(id: 'sal', name: 'Salary', kind: 'income', openingBalance: 0, sortOrder: 0),
+      ];
+      state.txns = [
+        TxnRow(id: 'mine', familyId: 'fam-1', userId: 'user-asif', title: 'Pay',
+            amount: 7938, type: 'income', occurredAt: DateTime.now()),
+        TxnRow(id: 'theirs', familyId: 'fam-1', userId: 'user-sinu', title: 'Gift',
+            amount: 1900, type: 'income', occurredAt: DateTime.now()),
+        TxnRow(id: 'their-spend', familyId: 'fam-1', userId: 'user-sinu',
+            title: 'Snack', amount: 45, type: 'expense', sourceId: 'sal',
+            occurredAt: DateTime.now()),
+      ];
+      state.srcFilter = 'sal';
+      state.scope = 'user-asif';
+      return state;
+    }
+
+    final mine = view('user-asif');
+    final w = mine.wallet('sal');
     expect(w.cash + w.bank, 7893); // explicit charges still count
-    expect(state.balance, 7893);
+    expect(mine.balance, 7893);
+    // The reported bug: Sinu viewing Asif saw his account-less pay vanish.
+    expect(view('user-sinu').balance, 7893);
+    // The family view holds everyone's.
+    expect((view('user-sinu')..scope = 'family').balance, 9793);
   });
+
 }

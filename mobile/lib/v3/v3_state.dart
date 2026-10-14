@@ -526,13 +526,17 @@ class V3State extends ChangeNotifier {
   }
 
   /// Whether [t] moves money in account [sourceId]. Entries without an
-  /// account fall to the main account, but only the viewer's own: another
-  /// member's account-less income is not money in this account.
-  /// shortcut: accounts have no owner, so "own" means the viewer; add an
-  /// owner column if members start keeping separate main accounts.
+  /// account fall to the main account, but only those of the member in view
+  /// (everyone's in the family view): another member's account-less income
+  /// is not money in this account. Never depends on who is looking, so a
+  /// member's balance reads the same on every phone.
+  /// shortcut: accounts have no owner, so "own" means the member in view;
+  /// add an owner column if members start keeping separate main accounts.
   bool _inAccount(TxnRow t, String sourceId) =>
       t.sourceId == sourceId ||
-      (t.sourceId == null && sourceId == mainSourceId && t.userId == myId);
+      (t.sourceId == null &&
+          sourceId == mainSourceId &&
+          (isFamily || t.userId == scope));
 
   /// What [sourceId] holds right now, split into cash and bank. Cash-method
   /// entries move the cash part, every other method (UPI, bank, card) the bank
