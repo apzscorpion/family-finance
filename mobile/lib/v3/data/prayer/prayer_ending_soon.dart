@@ -117,6 +117,7 @@ Map<String, Object?> islandPayload(PrayerConfig config, DateTime now) {
     'repeatMinutes': config.endingSoonRepeat,
     'chipName': config.islandChip != 'countdown',
     'color': PrayerConfig.islandColors[config.islandColor] ?? 0,
+    'media': config.islandMedia,
     'windows': [for (final w in windows) _windowJson(w, config.islandAsk)],
     'prayers': [
       for (final p in prayers.take(10))
@@ -152,6 +153,40 @@ Future<void> syncEndingSoon(PrayerConfig config) async {
     // Tests and hosts without the channel.
   } catch (e, st) {
     AppLog.error('syncEndingSoon', e, st);
+  }
+}
+
+/// The island payload plus a 3-minute reminder starting now, for the
+/// current prayer in the user's style, so they can see how it looks on
+/// their phone. Its own key, so "I prayed" on it can't mark a real prayer.
+Map<String, Object?> testPayload(PrayerConfig config, DateTime now) {
+  final np = PrayerService.next(config, now);
+  final slot = np.current?.slot ?? np.next.slot;
+  final EndingWindow test = (
+    slot: slot.isPrayer ? slot : PrayerSlot.fajr,
+    start: now.subtract(const Duration(seconds: 1)),
+    end: now.add(const Duration(minutes: 3)),
+    nextSlot: np.next.slot.isPrayer ? np.next.slot : null,
+  );
+  final payload = islandPayload(config, now);
+  return {
+    ...payload,
+    'windows': [
+      {
+        ..._windowJson(test, config.islandAsk),
+        'key': 'test@${now.millisecondsSinceEpoch}',
+      },
+      ...payload['windows'] as List,
+    ],
+  };
+}
+
+/// Shows [testPayload] now; the next normal sync puts things back.
+Future<void> showTestReminder(PrayerConfig config) async {
+  try {
+    await _channel.invokeMethod('schedule', testPayload(config, DateTime.now()));
+  } catch (e, st) {
+    AppLog.error('showTestReminder', e, st);
   }
 }
 

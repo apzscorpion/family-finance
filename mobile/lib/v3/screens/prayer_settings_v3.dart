@@ -102,6 +102,23 @@ class PrayerSettingsV3 extends StatelessWidget {
                 ),
               ),
               _Row(
+                icon: PhRegular.playCircle,
+                label: 'Samsung Now Bar',
+                sub: 'Where the Now Bar is limited to approved apps, show it as '
+                    'a media card instead. It has music-style controls and can '
+                    'swap places with music that is playing.',
+                trailing: _MiniSeg(
+                  options: const ['Off', 'Ending', 'All day'],
+                  selected: switch (config.islandMedia) {
+                    'off' => 0,
+                    'always' => 2,
+                    _ => 1,
+                  },
+                  onChanged: (i) => prayer.update(config.copyWith(
+                      islandMedia: const ['off', 'ending', 'always'][i])),
+                ),
+              ),
+              _Row(
                 icon: PhRegular.bellRinging,
                 label: 'Ask before a prayer ends',
                 sub: 'Pops up until you mark it prayed',
@@ -199,6 +216,25 @@ class PrayerSettingsV3 extends StatelessWidget {
               value: config.exactAlarms,
               onChanged: (on) => _setExact(context, on),
             ),
+            last: true,
+          ),
+        ),
+        _Card(
+          child: _Row(
+            icon: PhRegular.playCircle,
+            label: 'Test it now',
+            sub: 'Shows a 3-minute reminder for the current prayer, the way '
+                'it will look on this phone',
+            trailing: const Icon(PhRegular.caretRight,
+                size: 16, color: Nocturne.neutral500),
+            onTap: () async {
+              await showTestReminder(config);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Test reminder sent: check the status bar, '
+                    'Now Bar and lock screen'),
+              ));
+            },
             last: true,
           ),
         ),

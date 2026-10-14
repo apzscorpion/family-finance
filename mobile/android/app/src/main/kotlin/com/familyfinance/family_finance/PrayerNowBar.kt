@@ -32,7 +32,9 @@ object PrayerNowBar {
     private const val CHANNEL_ASK = "ff_prayer_ending"
     private const val CHANNEL_ISLAND = "ff_prayer_island"
     // In the prayer block of AppNotifications' id ranges, unused there.
-    private const val NOTIFICATION_ID = 300100
+    const val NOTIFICATION_ID = 300100
+    // The media-card fallback (PrayerMediaService) posts under its own id.
+    const val MEDIA_ID = 300101
     const val ACTION_TICK = "com.familyfinance.prayer.TICK"
     const val ACTION_DONE = "com.familyfinance.prayer.DONE"
     const val ACTION_LATER = "com.familyfinance.prayer.LATER"
@@ -58,6 +60,7 @@ object PrayerNowBar {
             .putInt("repeat", ((args["repeatMinutes"] as? Int) ?: 5).coerceIn(1, 30))
             .putBoolean("chipName", (args["chipName"] as? Boolean) ?: true)
             .putLong("color", ((args["color"] as? Number) ?: 0).toLong())
+            .putString("media", (args["media"] as? String) ?: "ending")
             // Forget "prayed" marks for windows that are gone.
             .putStringSet("done", prefs.getStringSet("done", emptySet())!!.intersect(keys))
             .apply()
@@ -103,14 +106,17 @@ object PrayerNowBar {
         when {
             skipPost -> {}
             snoozed && next != null -> postIsland(ctx, next)
-            snoozed -> manager(ctx).cancel(NOTIFICATION_ID)
+            snoozed -> clear(ctx)
             active != null -> {
                 val showing = manager(ctx).activeNotifications
-                    .any { it.id == NOTIFICATION_ID && it.notification.channelId == CHANNEL_ASK }
+                    .any {
+                        (it.id == NOTIFICATION_ID || it.id == MEDIA_ID) &&
+                            it.notification.channelId == CHANNEL_ASK
+                    }
                 postAsk(ctx, active, alert = alertIfNew && !showing)
             }
             next != null -> postIsland(ctx, next)
-            else -> manager(ctx).cancel(NOTIFICATION_ID)
+            else -> clear(ctx)
         }
         val repeatMs = prefs(ctx).getInt("repeat", 5) * 60_000L
         val candidates = listOfNotNull(
@@ -136,14 +142,57 @@ object PrayerNowBar {
     fun canPromote(ctx: Context): Boolean =
         Build.VERSION.SDK_INT < 36 || manager(ctx).canPostPromotedNotifications()
 
+    private fun clear(ctx: Context) {
+        manager(ctx).cancel(NOTIFICATION_ID)
+        PrayerMediaService.stop(ctx)
+    }
+
+    /**
+     * Use the media card when Android won't promote a Live Update (Samsung
+     * without the developer option) and the user's setting allows it here:
+     * "ending" for the question only, "always" for the island too.
+     */
+    private fun useMedia(ctx: Context, island: Boolean): Boolean {
+        val mode = prefs(ctx).getString("media", "ending")
+        val allowed = if (island) mode == "always" else mode == "ending" || mode == "always"
+        return allowed && Build.VERSION.SDK_INT >= 26 && !canPromote(ctx)
+    }
+
+    private fun postMedia(
+        ctx: Context, channel: String, title: String, text: String,
+        start: Long, end: Long, alert: Boolean, w: Window?,
+    ): Boolean {
+        val shown = PrayerMediaService.show(ctx) {
+            putExtra("title", title)
+            putExtra("text", text)
+            putExtra("start", start)
+            putExtra("end", end)
+            putExtra("channel", channel)
+            putExtra("alert", alert)
+            if (w != null) {
+                putExtra("key", w.key)
+                putExtra("done", w.done)
+                putExtra("later", w.later)
+            }
+        }
+        if (shown) manager(ctx).cancel(NOTIFICATION_ID)
+        return shown
+    }
+
     private fun postAsk(ctx: Context, w: Window, alert: Boolean) {
         channel(ctx, CHANNEL_ASK, "Prayer ending soon", NotificationManager.IMPORTANCE_HIGH)
+        if (useMedia(ctx, island = false) &&
+            postMedia(ctx, CHANNEL_ASK, w.title, w.text, w.start, w.end, alert, w)
+        ) {
+            return
+        }
+        PrayerMediaService.stop(ctx)
         val builder = base(ctx, CHANNEL_ASK, w.title, w.text, w.end)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOnlyAlertOnce(!alert)
-            .addAction(0, w.done, action(ctx, ACTION_DONE, w.key, 1))
-            .addAction(0, w.later, action(ctx, ACTION_LATER, w.key, 2))
+            .addAction(0, w.done, actionIntent(ctx, ACTION_DONE, w.key, 1))
+            .addAction(0, w.later, actionIntent(ctx, ACTION_LATER, w.key, 2))
         notify(ctx, builder, w.name)
     }
 
@@ -151,6 +200,14 @@ object PrayerNowBar {
         // Low importance: it never makes a sound; the chip and card update
         // silently as the day goes on.
         channel(ctx, CHANNEL_ISLAND, "Prayer island", NotificationManager.IMPORTANCE_LOW)
+        val prev = prayers(ctx).lastOrNull { it.at <= System.currentTimeMillis() }?.at
+            ?: (p.at - 6 * 3_600_000L)
+        if (useMedia(ctx, island = true) &&
+            postMedia(ctx, CHANNEL_ISLAND, p.title, "Next prayer", prev, p.at, false, null)
+        ) {
+            return
+        }
+        PrayerMediaService.stop(ctx)
         val builder = base(ctx, CHANNEL_ISLAND, p.title, "Next prayer", p.at)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -242,7 +299,7 @@ object PrayerNowBar {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private fun action(ctx: Context, what: String, key: String, code: Int) =
+    fun actionIntent(ctx: Context, what: String, key: String, code: Int): PendingIntent =
         PendingIntent.getBroadcast(
             ctx, code,
             Intent(ctx, PrayerNowBarReceiver::class.java).setAction(what).putExtra("key", key),

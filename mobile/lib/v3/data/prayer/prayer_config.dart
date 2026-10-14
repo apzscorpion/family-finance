@@ -242,6 +242,11 @@ class PrayerConfig {
   /// The chip's background, a key of [islandColors].
   final String islandColor;
 
+  /// Samsung Now Bar fallback, used only where Android won't promote a
+  /// Live Update: show as a media card 'off', for the 'ending' question
+  /// only, or 'always' (the all-day island too).
+  final String islandMedia;
+
   /// Chip backgrounds on offer; 'none' leaves the system's plain chip.
   static const islandColors = {
     'gold': 0xFFC9963F,
@@ -294,6 +299,7 @@ class PrayerConfig {
     this.islandChip = 'name',
     this.islandAsk = 'ask',
     this.islandColor = 'gold',
+    this.islandMedia = 'ending',
   });
 
   bool notifyFor(PrayerSlot slot) => notify[slot.name] ?? false;
@@ -337,6 +343,7 @@ class PrayerConfig {
     String? islandChip,
     String? islandAsk,
     String? islandColor,
+    String? islandMedia,
   }) =>
       PrayerConfig(
         enabled: enabled ?? this.enabled,
@@ -368,6 +375,7 @@ class PrayerConfig {
         islandChip: islandChip ?? this.islandChip,
         islandAsk: islandAsk ?? this.islandAsk,
         islandColor: islandColor ?? this.islandColor,
+        islandMedia: islandMedia ?? this.islandMedia,
       );
 
   /// Applies a bundled city, dropping any previous device fix.
@@ -426,6 +434,7 @@ class PrayerConfig {
         'island_chip': islandChip,
         'island_ask': islandAsk,
         'island_color': islandColor,
+        'island_media': islandMedia,
       };
 
   /// Every field is read defensively. This blob is on disk across upgrades and
@@ -481,6 +490,9 @@ class PrayerConfig {
       islandColor: islandColors.containsKey(j['island_color'])
           ? j['island_color'] as String
           : 'gold',
+      islandMedia: const ['off', 'ending', 'always'].contains(j['island_media'])
+          ? j['island_media'] as String
+          : 'ending',
     );
   }
 

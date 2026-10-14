@@ -90,6 +90,18 @@ void main() {
         0);
   });
 
+  test('test reminder: 3 minutes from now, own key, ahead of real ones', () {
+    final at = today[PrayerSlot.asr].time.add(const Duration(minutes: 10));
+    final p = testPayload(config, at);
+    final first = (p['windows'] as List).first as Map;
+    expect(first['key'], startsWith('test@'));
+    expect(first['name'], 'Asr'); // the prayer in progress
+    expect(first['end'],
+        at.add(const Duration(minutes: 3)).millisecondsSinceEpoch);
+    expect((p['windows'] as List).length,
+        (islandPayload(config, at)['windows'] as List).length + 1);
+  });
+
   test('settings survive a save and load', () {
     final c = config.copyWith(
       endingSoonLead: 30,
@@ -112,6 +124,11 @@ void main() {
         'teal');
     expect(PrayerConfig.fromJson(const {'island_color': 'neon'}).islandColor,
         'gold');
+    expect(PrayerConfig.fromJson(const {}).islandMedia, 'ending');
+    expect(PrayerConfig.fromJson(
+            config.copyWith(islandMedia: 'always').toJson()).islandMedia,
+        'always');
+    expect(islandPayload(config, morning)['media'], 'ending');
     // On by default, including for configs saved before these settings.
     expect(PrayerConfig.fromJson(const {}).islandAlways, isTrue);
     expect(PrayerConfig.fromJson(const {}).endingSoon, isTrue);

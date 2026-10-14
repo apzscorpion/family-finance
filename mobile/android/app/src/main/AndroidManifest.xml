@@ -27,6 +27,8 @@
          Android 14 type for exactly this. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING"/>
+    <!-- Prayer media card (Samsung Now Bar fallback); never plays audio -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
 
     <!-- Explicitly strip any sensitive permissions that trigger Google Play Protect blocks -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove"/>
@@ -90,6 +92,10 @@
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false"/>
+        <service
+            android:name=".PrayerMediaService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback"/>
         <!-- Prayer "ending soon" reminder: alarm ticks, its buttons, re-arm after reboot -->
         <receiver
             android:name=".PrayerNowBarReceiver"
