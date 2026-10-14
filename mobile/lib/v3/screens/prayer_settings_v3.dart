@@ -104,9 +104,10 @@ class PrayerSettingsV3 extends StatelessWidget {
               _Row(
                 icon: PhRegular.playCircle,
                 label: 'Samsung Now Bar',
-                sub: 'Where the Now Bar is limited to approved apps, show it as '
-                    'a media card instead. It has music-style controls and can '
-                    'swap places with music that is playing.',
+                sub: 'Experimental, off by default: shows the reminder as a '
+                    'media card. Samsung may still keep it out of the Now Bar; '
+                    'it has music-style controls and runs a background service '
+                    '(a little more battery) while shown.',
                 trailing: _MiniSeg(
                   options: const ['Off', 'Ending', 'All day'],
                   selected: switch (config.islandMedia) {

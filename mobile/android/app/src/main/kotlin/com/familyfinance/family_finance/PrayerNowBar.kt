@@ -60,7 +60,7 @@ object PrayerNowBar {
             .putInt("repeat", ((args["repeatMinutes"] as? Int) ?: 5).coerceIn(1, 30))
             .putBoolean("chipName", (args["chipName"] as? Boolean) ?: true)
             .putLong("color", ((args["color"] as? Number) ?: 0).toLong())
-            .putString("media", (args["media"] as? String) ?: "ending")
+            .putString("media", (args["media"] as? String) ?: "off")
             // Forget "prayed" marks for windows that are gone.
             .putStringSet("done", prefs.getStringSet("done", emptySet())!!.intersect(keys))
             .apply()
@@ -119,18 +119,22 @@ object PrayerNowBar {
             else -> clear(ctx)
         }
         val repeatMs = prefs(ctx).getInt("repeat", 5) * 60_000L
-        val candidates = listOfNotNull(
+        // The question's moments need to be on time; the island rolling over
+        // to the next prayer doesn't, so that one may be batched by Android
+        // with other apps' wake-ups (cheaper on battery).
+        val timely = listOfNotNull(
             if (snoozed) snoozedUntil else null,
             if (active != null && !snoozed && now + repeatMs < active.end) now + repeatMs else null,
             active?.end,
             pending(ctx).map { it.start }.filter { it > now }.minOrNull(),
-            next?.at,
-        )
+        ).filter { it > now }.minOrNull()
+        val rollover = next?.at?.takeIf { it > now }
         val pi = tickIntent(ctx)
         val alarms = ctx.getSystemService(AlarmManager::class.java)
         alarms.cancel(pi)
-        val nextAt = candidates.filter { it > now }.minOrNull() ?: return
-        val exact = Build.VERSION.SDK_INT < 31 || alarms.canScheduleExactAlarms()
+        val nextAt = listOfNotNull(timely, rollover).minOrNull() ?: return
+        val exact = nextAt == timely &&
+            (Build.VERSION.SDK_INT < 31 || alarms.canScheduleExactAlarms())
         if (exact) {
             alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextAt, pi)
         } else {
@@ -153,7 +157,7 @@ object PrayerNowBar {
      * "ending" for the question only, "always" for the island too.
      */
     private fun useMedia(ctx: Context, island: Boolean): Boolean {
-        val mode = prefs(ctx).getString("media", "ending")
+        val mode = prefs(ctx).getString("media", "off")
         val allowed = if (island) mode == "always" else mode == "ending" || mode == "always"
         return allowed && Build.VERSION.SDK_INT >= 26 && !canPromote(ctx)
     }

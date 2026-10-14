@@ -299,7 +299,7 @@ class PrayerConfig {
     this.islandChip = 'name',
     this.islandAsk = 'ask',
     this.islandColor = 'gold',
-    this.islandMedia = 'ending',
+    this.islandMedia = 'off',
   });
 
   bool notifyFor(PrayerSlot slot) => notify[slot.name] ?? false;
@@ -434,7 +434,7 @@ class PrayerConfig {
         'island_chip': islandChip,
         'island_ask': islandAsk,
         'island_color': islandColor,
-        'island_media': islandMedia,
+        'island_media_v2': islandMedia,
       };
 
   /// Every field is read defensively. This blob is on disk across upgrades and
@@ -490,9 +490,12 @@ class PrayerConfig {
       islandColor: islandColors.containsKey(j['island_color'])
           ? j['island_color'] as String
           : 'gold',
-      islandMedia: const ['off', 'ending', 'always'].contains(j['island_media'])
-          ? j['island_media'] as String
-          : 'ending',
+      // '_v2': the old key defaulted to 'ending'; reset everyone to Off now
+      // that the media card turned out not to reach Samsung's Now Bar.
+      islandMedia:
+          const ['off', 'ending', 'always'].contains(j['island_media_v2'])
+              ? j['island_media_v2'] as String
+              : 'off',
     );
   }
 

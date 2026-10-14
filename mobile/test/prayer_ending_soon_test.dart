@@ -124,11 +124,14 @@ void main() {
         'teal');
     expect(PrayerConfig.fromJson(const {'island_color': 'neon'}).islandColor,
         'gold');
-    expect(PrayerConfig.fromJson(const {}).islandMedia, 'ending');
+    expect(PrayerConfig.fromJson(const {}).islandMedia, 'off');
+    // The old key's saved 'ending' no longer applies.
+    expect(PrayerConfig.fromJson(const {'island_media': 'ending'}).islandMedia,
+        'off');
     expect(PrayerConfig.fromJson(
             config.copyWith(islandMedia: 'always').toJson()).islandMedia,
         'always');
-    expect(islandPayload(config, morning)['media'], 'ending');
+    expect(islandPayload(config, morning)['media'], 'off');
     // On by default, including for configs saved before these settings.
     expect(PrayerConfig.fromJson(const {}).islandAlways, isTrue);
     expect(PrayerConfig.fromJson(const {}).endingSoon, isTrue);
