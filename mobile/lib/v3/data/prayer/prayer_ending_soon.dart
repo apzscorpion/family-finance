@@ -175,7 +175,7 @@ Future<Map<String, Object?>> islandStatus() async {
   }
 }
 
-/// Sampio's page in system settings (battery, auto launch, permissions).
+/// KinPurse's page in system settings (battery, auto launch, permissions).
 Future<void> openAppSettings() async {
   try {
     await _channel.invokeMethod('openAppSettings');

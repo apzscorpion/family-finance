@@ -51,7 +51,7 @@ class WebApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Sampio — Your Money Companion',
+        title: 'KinPurse — Family money, together',
         debugShowCheckedModeBanner: false,
         theme: v3Theme,
         home: const WebRoot(),

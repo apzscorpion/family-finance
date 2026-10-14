@@ -13,7 +13,7 @@ class UpdateService {
   static const String latestReleaseUrl =
       'https://api.github.com/repos/$githubRepo/releases/latest';
   static const String latestApkUrl =
-      'https://github.com/$githubRepo/releases/latest/download/Sampio-latest.apk';
+      'https://github.com/$githubRepo/releases/latest/download/KinPurse-latest.apk';
 
   /// The newer release this build could update to, or null when up to date
   /// or not checked yet. Settings listens to it to show the update button.
@@ -65,12 +65,12 @@ class UpdateService {
         _showUpdateDialog(
           context,
           latestTag,
-          'A newer version (v$latestTag) of Sampio is available with the latest improvements and fixes.',
+          'A newer version (v$latestTag) of KinPurse is available with the latest improvements and fixes.',
           latestApkUrl,
         );
       } else if (!silent && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sampio is up to date (v$currentVersion).')),
+          SnackBar(content: Text('KinPurse is up to date (v$currentVersion).')),
         );
       }
     } catch (e) {

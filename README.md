@@ -1,8 +1,8 @@
-<img src="mobile/assets/branding/sampio.png" width="96" alt="Sampio logo">
+<img src="mobile/assets/branding/kinpurse.png" width="96" alt="KinPurse logo">
 
-# Sampio — Your Money Companion
+# KinPurse — Family money, together
 
-[![Download APK](https://img.shields.io/badge/⚡_Download_Android_APK-v1.10.15-9184d9?style=for-the-badge&logo=android&logoColor=white)](https://github.com/apzscorpion/family-finance/releases/latest/download/Sampio-latest.apk)
+[![Download APK](https://img.shields.io/badge/⚡_Download_Android_APK-v1.10.15-9184d9?style=for-the-badge&logo=android&logoColor=white)](https://github.com/apzscorpion/family-finance/releases/latest/download/KinPurse-latest.apk)
 [![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-Cloud_Auth_%26_DB-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
@@ -14,11 +14,11 @@ A collaborative mobile & cloud finance tracker designed for families, couples, a
 ## 📲 Quick Download & Installation (No Play Store Needed)
 
 ### 📥 Direct Download (Always Latest Version):
-👉 **[Download Latest APK (`Sampio-latest.apk`)](https://github.com/apzscorpion/family-finance/releases/latest/download/Sampio-latest.apk)**
+👉 **[Download Latest APK (`KinPurse-latest.apk`)](https://github.com/apzscorpion/family-finance/releases/latest/download/KinPurse-latest.apk)**
 
 ### 📱 Installation Steps:
 1. Tap the download link above on your Android device.
-2. Open the downloaded `Sampio-latest.apk` file.
+2. Open the downloaded `KinPurse-latest.apk` file.
 3. If prompted, tap **"Allow from this source"** to enable APK installation.
 4. Open **Family Spend Tracker**, log in or create a family workspace, and enjoy!
 

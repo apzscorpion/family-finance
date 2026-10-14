@@ -44,12 +44,13 @@ FLUTTER_APK_DIR = MOBILE_DIR / "build" / "app" / "outputs" / "flutter-apk"
 # updater downloads releases/latest/download/<asset name>, so a name, once
 # shipped, has to keep being uploaded.
 BUILT_APK_PATH = FLUTTER_APK_DIR / "app-standard-release.apk"
-ASSET_NAME = "Sampio-latest.apk"
+ASSET_NAME = "KinPurse-latest.apk"
 # Builds up to v1.10.5 update from this name; the same APK is uploaded under
 # it too. shortcut: drop it once no phone runs v1.10.5 or older.
-LEGACY_ASSET_NAMES = ["FamilySpendTracker-latest.apk"]
+# Older installs download these names; keep publishing them.
+LEGACY_ASSET_NAMES = ["Sampio-latest.apk", "FamilySpendTracker-latest.apk"]
 DETECT_APK_PATH = FLUTTER_APK_DIR / "app-detect-release.apk"
-DETECT_ASSET_NAME = "Sampio-detect.apk"
+DETECT_ASSET_NAME = "KinPurse-detect.apk"
 
 RELEASE_DETECT = os.environ.get("RELEASE_DETECT") == "1"
 

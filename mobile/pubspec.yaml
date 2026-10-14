@@ -73,7 +73,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/branding/sampio.png
+    - assets/branding/kinpurse.png
 
   fonts:
     # The Nocturne design system specifies Inter at 400/500/600/700. Without

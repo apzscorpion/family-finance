@@ -75,7 +75,7 @@ class V3App extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PrayerController()..load()),
       ],
       child: MaterialApp(
-        title: 'Sampio',
+        title: 'KinPurse',
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: v3Theme,

@@ -1184,7 +1184,7 @@ class _PhoneCheckState extends State<_PhoneCheck> with WidgetsBindingObserver {
         (
           icon: PhRegular.warning,
           label: 'Now Bar not allowed',
-          sub: 'Tap, then allow live notifications for Sampio.',
+          sub: 'Tap, then allow live notifications for KinPurse.',
           fix: openNowBarSettings,
         ),
       if (_status['unrestricted'] == false)
@@ -1203,7 +1203,7 @@ class _PhoneCheckState extends State<_PhoneCheck> with WidgetsBindingObserver {
         (
           icon: PhRegular.moonStars,
           label: 'Full-screen alert not allowed',
-          sub: 'Tap to let Sampio show prayer alerts full screen.',
+          sub: 'Tap to let KinPurse show prayer alerts full screen.',
           fix: () => prayer.setFullScreenAlert(true),
         ),
       if (config.exactAlarms && _status['exact'] == false)
@@ -1223,7 +1223,7 @@ class _PhoneCheckState extends State<_PhoneCheck> with WidgetsBindingObserver {
               icon: PhRegular.checkCircle,
               label: 'Phone check: all set',
               sub: 'Android allows the Now Bar, alerts and background '
-                  'reminders for Sampio.',
+                  'reminders for KinPurse.',
               trailing: SizedBox.shrink(),
               last: true,
             )

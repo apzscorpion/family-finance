@@ -45,7 +45,7 @@
     <uses-permission android:name="android.permission.CAMERA" tools:node="remove"/>
 
     <application
-        android:label="Sampio"
+        android:label="KinPurse"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Fetch the Play Services OCR model at install, not on first scan -->

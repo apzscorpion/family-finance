@@ -47,7 +47,7 @@ const BillScan _empty = (
   ref: null,
 );
 
-/// Reads an image shared into the app (Android "Share → Sampio"), if one
+/// Reads an image shared into the app (Android "Share → KinPurse"), if one
 /// arrived since the last call. The cached copy is deleted after reading.
 ///
 /// The on-phone reader runs first. With an AI key set up, the screenshot

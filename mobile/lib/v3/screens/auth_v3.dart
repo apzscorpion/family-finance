@@ -6,6 +6,7 @@ import '../../theme/nocturne.dart';
 import '../phosphor_icons.dart';
 import '../sheets/update_sheet_v3.dart';
 import '../widgets/v3_motion.dart';
+import '../widgets/kinpurse_wordmark.dart';
 
 /// Sign in / sign up.
 ///
@@ -140,17 +141,13 @@ class _AuthV3State extends State<AuthV3> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(20),
-                    child: Image.asset('assets/branding/sampio.png',
-                        width: 72, height: 72, semanticLabel: 'Sampio'),
+                    child: Image.asset('assets/branding/kinpurse.png',
+                        width: 88, height: 88, semanticLabel: 'KinPurse'),
                   ),
                   const SizedBox(height: 18),
-                  const Text('Sampio',
-                      style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w500,
-                          color: Nocturne.text)),
+                  const KinPurseWordmark(size: 28),
                   const SizedBox(height: 6),
-                  const Text('Your Money Companion',
+                  const Text('Family money, together',
                       style: TextStyle(
                           fontSize: 13, color: Nocturne.neutral500)),
                   const SizedBox(height: 24),

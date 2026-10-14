@@ -299,7 +299,7 @@ class _NotesV3State extends State<NotesV3> {
                       final ok = await DataExport.share(
                         DataExport.notesMarkdown(s.notes),
                         'notes-$stamp.md',
-                        subject: 'Sampio notes',
+                        subject: 'KinPurse notes',
                       );
                       if (!ok) {
                         messenger.showSnackBar(const SnackBar(

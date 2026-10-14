@@ -1,11 +1,11 @@
 {
-    "name": "Sampio: Your Money Companion",
-    "short_name": "Sampio",
+    "name": "KinPurse: Family money, together",
+    "short_name": "KinPurse",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FEFBF3",
-    "theme_color": "#0E5C3A",
-    "description": "Sampio: Your Money Companion",
+    "background_color": "#161826",
+    "theme_color": "#161826",
+    "description": "KinPurse: Family money, together",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
