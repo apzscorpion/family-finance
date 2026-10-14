@@ -116,6 +116,7 @@ Map<String, Object?> islandPayload(PrayerConfig config, DateTime now) {
   return {
     'repeatMinutes': config.endingSoonRepeat,
     'chipName': config.islandChip != 'countdown',
+    'color': PrayerConfig.islandColors[config.islandColor] ?? 0,
     'windows': [for (final w in windows) _windowJson(w, config.islandAsk)],
     'prayers': [
       for (final p in prayers.take(10))

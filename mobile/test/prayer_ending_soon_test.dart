@@ -85,6 +85,9 @@ void main() {
         config.copyWith(islandAlways: false, islandChip: 'countdown'), morning);
     expect(off['prayers'], isEmpty);
     expect(off['chipName'], isFalse);
+    expect(on['color'], PrayerConfig.islandColors['gold']);
+    expect(islandPayload(config.copyWith(islandColor: 'none'), morning)['color'],
+        0);
   });
 
   test('settings survive a save and load', () {
@@ -104,6 +107,11 @@ void main() {
     expect(island.islandAlways, isFalse);
     expect(island.islandChip, 'countdown');
     expect(island.islandAsk, 'tell');
+    expect(PrayerConfig.fromJson(
+            config.copyWith(islandColor: 'teal').toJson()).islandColor,
+        'teal');
+    expect(PrayerConfig.fromJson(const {'island_color': 'neon'}).islandColor,
+        'gold');
     // On by default, including for configs saved before these settings.
     expect(PrayerConfig.fromJson(const {}).islandAlways, isTrue);
     expect(PrayerConfig.fromJson(const {}).endingSoon, isTrue);

@@ -64,6 +64,44 @@ class PrayerSettingsV3 extends StatelessWidget {
                 ),
               ),
               _Row(
+                icon: PhRegular.circle,
+                label: 'Chip colour',
+                sub: 'Its background, where your phone supports it',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final e in PrayerConfig.islandColors.entries)
+                      GestureDetector(
+                        onTap: () => prayer
+                            .update(config.copyWith(islandColor: e.key)),
+                        child: Semantics(
+                          label: '${e.key} chip',
+                          selected: config.islandColor == e.key,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            margin: const EdgeInsets.only(left: 6),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: e.value == 0 ? null : Color(e.value),
+                              border: Border.all(
+                                color: config.islandColor == e.key
+                                    ? Nocturne.text
+                                    : Nocturne.neutral700,
+                                width: config.islandColor == e.key ? 2 : 1,
+                              ),
+                            ),
+                            child: e.value == 0
+                                ? const Icon(PhRegular.x,
+                                    size: 12, color: Nocturne.neutral500)
+                                : null,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              _Row(
                 icon: PhRegular.bellRinging,
                 label: 'Ask before a prayer ends',
                 sub: 'Pops up until you mark it prayed',

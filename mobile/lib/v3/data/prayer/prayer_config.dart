@@ -239,6 +239,19 @@ class PrayerConfig {
   /// How the ending-soon reminder words it: 'ask', 'remind' or 'tell'.
   final String islandAsk;
 
+  /// The chip's background, a key of [islandColors].
+  final String islandColor;
+
+  /// Chip backgrounds on offer; 'none' leaves the system's plain chip.
+  static const islandColors = {
+    'gold': 0xFFC9963F,
+    'teal': 0xFF1E8C99,
+    'purple': 0xFF6E5FC8,
+    'green': 0xFF2E8B57,
+    'rose': 0xFFC0506A,
+    'none': 0,
+  };
+
   const PrayerConfig({
     this.enabled = false,
     this.cityId,
@@ -280,6 +293,7 @@ class PrayerConfig {
     this.islandAlways = true,
     this.islandChip = 'name',
     this.islandAsk = 'ask',
+    this.islandColor = 'gold',
   });
 
   bool notifyFor(PrayerSlot slot) => notify[slot.name] ?? false;
@@ -322,6 +336,7 @@ class PrayerConfig {
     bool? islandAlways,
     String? islandChip,
     String? islandAsk,
+    String? islandColor,
   }) =>
       PrayerConfig(
         enabled: enabled ?? this.enabled,
@@ -352,6 +367,7 @@ class PrayerConfig {
         islandAlways: islandAlways ?? this.islandAlways,
         islandChip: islandChip ?? this.islandChip,
         islandAsk: islandAsk ?? this.islandAsk,
+        islandColor: islandColor ?? this.islandColor,
       );
 
   /// Applies a bundled city, dropping any previous device fix.
@@ -409,6 +425,7 @@ class PrayerConfig {
         'island_always': islandAlways,
         'island_chip': islandChip,
         'island_ask': islandAsk,
+        'island_color': islandColor,
       };
 
   /// Every field is read defensively. This blob is on disk across upgrades and
@@ -461,6 +478,9 @@ class PrayerConfig {
       islandAsk: const ['ask', 'remind', 'tell'].contains(j['island_ask'])
           ? j['island_ask'] as String
           : 'ask',
+      islandColor: islandColors.containsKey(j['island_color'])
+          ? j['island_color'] as String
+          : 'gold',
     );
   }
 

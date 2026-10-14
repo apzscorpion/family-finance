@@ -57,6 +57,7 @@ object PrayerNowBar {
             .putString("prayers", JSONArray(prayers.map { JSONObject(it) }).toString())
             .putInt("repeat", ((args["repeatMinutes"] as? Int) ?: 5).coerceIn(1, 30))
             .putBoolean("chipName", (args["chipName"] as? Boolean) ?: true)
+            .putLong("color", ((args["color"] as? Number) ?: 0).toLong())
             // Forget "prayed" marks for windows that are gone.
             .putStringSet("done", prefs.getStringSet("done", emptySet())!!.intersect(keys))
             .apply()
@@ -160,6 +161,9 @@ object PrayerNowBar {
     private fun base(ctx: Context, channel: String, title: String, text: String, until: Long) =
         NotificationCompat.Builder(ctx, channel)
             .setSmallIcon(R.drawable.ic_notification)
+            // The chip's background (and the accent in the shade). Not
+            // setColorized: that would stop Android promoting it.
+            .setColor(prefs(ctx).getLong("color", 0L).toInt())
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -194,9 +198,10 @@ object PrayerNowBar {
     }
 
     private fun channel(ctx: Context, id: String, name: String, importance: Int) {
-        val nm = manager(ctx)
-        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(id) == null) {
-            nm.createNotificationChannel(NotificationChannel(id, name, importance))
+        // Always (re)create: it is a no-op for an existing channel, and a
+        // "found but deleted" check misses channels wiped with the app data.
+        if (Build.VERSION.SDK_INT >= 26) {
+            manager(ctx).createNotificationChannel(NotificationChannel(id, name, importance))
         }
     }
 
