@@ -13,22 +13,24 @@ import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import org.json.JSONArray
 import org.json.JSONObject
-import java.text.DateFormat
-import java.util.Date
 
 /**
- * "Prayer ending soon" reminder, shown as an Android 16 Live Update (the
- * Now Bar on Samsung, the status-bar chip elsewhere) with a countdown to the
- * end of the prayer's time, and a plain ongoing notification on older
- * Android. It re-alerts every few minutes until "I prayed" or the time ends.
+ * The prayer island: an Android 16 Live Update (Samsung's Now Bar, the
+ * status-bar pill elsewhere; a plain ongoing notification on older Android).
  *
- * Dart computes the windows (see prayer_ending_soon.dart) and hands them
- * over; from then on it runs on alarms, so it works with the app closed and
- * is re-armed after a reboot from what is stored here.
+ * - All day (if on): the next prayer with a countdown, silently.
+ * - N minutes before a prayer's time ends: a reminder ("Have you prayed
+ *   Asr?") with Prayed / Not-yet buttons that re-alerts every few minutes
+ *   until marked or the time ends.
+ *
+ * Dart computes everything (prayer_ending_soon.dart, islandPayload) and
+ * hands it over; this runs it on alarms, so it works with the app closed
+ * and is re-armed after a reboot from what is stored here.
  */
 object PrayerNowBar {
     private const val PREFS = "prayer_nowbar"
-    private const val CHANNEL = "ff_prayer_ending"
+    private const val CHANNEL_ASK = "ff_prayer_ending"
+    private const val CHANNEL_ISLAND = "ff_prayer_island"
     // In the prayer block of AppNotifications' id ranges, unused there.
     private const val NOTIFICATION_ID = 300100
     const val ACTION_TICK = "com.familyfinance.prayer.TICK"
@@ -36,18 +38,25 @@ object PrayerNowBar {
     const val ACTION_LATER = "com.familyfinance.prayer.LATER"
 
     private data class Window(
-        val key: String, val name: String, val start: Long, val end: Long, val next: String,
+        val key: String, val name: String, val start: Long, val end: Long,
+        val title: String, val text: String, val done: String, val later: String,
     )
 
-    /** Stores the windows and repeat interval from Dart, then re-arms. */
-    fun schedule(ctx: Context, windows: List<Map<String, Any?>>, repeatMinutes: Int) {
-        val arr = JSONArray()
-        for (w in windows) arr.put(JSONObject(w))
+    private data class Prayer(val name: String, val at: Long, val title: String)
+
+    /** Stores what Dart computed, then re-arms. */
+    fun schedule(ctx: Context, args: Map<String, Any?>) {
+        @Suppress("UNCHECKED_CAST")
+        val windows = (args["windows"] as? List<Map<String, Any?>>).orEmpty()
+        @Suppress("UNCHECKED_CAST")
+        val prayers = (args["prayers"] as? List<Map<String, Any?>>).orEmpty()
         val keys = windows.map { it["key"].toString() }.toSet()
         val prefs = prefs(ctx)
         prefs.edit()
-            .putString("windows", arr.toString())
-            .putInt("repeat", repeatMinutes.coerceIn(1, 30))
+            .putString("windows", JSONArray(windows.map { JSONObject(it) }).toString())
+            .putString("prayers", JSONArray(prayers.map { JSONObject(it) }).toString())
+            .putInt("repeat", ((args["repeatMinutes"] as? Int) ?: 5).coerceIn(1, 30))
+            .putBoolean("chipName", (args["chipName"] as? Boolean) ?: true)
             // Forget "prayed" marks for windows that are gone.
             .putStringSet("done", prefs.getStringSet("done", emptySet())!!.intersect(keys))
             .apply()
@@ -56,8 +65,10 @@ object PrayerNowBar {
 
     /** Alarm fired: re-alert during a window, then set the next alarm. */
     fun tick(ctx: Context) {
-        val active = active(ctx)
-        if (active != null) post(ctx, active, alert = true)
+        val snoozed = System.currentTimeMillis() < prefs(ctx).getLong("snoozedUntil", 0L)
+        if (!snoozed) prefs(ctx).edit().remove("snoozedUntil").apply()
+        val active = if (snoozed) null else active(ctx)
+        if (active != null) postAsk(ctx, active, alert = true)
         arm(ctx, alertIfNew = false, skipPost = active != null)
     }
 
@@ -65,38 +76,53 @@ object PrayerNowBar {
         val prefs = prefs(ctx)
         prefs.edit()
             .putStringSet("done", prefs.getStringSet("done", emptySet())!! + key)
+            .remove("snoozedUntil")
             .apply()
-        manager(ctx).cancel(NOTIFICATION_ID)
         arm(ctx, alertIfNew = false)
     }
 
-    /** "Not yet": stay in the Now Bar quietly until the next re-alert. */
+    /** "Not yet": put the question away until the snooze gap has passed. */
     fun later(ctx: Context) {
-        active(ctx)?.let { post(ctx, it, alert = false) }
+        val repeatMs = prefs(ctx).getInt("repeat", 5) * 60_000L
+        prefs(ctx).edit().putLong("snoozedUntil", System.currentTimeMillis() + repeatMs).apply()
+        arm(ctx, alertIfNew = false)
     }
 
     /**
-     * Shows or clears the reminder for now and sets one alarm: the next
-     * re-alert inside the current window, else the next window's start.
+     * Shows what belongs on screen now (reminder, else island, else
+     * nothing) and sets one alarm for the next change: a re-alert inside the
+     * current window, the next window's start, or the next prayer time.
      */
     fun arm(ctx: Context, alertIfNew: Boolean, skipPost: Boolean = false) {
         val now = System.currentTimeMillis()
         val active = active(ctx)
-        if (active == null) {
-            manager(ctx).cancel(NOTIFICATION_ID)
-        } else if (!skipPost) {
-            val showing = manager(ctx).activeNotifications.any { it.id == NOTIFICATION_ID }
-            post(ctx, active, alert = alertIfNew && !showing)
+        val next = prayers(ctx).firstOrNull { it.at > now }
+        val snoozedUntil = prefs(ctx).getLong("snoozedUntil", 0L)
+        val snoozed = active != null && now < snoozedUntil
+        when {
+            skipPost -> {}
+            snoozed && next != null -> postIsland(ctx, next)
+            snoozed -> manager(ctx).cancel(NOTIFICATION_ID)
+            active != null -> {
+                val showing = manager(ctx).activeNotifications
+                    .any { it.id == NOTIFICATION_ID && it.notification.channelId == CHANNEL_ASK }
+                postAsk(ctx, active, alert = alertIfNew && !showing)
+            }
+            next != null -> postIsland(ctx, next)
+            else -> manager(ctx).cancel(NOTIFICATION_ID)
         }
         val repeatMs = prefs(ctx).getInt("repeat", 5) * 60_000L
-        val nextAt = when {
-            active != null && now + repeatMs < active.end -> now + repeatMs
-            else -> pending(ctx).map { it.start }.filter { it > now }.minOrNull()
-        }
+        val candidates = listOfNotNull(
+            if (snoozed) snoozedUntil else null,
+            if (active != null && !snoozed && now + repeatMs < active.end) now + repeatMs else null,
+            active?.end,
+            pending(ctx).map { it.start }.filter { it > now }.minOrNull(),
+            next?.at,
+        )
         val pi = tickIntent(ctx)
         val alarms = ctx.getSystemService(AlarmManager::class.java)
         alarms.cancel(pi)
-        if (nextAt == null) return
+        val nextAt = candidates.filter { it > now }.minOrNull() ?: return
         val exact = Build.VERSION.SDK_INT < 31 || alarms.canScheduleExactAlarms()
         if (exact) {
             alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextAt, pi)
@@ -109,52 +135,69 @@ object PrayerNowBar {
     fun canPromote(ctx: Context): Boolean =
         Build.VERSION.SDK_INT < 36 || manager(ctx).canPostPromotedNotifications()
 
-    private fun post(ctx: Context, w: Window, alert: Boolean) {
-        val nm = manager(ctx)
-        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null) {
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL, "Prayer ending soon", NotificationManager.IMPORTANCE_HIGH)
-                    .apply { description = "Reminds you to pray before a prayer's time ends" },
-            )
-        }
-        val time = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(w.end))
-        val text = if (w.next.isNotEmpty()) {
-            "Have you prayed ${w.name}? ${w.next} begins at $time."
-        } else {
-            "Have you prayed ${w.name}? Its time ends at $time."
-        }
-        val open = PendingIntent.getActivity(
-            ctx, 0,
-            Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        val builder = NotificationCompat.Builder(ctx, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("${w.name} ends soon")
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+    private fun postAsk(ctx: Context, w: Window, alert: Boolean) {
+        channel(ctx, CHANNEL_ASK, "Prayer ending soon", NotificationManager.IMPORTANCE_HIGH)
+        val builder = base(ctx, CHANNEL_ASK, w.title, w.text, w.end)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setOnlyAlertOnce(!alert)
+            .addAction(0, w.done, action(ctx, ACTION_DONE, w.key, 1))
+            .addAction(0, w.later, action(ctx, ACTION_LATER, w.key, 2))
+        notify(ctx, builder, w.name)
+    }
+
+    private fun postIsland(ctx: Context, p: Prayer) {
+        // Low importance: it never makes a sound; the chip and card update
+        // silently as the day goes on.
+        channel(ctx, CHANNEL_ISLAND, "Prayer island", NotificationManager.IMPORTANCE_LOW)
+        val builder = base(ctx, CHANNEL_ISLAND, p.title, "Next prayer", p.at)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOnlyAlertOnce(true)
+        notify(ctx, builder, p.name)
+    }
+
+    private fun base(ctx: Context, channel: String, title: String, text: String, until: Long) =
+        NotificationCompat.Builder(ctx, channel)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
-            .setOnlyAlertOnce(!alert)
-            // Counts down to the end of the prayer's time, here and in the chip.
-            .setWhen(w.end)
+            // Counts down to [until], here and in the status-bar chip.
+            .setWhen(until)
             .setShowWhen(true)
             .setUsesChronometer(true)
             // Ask for Live Update promotion (Now Bar / status-bar chip) on
             // Android 16. Set as the extra the platform reads, since the
             // setter isn't in the SDK this app compiles against.
             .addExtras(Bundle().apply { putBoolean("android.requestPromotedOngoing", true) })
-            .setTimeoutAfter((w.end - System.currentTimeMillis()).coerceAtLeast(1_000L))
-            .setContentIntent(open)
-            .addAction(0, "I prayed", action(ctx, ACTION_DONE, w.key, 1))
-            .addAction(0, "Not yet", action(ctx, ACTION_LATER, w.key, 2))
-        // Platform-only bits: count down rather than up, and the chip's label.
+            .setTimeoutAfter((until - System.currentTimeMillis() + 60_000L).coerceAtLeast(1_000L))
+            .setContentIntent(
+                PendingIntent.getActivity(
+                    ctx, 0,
+                    Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                ),
+            )
+
+    private fun notify(ctx: Context, builder: NotificationCompat.Builder, chipName: String) {
+        // Platform-only bits: count down rather than up, and the chip's label
+        // (left out to make the chip show the countdown instead).
         val platform = Notification.Builder.recoverBuilder(ctx, builder.build())
             .setChronometerCountDown(true)
-        if (Build.VERSION.SDK_INT >= 36) platform.setShortCriticalText(w.name)
-        nm.notify(NOTIFICATION_ID, platform.build())
+        if (Build.VERSION.SDK_INT >= 36 && prefs(ctx).getBoolean("chipName", true)) {
+            platform.setShortCriticalText(chipName)
+        }
+        manager(ctx).notify(NOTIFICATION_ID, platform.build())
+    }
+
+    private fun channel(ctx: Context, id: String, name: String, importance: Int) {
+        val nm = manager(ctx)
+        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(id) == null) {
+            nm.createNotificationChannel(NotificationChannel(id, name, importance))
+        }
     }
 
     private fun windows(ctx: Context): List<Window> {
@@ -162,10 +205,19 @@ object PrayerNowBar {
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
             Window(
-                o.getString("key"), o.getString("name"),
-                o.getLong("start"), o.getLong("end"), o.optString("next"),
+                o.getString("key"), o.getString("name"), o.getLong("start"), o.getLong("end"),
+                o.optString("title"), o.optString("text"),
+                o.optString("done", "Prayed"), o.optString("later", "Later"),
             )
         }
+    }
+
+    private fun prayers(ctx: Context): List<Prayer> {
+        val arr = JSONArray(prefs(ctx).getString("prayers", "[]"))
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            Prayer(o.getString("name"), o.getLong("at"), o.optString("title"))
+        }.sortedBy { it.at }
     }
 
     /** Windows not marked prayed. */

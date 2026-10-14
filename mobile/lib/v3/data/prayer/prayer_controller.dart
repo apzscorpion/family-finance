@@ -54,6 +54,7 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
     _loaded = true;
     _recompute();
     notifyListeners();
+    await prayer_platform.syncPrayerIsland(_config);
     // Reconcile the alert window with whatever was restored from disk.
     if (_config.enabled) {
       await prayer_platform.syncPrayerNotifications(_config);
@@ -89,6 +90,7 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
 
     await PrayerConfigStore.save(next);
+    await prayer_platform.syncPrayerIsland(next);
 
     if (!next.enabled) {
       if (wasEnabled) await prayer_platform.cancelAllPrayerNotifications();
@@ -188,6 +190,7 @@ class PrayerController extends ChangeNotifier with WidgetsBindingObserver {
       // The clock moved while we were away and the window may have drained.
       _recompute();
       notifyListeners();
+      prayer_platform.syncPrayerIsland(_config);
       if (_config.enabled) {
         prayer_platform.syncPrayerNotifications(_config);
         // The prayer may well have rolled over while the app was away, and

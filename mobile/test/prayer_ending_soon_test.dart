@@ -57,10 +57,34 @@ void main() {
     expect(maghrib.start, today[PrayerSlot.maghrib].time);
   });
 
-  test('off, or prayer times off: no windows', () {
+  test('runs without the prayer-alerts switch; only its own switch stops it',
+      () {
     expect(endingSoonWindows(config.copyWith(endingSoon: false), morning),
         isEmpty);
-    expect(endingSoonWindows(const PrayerConfig(), morning), isEmpty);
+    expect(endingSoonWindows(const PrayerConfig(), morning), isNotEmpty);
+  });
+
+  test('question wording follows the chosen style', () {
+    final w = todays(PrayerSlot.dhuhr, endingSoonWindows(config, morning));
+    expect(endingSoonText(w, 'ask').title, 'Dhuhr ends soon');
+    expect(endingSoonText(w, 'ask').text, startsWith('Have you prayed Dhuhr?'));
+    expect(endingSoonText(w, 'ask').done, 'I prayed');
+    expect(endingSoonText(w, 'remind').title, 'Pray Dhuhr before it ends');
+    expect(endingSoonText(w, 'tell').title, startsWith('Dhuhr ends at '));
+  });
+
+  test('island payload: next prayers when on, none when off', () {
+    final on = islandPayload(config, morning);
+    final prayers = on['prayers'] as List;
+    expect(prayers, hasLength(10));
+    expect((prayers.first as Map)['name'], 'Fajr');
+    expect(on['chipName'], isTrue);
+    expect((on['windows'] as List).first, containsPair('done', 'I prayed'));
+
+    final off = islandPayload(
+        config.copyWith(islandAlways: false, islandChip: 'countdown'), morning);
+    expect(off['prayers'], isEmpty);
+    expect(off['chipName'], isFalse);
   });
 
   test('settings survive a save and load', () {
@@ -74,5 +98,14 @@ void main() {
     expect(back.endingSoonRepeat, 3);
     expect(back.endingSoonOn(PrayerSlot.isha), isFalse);
     expect(back.endingSoonOn(PrayerSlot.asr), isTrue);
+    final island = PrayerConfig.fromJson(
+        config.copyWith(islandAlways: false, islandChip: 'countdown',
+            islandAsk: 'tell').toJson());
+    expect(island.islandAlways, isFalse);
+    expect(island.islandChip, 'countdown');
+    expect(island.islandAsk, 'tell');
+    // On by default, including for configs saved before these settings.
+    expect(PrayerConfig.fromJson(const {}).islandAlways, isTrue);
+    expect(PrayerConfig.fromJson(const {}).endingSoon, isTrue);
   });
 }

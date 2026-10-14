@@ -5,16 +5,14 @@ import 'prayer_ending_soon.dart';
 import 'prayer_notifier.dart';
 import 'prayer_service.dart';
 
-Future<void> syncPrayerNotifications(PrayerConfig config) async {
-  await PrayerNotifier.sync(config);
-  await syncEndingSoon(config);
-}
+Future<void> syncPrayerNotifications(PrayerConfig config) =>
+    PrayerNotifier.sync(config);
 
-Future<void> cancelAllPrayerNotifications() async {
-  await PrayerNotifier.cancelAll();
-  // Disabled config: no windows, so Android clears its reminder too.
-  await syncEndingSoon(const PrayerConfig());
-}
+Future<void> cancelAllPrayerNotifications() => PrayerNotifier.cancelAll();
+
+/// The Now Bar island and ending-soon reminder; runs whether or not the
+/// prayer alerts are on.
+Future<void> syncPrayerIsland(PrayerConfig config) => syncEndingSoon(config);
 
 Future<void> postPrayerBanner({
   required PrayerConfig config,

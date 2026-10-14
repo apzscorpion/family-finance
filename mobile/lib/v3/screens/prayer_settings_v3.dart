@@ -37,6 +37,135 @@ class PrayerSettingsV3 extends StatelessWidget {
           ),
         ),
 
+        const _Kicker('Now Bar'),
+        _Card(
+          child: Column(
+            children: [
+              _Row(
+                icon: PhRegular.moonStars,
+                label: 'Prayer island',
+                sub: 'The next prayer and a countdown in the Now Bar, status '
+                    'bar and lock screen · ${config.locationLabel}',
+                trailing: V3SettingsSwitch(
+                  value: config.islandAlways,
+                  onChanged: (on) =>
+                      prayer.update(config.copyWith(islandAlways: on)),
+                ),
+              ),
+              _Row(
+                icon: PhRegular.circle,
+                label: 'Chip shows',
+                sub: 'The small pill next to the clock',
+                trailing: _MiniSeg(
+                  options: const ['Prayer', 'Countdown'],
+                  selected: config.islandChip == 'countdown' ? 1 : 0,
+                  onChanged: (i) => prayer.update(config.copyWith(
+                      islandChip: i == 1 ? 'countdown' : 'name')),
+                ),
+              ),
+              _Row(
+                icon: PhRegular.bellRinging,
+                label: 'Ask before a prayer ends',
+                sub: 'Pops up until you mark it prayed',
+                trailing: V3SettingsSwitch(
+                  value: config.endingSoon,
+                  onChanged: (on) =>
+                      prayer.update(config.copyWith(endingSoon: on)),
+                ),
+                last: !config.endingSoon,
+              ),
+              if (config.endingSoon) ...[
+                _Row(
+                  icon: PhRegular.clock,
+                  label: 'When to show',
+                  sub: 'Minutes before the prayer time ends',
+                  trailing: _Stepper(
+                    value: config.endingSoonLead,
+                    min: 5,
+                    max: 90,
+                    step: 5,
+                    suffix: 'm',
+                    onChanged: (v) =>
+                        prayer.update(config.copyWith(endingSoonLead: v)),
+                  ),
+                ),
+                _Row(
+                  icon: PhRegular.arrowsClockwise,
+                  label: 'Snooze gap',
+                  sub: 'Asks again after this long, until you mark it prayed',
+                  trailing: _Stepper(
+                    value: config.endingSoonRepeat,
+                    min: 1,
+                    max: 30,
+                    step: 1,
+                    suffix: 'm',
+                    onChanged: (v) =>
+                        prayer.update(config.copyWith(endingSoonRepeat: v)),
+                  ),
+                ),
+                _Row(
+                  icon: PhRegular.chatCircleDots,
+                  label: 'Question',
+                  sub: switch (config.islandAsk) {
+                    'remind' => '"Pray Asr before it ends"',
+                    'tell' => '"Asr ends at 3:35 PM"',
+                    _ => '"Have you prayed Asr?"',
+                  },
+                  trailing: _MiniSeg(
+                    options: const ['Ask', 'Remind', 'Tell'],
+                    selected: switch (config.islandAsk) {
+                      'remind' => 1,
+                      'tell' => 2,
+                      _ => 0,
+                    },
+                    onChanged: (i) => prayer.update(config.copyWith(
+                        islandAsk: const ['ask', 'remind', 'tell'][i])),
+                  ),
+                ),
+                for (final slot in PrayerSlot.values.where((s) => s.isPrayer))
+                  _Row(
+                    icon: PhRegular.dotOutline,
+                    label: slot.label,
+                    sub: switch (slot) {
+                      PrayerSlot.fajr => 'Ends at sunrise',
+                      PrayerSlot.isha => 'Ends at the middle of the night',
+                      _ => null,
+                    },
+                    trailing: V3SettingsSwitch(
+                      value: config.endingSoonOn(slot),
+                      onChanged: (on) => prayer.update(config.copyWith(
+                        endingSoonFor: {
+                          ...config.endingSoonFor,
+                          slot.name: on,
+                        },
+                      )),
+                    ),
+                    last: slot == PrayerSlot.isha,
+                  ),
+              ],
+            ],
+          ),
+        ),
+        _Card(
+          child: _Row(
+            icon: PhRegular.clock,
+            label: 'Exact alerts',
+            sub: config.exactAlarms
+                ? 'Alerts and Now Bar reminders arrive on the exact minute. '
+                    'Battery: the phone wakes for a moment at each one, '
+                    'about 30 times a day: well under 1%.'
+                : 'Off: Android may deliver them a few minutes late, '
+                    'grouped with other apps\' wake-ups. Slightly less '
+                    'battery, but less punctual.',
+            trailing: V3SettingsSwitch(
+              value: config.exactAlarms,
+              onChanged: (on) => _setExact(context, on),
+            ),
+            last: true,
+          ),
+        ),
+        const _PhoneCheck(),
+
         if (config.enabled) ...[
           const _Kicker('Location'),
           _Card(
@@ -122,19 +251,6 @@ class PrayerSettingsV3 extends StatelessWidget {
 
           _Card(
             child: _Row(
-              icon: PhRegular.clock,
-              label: 'Exact alerts',
-              sub: config.exactAlarms
-                  ? 'Fires at the exact minute'
-                  : 'Fires within a few minutes — easier on battery',
-              trailing: V3SettingsSwitch(
-                value: config.exactAlarms,
-                onChanged: (on) => _setExact(context, on),
-              ),
-            ),
-          ),
-          _Card(
-            child: _Row(
               icon: PhRegular.moonStars,
               label: 'Full-screen alert',
               sub: 'Shows the prayer name full screen, even when locked',
@@ -145,94 +261,6 @@ class PrayerSettingsV3 extends StatelessWidget {
               last: true,
             ),
           ),
-
-          const _Kicker('Ending soon'),
-          _Card(
-            child: Column(
-              children: [
-                _Row(
-                  icon: PhRegular.bellRinging,
-                  label: 'Remind before a prayer ends',
-                  sub: 'In the Now Bar with a countdown, repeating until '
-                      'you tap "I prayed"',
-                  trailing: V3SettingsSwitch(
-                    value: config.endingSoon,
-                    onChanged: (on) =>
-                        prayer.update(config.copyWith(endingSoon: on)),
-                  ),
-                  last: !config.endingSoon,
-                ),
-                if (config.endingSoon) ...[
-                  _Row(
-                    icon: PhRegular.clock,
-                    label: 'Start',
-                    sub: 'Minutes before the prayer time ends',
-                    trailing: _Stepper(
-                      value: config.endingSoonLead,
-                      min: 5,
-                      max: 90,
-                      step: 5,
-                      suffix: 'm',
-                      onChanged: (v) =>
-                          prayer.update(config.copyWith(endingSoonLead: v)),
-                    ),
-                  ),
-                  _Row(
-                    icon: PhRegular.arrowsClockwise,
-                    label: 'Remind again every',
-                    sub: 'Until you mark it prayed',
-                    trailing: _Stepper(
-                      value: config.endingSoonRepeat,
-                      min: 1,
-                      max: 30,
-                      step: 1,
-                      suffix: 'm',
-                      onChanged: (v) =>
-                          prayer.update(config.copyWith(endingSoonRepeat: v)),
-                    ),
-                  ),
-                  for (final slot in PrayerSlot.values.where((s) => s.isPrayer))
-                    _Row(
-                      icon: PhRegular.moonStars,
-                      label: slot.label,
-                      sub: switch (slot) {
-                        PrayerSlot.fajr => 'Ends at sunrise',
-                        PrayerSlot.isha => 'Ends at the middle of the night',
-                        _ => null,
-                      },
-                      trailing: V3SettingsSwitch(
-                        value: config.endingSoonOn(slot),
-                        onChanged: (on) => prayer.update(config.copyWith(
-                          endingSoonFor: {
-                            ...config.endingSoonFor,
-                            slot.name: on,
-                          },
-                        )),
-                      ),
-                      last: slot == PrayerSlot.isha,
-                    ),
-                ],
-              ],
-            ),
-          ),
-          if (config.endingSoon)
-            FutureBuilder<bool>(
-              future: canShowInNowBar(),
-              builder: (context, snap) => snap.data == false
-                  ? _Card(
-                      child: _Row(
-                        icon: PhRegular.warning,
-                        label: 'Allow in Now Bar',
-                        sub: 'Android needs your OK to show it in the Now Bar '
-                            'and status bar',
-                        trailing: const Icon(PhRegular.caretRight,
-                            size: 16, color: Nocturne.neutral500),
-                        onTap: openNowBarSettings,
-                        last: true,
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-            ),
 
           const _Kicker('Banner'),
           _Card(
@@ -1093,4 +1121,126 @@ class _Row extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// What Android or the phone is blocking, each with a tap to fix it.
+/// Re-checks when the user comes back from system settings.
+class _PhoneCheck extends StatefulWidget {
+  const _PhoneCheck();
+
+  @override
+  State<_PhoneCheck> createState() => _PhoneCheckState();
+}
+
+class _PhoneCheckState extends State<_PhoneCheck> with WidgetsBindingObserver {
+  Map<String, Object?> _status = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _load();
+  }
+
+  Future<void> _load() async {
+    final s = await islandStatus();
+    if (mounted) setState(() => _status = s);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_status.isEmpty) return const SizedBox.shrink();
+    final prayer = context.watch<PrayerController>();
+    final config = prayer.config;
+    final sdk = _status['sdk'] as int? ?? 0;
+    final maker = '${_status['maker']}'.toLowerCase();
+    // realme, OPPO and OnePlus (ColorOS) stop sideloaded apps in the
+    // background unless "Auto launch" is on.
+    final colorOs = ['realme', 'oppo', 'oneplus'].any(maker.contains);
+    const caret =
+        Icon(PhRegular.caretRight, size: 16, color: Nocturne.neutral500);
+
+    final problems = <({IconData icon, String label, String sub, VoidCallback? fix})>[
+      if (sdk < 36)
+        (
+          icon: PhRegular.info,
+          label: 'Now Bar needs Android 16',
+          sub: 'This phone runs Android ${_status['release']}, so the island '
+              'shows as a normal notification.',
+          fix: null,
+        ),
+      if (sdk >= 36 && _status['promote'] == false)
+        (
+          icon: PhRegular.warning,
+          label: 'Now Bar not allowed',
+          sub: 'Tap, then allow live notifications for Sampio.',
+          fix: openNowBarSettings,
+        ),
+      if (_status['unrestricted'] == false)
+        (
+          icon: PhRegular.batteryHigh,
+          label: 'Battery restriction',
+          sub: colorOs
+              ? 'Tap → Battery: allow background activity, and turn on '
+                  'Auto launch. Without it the Prayed / Not yet buttons and '
+                  'the repeats can stop working.'
+              : 'Tap → Battery → Unrestricted. Without it the buttons and '
+                  'repeats can stop working.',
+          fix: openAppSettings,
+        ),
+      if (config.fullScreenAlert && _status['fullScreen'] == false)
+        (
+          icon: PhRegular.moonStars,
+          label: 'Full-screen alert not allowed',
+          sub: 'Tap to let Sampio show prayer alerts full screen.',
+          fix: () => prayer.setFullScreenAlert(true),
+        ),
+      if (config.exactAlarms && _status['exact'] == false)
+        (
+          icon: PhRegular.clock,
+          label: 'Exact alarms not allowed',
+          sub: 'Tap to allow, so reminders arrive on the minute.',
+          fix: () => prayer.setExactAlarms(true),
+        ),
+    ];
+
+    return _Card(
+      child: Column(
+        children: [
+          if (problems.isEmpty)
+            const _Row(
+              icon: PhRegular.checkCircle,
+              label: 'Phone check: all set',
+              sub: 'Android allows the Now Bar, alerts and background '
+                  'reminders for Sampio.',
+              trailing: SizedBox.shrink(),
+              last: true,
+            )
+          else
+            for (var i = 0; i < problems.length; i++)
+              _Row(
+                icon: problems[i].icon,
+                label: problems[i].label,
+                sub: problems[i].sub,
+                trailing: problems[i].fix == null
+                    ? const SizedBox.shrink()
+                    : caret,
+                onTap: problems[i].fix,
+                last: i == problems.length - 1,
+              ),
+        ],
+      ),
+    );
+  }
 }

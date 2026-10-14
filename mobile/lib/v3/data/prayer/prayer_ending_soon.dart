@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 import '../../../services/app_log.dart';
 import 'prayer_config.dart';
@@ -24,7 +25,7 @@ List<EndingWindow> endingSoonWindows(
   DateTime now, {
   int days = 2,
 }) {
-  if (!config.enabled || !config.endingSoon) return const [];
+  if (!config.endingSoon) return const [];
   final out = <EndingWindow>[];
   final today = DateTime(now.year, now.month, now.day);
   // From yesterday: its Isha can run past midnight at high latitudes.
@@ -67,25 +68,85 @@ List<EndingWindow> endingSoonWindows(
 
 const _channel = MethodChannel('com.familyfinance/prayer_nowbar');
 
-/// Hands the windows to Android, which shows and repeats the reminder with
-/// alarms, so it works with the app closed and survives a restart.
+/// The wording of an ending-soon reminder in the user's chosen style.
+({String title, String text, String done, String later}) endingSoonText(
+  EndingWindow w,
+  String style,
+) {
+  final name = w.slot.label;
+  final at = DateFormat.jm().format(w.end);
+  final then = w.nextSlot == null
+      ? 'Its time ends at $at.'
+      : '${w.nextSlot!.label} begins at $at.';
+  return switch (style) {
+    'remind' => (
+        title: 'Pray $name before it ends',
+        text: '$name time ends at $at.',
+        done: 'Prayed',
+        later: 'Later',
+      ),
+    'tell' => (
+        title: '$name ends at $at',
+        text: then,
+        done: 'Prayed',
+        later: 'Later',
+      ),
+    _ => (
+        title: '$name ends soon',
+        text: 'Have you prayed $name? $then',
+        done: 'I prayed',
+        later: 'Not yet',
+      ),
+  };
+}
+
+/// Everything Android needs, computed here so it stays one pure, testable
+/// function: the ending-soon windows and, for the always-on island, the
+/// next ten prayers.
+Map<String, Object?> islandPayload(PrayerConfig config, DateTime now) {
+  final windows = endingSoonWindows(config, now);
+  final prayers = <PrayerTime>[];
+  if (config.islandAlways) {
+    for (var d = 0; d < 3 && prayers.length < 10; d++) {
+      final day = PrayerService.day(
+          config, DateTime(now.year, now.month, now.day + d));
+      prayers.addAll(day.prayersOnly.where((p) => p.time.isAfter(now)));
+    }
+  }
+  return {
+    'repeatMinutes': config.endingSoonRepeat,
+    'chipName': config.islandChip != 'countdown',
+    'windows': [for (final w in windows) _windowJson(w, config.islandAsk)],
+    'prayers': [
+      for (final p in prayers.take(10))
+        {
+          'name': p.slot.label,
+          'at': p.time.millisecondsSinceEpoch,
+          'title': '${p.slot.label} at ${DateFormat.jm().format(p.time)}',
+        },
+    ],
+  };
+}
+
+Map<String, Object?> _windowJson(EndingWindow w, String style) {
+  final t = endingSoonText(w, style);
+  return {
+    'key': '${w.slot.name}@${w.start.year}-${w.start.month}-${w.start.day}',
+    'name': w.slot.label,
+    'start': w.start.millisecondsSinceEpoch,
+    'end': w.end.millisecondsSinceEpoch,
+    'title': t.title,
+    'text': t.text,
+    'done': t.done,
+    'later': t.later,
+  };
+}
+
+/// Hands the island to Android, which shows and repeats it with alarms, so
+/// it works with the app closed and survives a restart.
 Future<void> syncEndingSoon(PrayerConfig config) async {
-  final windows = endingSoonWindows(config, DateTime.now());
   try {
-    await _channel.invokeMethod('schedule', {
-      'repeatMinutes': config.endingSoonRepeat,
-      'windows': [
-        for (final w in windows)
-          {
-            'key':
-                '${w.slot.name}@${w.start.year}-${w.start.month}-${w.start.day}',
-            'name': w.slot.label,
-            'start': w.start.millisecondsSinceEpoch,
-            'end': w.end.millisecondsSinceEpoch,
-            'next': w.nextSlot?.label ?? '',
-          },
-      ],
-    });
+    await _channel.invokeMethod('schedule', islandPayload(config, DateTime.now()));
   } on MissingPluginException {
     // Tests and hosts without the channel.
   } catch (e, st) {
@@ -100,6 +161,26 @@ Future<bool> canShowInNowBar() async {
     return await _channel.invokeMethod<bool>('canPromote') ?? true;
   } catch (_) {
     return true;
+  }
+}
+
+/// What Android and the phone allow right now, for the settings' phone
+/// check. Empty off Android.
+Future<Map<String, Object?>> islandStatus() async {
+  try {
+    final r = await _channel.invokeMethod<Map>('status');
+    return {...?r?.map((k, v) => MapEntry('$k', v))};
+  } catch (_) {
+    return const {};
+  }
+}
+
+/// Sampio's page in system settings (battery, auto launch, permissions).
+Future<void> openAppSettings() async {
+  try {
+    await _channel.invokeMethod('openAppSettings');
+  } catch (e, st) {
+    AppLog.error('openAppSettings', e, st);
   }
 }
 

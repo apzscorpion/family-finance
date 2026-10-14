@@ -183,11 +183,16 @@ void main() {
     });
 
     testWidgets('reveals every section once enabled', (tester) async {
+      // Tall enough that the lazy list builds every section at once.
+      tester.view.physicalSize = const Size(1080, 12000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
       final controller = await controllerWith(tester, kochi);
 
       await tester.pumpWidget(host(controller, const PrayerSettingsV3()));
       await tester.pump();
 
+      expect(find.text('NOW BAR'), findsOneWidget);
       expect(find.text('LOCATION'), findsOneWidget);
       expect(find.text('CALCULATION'), findsOneWidget);
       expect(find.text('ALERTS'), findsOneWidget);

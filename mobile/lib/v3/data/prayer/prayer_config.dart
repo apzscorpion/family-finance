@@ -229,6 +229,16 @@ class PrayerConfig {
   /// Per prayer, keyed by [PrayerSlot.name].
   final Map<String, bool> endingSoonFor;
 
+  /// The "prayer island": the next prayer and a countdown, standing in the
+  /// Now Bar / status bar all day. Independent of [enabled] (the alerts).
+  final bool islandAlways;
+
+  /// What the status-bar chip shows: 'name' (Asr) or 'countdown' (25min).
+  final String islandChip;
+
+  /// How the ending-soon reminder words it: 'ask', 'remind' or 'tell'.
+  final String islandAsk;
+
   const PrayerConfig({
     this.enabled = false,
     this.cityId,
@@ -267,6 +277,9 @@ class PrayerConfig {
       'maghrib': true,
       'isha': true,
     },
+    this.islandAlways = true,
+    this.islandChip = 'name',
+    this.islandAsk = 'ask',
   });
 
   bool notifyFor(PrayerSlot slot) => notify[slot.name] ?? false;
@@ -306,6 +319,9 @@ class PrayerConfig {
     int? endingSoonLead,
     int? endingSoonRepeat,
     Map<String, bool>? endingSoonFor,
+    bool? islandAlways,
+    String? islandChip,
+    String? islandAsk,
   }) =>
       PrayerConfig(
         enabled: enabled ?? this.enabled,
@@ -333,6 +349,9 @@ class PrayerConfig {
         endingSoonLead: endingSoonLead ?? this.endingSoonLead,
         endingSoonRepeat: endingSoonRepeat ?? this.endingSoonRepeat,
         endingSoonFor: endingSoonFor ?? this.endingSoonFor,
+        islandAlways: islandAlways ?? this.islandAlways,
+        islandChip: islandChip ?? this.islandChip,
+        islandAsk: islandAsk ?? this.islandAsk,
       );
 
   /// Applies a bundled city, dropping any previous device fix.
@@ -387,6 +406,9 @@ class PrayerConfig {
         'ending_soon_lead': endingSoonLead,
         'ending_soon_repeat': endingSoonRepeat,
         'ending_soon_for': endingSoonFor,
+        'island_always': islandAlways,
+        'island_chip': islandChip,
+        'island_ask': islandAsk,
       };
 
   /// Every field is read defensively. This blob is on disk across upgrades and
@@ -434,6 +456,11 @@ class PrayerConfig {
             'maghrib': true,
             'isha': true,
           },
+      islandAlways: _bool(j['island_always']) ?? true,
+      islandChip: j['island_chip'] == 'countdown' ? 'countdown' : 'name',
+      islandAsk: const ['ask', 'remind', 'tell'].contains(j['island_ask'])
+          ? j['island_ask'] as String
+          : 'ask',
     );
   }
 

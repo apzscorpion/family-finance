@@ -40,11 +40,37 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "schedule" -> {
                         @Suppress("UNCHECKED_CAST")
-                        val windows = call.argument<List<Map<String, Any?>>>("windows") ?: emptyList()
-                        PrayerNowBar.schedule(this, windows, call.argument<Int>("repeatMinutes") ?: 5)
+                        PrayerNowBar.schedule(this, (call.arguments as? Map<String, Any?>).orEmpty())
                         result.success(null)
                     }
                     "canPromote" -> result.success(PrayerNowBar.canPromote(this))
+                    // What Android / the phone currently blocks, for the
+                    // "Phone check" card in prayer settings.
+                    "status" -> {
+                        val nm = getSystemService(android.app.NotificationManager::class.java)
+                        val power = getSystemService(android.os.PowerManager::class.java)
+                        val alarms = getSystemService(android.app.AlarmManager::class.java)
+                        result.success(
+                            mapOf(
+                                "sdk" to Build.VERSION.SDK_INT,
+                                "release" to Build.VERSION.RELEASE,
+                                "maker" to Build.MANUFACTURER,
+                                "promote" to PrayerNowBar.canPromote(this),
+                                "fullScreen" to (Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent()),
+                                "exact" to (Build.VERSION.SDK_INT < 31 || alarms.canScheduleExactAlarms()),
+                                "unrestricted" to power.isIgnoringBatteryOptimizations(packageName),
+                            ),
+                        )
+                    }
+                    "openAppSettings" -> {
+                        startActivity(
+                            Intent(
+                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:$packageName"),
+                            ),
+                        )
+                        result.success(null)
+                    }
                     "openPromoteSettings" -> {
                         // Settings.ACTION_MANAGE_APP_PROMOTED_NOTIFICATIONS
                         // (Android 16), else the app's notification settings.

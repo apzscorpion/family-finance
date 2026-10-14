@@ -19,3 +19,5 @@ Future<bool> requestExactPrayerAlarms() async => false;
 Future<bool> requestFullScreenPrayerAlerts() async => false;
 
 Future<void> listenForPrayerAlerts(void Function(String slot) show) async {}
+
+Future<void> syncPrayerIsland(PrayerConfig config) async {}
