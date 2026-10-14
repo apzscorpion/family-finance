@@ -1206,6 +1206,7 @@ class _PhoneCheckState extends State<_PhoneCheck> with WidgetsBindingObserver {
     // realme, OPPO and OnePlus (ColorOS) stop sideloaded apps in the
     // background unless "Auto launch" is on.
     final colorOs = ['realme', 'oppo', 'oneplus'].any(maker.contains);
+    final samsung = maker.contains('samsung');
     const caret =
         Icon(PhRegular.caretRight, size: 16, color: Nocturne.neutral500);
 
@@ -1218,7 +1219,20 @@ class _PhoneCheckState extends State<_PhoneCheck> with WidgetsBindingObserver {
               'shows as a normal notification.',
           fix: null,
         ),
-      if (sdk >= 36 && _status['promote'] == false)
+      // Samsung (One UI 8) only lets apps it has approved post Live
+      // notifications, unless Developer options → "Live notifications for
+      // all apps" is on; there is nothing the app itself can request.
+      if (sdk >= 36 && _status['promote'] == false && samsung)
+        (
+          icon: PhRegular.info,
+          label: 'Now Bar: Samsung-approved apps only',
+          sub: 'Until Samsung opens it to all apps, the prayer island shows '
+              'as a pinned notification with the countdown. Optional: '
+              'Developer options → "Live notifications for all apps" puts it '
+              'in the Now Bar now.',
+          fix: null,
+        ),
+      if (sdk >= 36 && _status['promote'] == false && !samsung)
         (
           icon: PhRegular.warning,
           label: 'Now Bar not allowed',
