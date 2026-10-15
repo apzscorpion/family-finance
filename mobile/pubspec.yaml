@@ -64,6 +64,10 @@ dependencies:
   # leaves the phone and only the last 4 digits are kept.
   google_mlkit_text_recognition: ^0.17.1
 
+  # "Download" on a chat photo saves it into the gallery via MediaStore, so
+  # Android 10+ needs no storage permission.
+  gal: ^2.3.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -780,6 +780,65 @@ void main() {
         expect(nav.page, isNull);
       },
     );
+
+    testWidgets('chat photo opens a zoomable viewer and offers Download', (
+      tester,
+    ) async {
+      final repo = _TestRepo();
+      final msg = DirectMessageRow(
+        id: 'dm-img',
+        familyId: 'fam-1',
+        senderId: 'user-sara',
+        recipientId: 'user-asif',
+        body: '📷 Photo',
+        kind: 'image',
+        imageData:
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        createdAt: DateTime(2026, 10, 8, 9, 30),
+      );
+      repo.sentMessages.add(msg);
+      final state = _buildSeededState(repo);
+      final chat = ChatController(repo);
+      chat.seedForTest(familyId: 'fam-1', myId: 'user-asif', messages: [msg]);
+      final nav = V3Nav();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<V3State>.value(value: state),
+            ChangeNotifierProvider<ChatController>.value(value: chat),
+            ChangeNotifierProvider<V3Nav>.value(value: nav),
+          ],
+          child: MaterialApp(
+            theme: ThemeData.dark(),
+            home: const Scaffold(body: ChatListV3()),
+          ),
+        ),
+      );
+      nav.openChat('user-sara');
+      await tester.pumpAndSettle();
+
+      // Long-press menu offers Download for photos.
+      await tester.tap(find.byKey(const ValueKey('chat_msg_options_dm-img')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('chat_download_image_action')),
+        findsOneWidget,
+      );
+      Navigator.of(
+        tester.element(find.byKey(const ValueKey('chat_download_image_action'))),
+      ).pop();
+      await tester.pumpAndSettle();
+
+      // The 1px test image has no decoded size yet, so fire onTap directly.
+      tester
+          .widget<GestureDetector>(find.byKey(const ValueKey('chat_image_dm-img')))
+          .onTap!();
+      await tester.pumpAndSettle();
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+      expect(find.byKey(const ValueKey('chat_image_download')), findsOneWidget);
+      expect(find.byKey(const ValueKey('chat_image_share')), findsOneWidget);
+    });
   });
 
   group('Phase 4 — Web Shell (Read-Only Finance + Editable Notes & Chat)', () {

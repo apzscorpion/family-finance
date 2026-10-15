@@ -4,9 +4,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../theme/nocturne.dart';
 import '../data/chat_controller.dart';
+import '../data/chat_media_io.dart'
+    if (dart.library.js_interop) '../data/chat_media_web.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../v3_nav.dart';
@@ -201,7 +204,8 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
 
   Future<void> _showMessageOptions(DirectMessageRow msg) async {
     final chat = context.read<ChatController>();
-    final shouldDelete = await showModalBottomSheet<bool>(
+    final imgBytes = _chatImageBytes(msg);
+    final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Nocturne.palette.surface,
       shape: const RoundedRectangleBorder(
@@ -213,6 +217,23 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (imgBytes != null)
+                ListTile(
+                  key: const ValueKey('chat_download_image_action'),
+                  leading: Icon(
+                    PhRegular.downloadSimple,
+                    color: Nocturne.palette.text,
+                  ),
+                  title: Text(
+                    'Download photo',
+                    style: TextStyle(
+                      color: Nocturne.palette.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () => Navigator.of(ctx).pop('download'),
+                ),
               ListTile(
                 key: const ValueKey('chat_delete_message_action'),
                 leading: Icon(
@@ -227,16 +248,27 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                onTap: () => Navigator.of(ctx).pop(true),
+                onTap: () => Navigator.of(ctx).pop('delete'),
               ),
             ],
           ),
         ),
       ),
     );
-    if (shouldDelete == true && mounted) {
-      await chat.deleteMessage(msg.id);
+    if (!mounted) return;
+    if (action == 'delete') await chat.deleteMessage(msg.id);
+    if (action == 'download' && imgBytes != null && mounted) {
+      await _downloadChatImage(context, imgBytes, msg);
     }
+  }
+
+  void _openImage(DirectMessageRow msg, Uint8List bytes) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => _ChatImageViewer(message: msg, bytes: bytes),
+      ),
+    );
   }
 
   @override
@@ -441,6 +473,7 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                           message: msg,
                           isMine: isMine,
                           onShowOptions: () => _showMessageOptions(msg),
+                          onOpenImage: (bytes) => _openImage(msg, bytes),
                         );
                       },
                     ),
@@ -570,29 +603,20 @@ class _MessageBubble extends StatelessWidget {
   final DirectMessageRow message;
   final bool isMine;
   final VoidCallback onShowOptions;
+  final ValueChanged<Uint8List> onOpenImage;
 
   const _MessageBubble({
     required this.message,
     required this.isMine,
     required this.onShowOptions,
+    required this.onOpenImage,
   });
-
-  Uint8List? _decodeImage() {
-    final raw = message.imageData;
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      final cleaned = raw.contains(',') ? raw.split(',').last : raw;
-      return base64Decode(cleaned);
-    } catch (_) {
-      return null;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final timeStr = _formatTime(message.createdAt.toLocal());
     final isTemp = message.id.startsWith('temp_');
-    final imgBytes = message.isImage ? _decodeImage() : null;
+    final imgBytes = _chatImageBytes(message);
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -627,13 +651,17 @@ class _MessageBubble extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (imgBytes != null) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.memory(
-                    imgBytes,
-                    width: 220,
-                    fit: BoxFit.cover,
-                    gaplessPlayback: true,
+                GestureDetector(
+                  key: ValueKey('chat_image_${message.id}'),
+                  onTap: () => onOpenImage(imgBytes),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.memory(
+                      imgBytes,
+                      width: 220,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                    ),
                   ),
                 ),
                 if (message.body.isNotEmpty && message.body != '📷 Photo')
@@ -705,5 +733,101 @@ class _MessageBubble extends StatelessWidget {
     final m = dt.minute.toString().padLeft(2, '0');
     final ampm = dt.hour >= 12 ? 'PM' : 'AM';
     return '$h:$m $ampm';
+  }
+}
+
+/// Chat photos travel as base64 (optionally a data URL) in the message row.
+Uint8List? _chatImageBytes(DirectMessageRow message) {
+  final raw = message.imageData;
+  if (!message.isImage || raw == null || raw.isEmpty) return null;
+  try {
+    final cleaned = raw.contains(',') ? raw.split(',').last : raw;
+    return base64Decode(cleaned);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Extension sniffed from the bytes, so the saved file opens correctly.
+String _chatImageExt(Uint8List b) {
+  if (b.length > 3 && b[0] == 0x89 && b[1] == 0x50) return 'png';
+  if (b.length > 3 && b[0] == 0x47 && b[1] == 0x49) return 'gif';
+  if (b.length > 11 && b[8] == 0x57 && b[9] == 0x45) return 'webp';
+  return 'jpg';
+}
+
+String _chatImageName(Uint8List bytes, DirectMessageRow message) =>
+    'kinpurse_${message.createdAt.millisecondsSinceEpoch}.'
+    '${_chatImageExt(bytes)}';
+
+Future<void> _downloadChatImage(
+  BuildContext context,
+  Uint8List bytes,
+  DirectMessageRow message,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final ok = await saveChatImage(bytes, _chatImageName(bytes, message));
+  messenger.showSnackBar(
+    SnackBar(content: Text(ok ? 'Photo saved' : 'Could not save photo')),
+  );
+}
+
+/// Full-screen chat photo with pinch zoom, Download and Share.
+class _ChatImageViewer extends StatelessWidget {
+  final DirectMessageRow message;
+  final Uint8List bytes;
+
+  const _ChatImageViewer({required this.message, required this.bytes});
+
+  Future<void> _share(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ext = _chatImageExt(bytes);
+    try {
+      await Share.shareXFiles([
+        XFile.fromData(
+          bytes,
+          name: _chatImageName(bytes, message),
+          mimeType: 'image/${ext == 'jpg' ? 'jpeg' : ext}',
+        ),
+      ]);
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not share photo')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Nocturne.palette;
+    return Scaffold(
+      backgroundColor: p.bg,
+      appBar: AppBar(
+        backgroundColor: p.bg,
+        foregroundColor: p.text,
+        elevation: 0,
+        actions: [
+          IconButton(
+            key: const ValueKey('chat_image_share'),
+            tooltip: 'Share',
+            icon: Icon(PhRegular.shareNetwork, color: p.text),
+            onPressed: () => _share(context),
+          ),
+          IconButton(
+            key: const ValueKey('chat_image_download'),
+            tooltip: 'Download',
+            icon: Icon(PhRegular.downloadSimple, color: p.text),
+            onPressed: () => _downloadChatImage(context, bytes, message),
+          ),
+        ],
+      ),
+      body: GestureDetector(
+        onLongPress: () => _downloadChatImage(context, bytes, message),
+        child: InteractiveViewer(
+          maxScale: 5,
+          child: Center(child: Image.memory(bytes, gaplessPlayback: true)),
+        ),
+      ),
+    );
   }
 }
