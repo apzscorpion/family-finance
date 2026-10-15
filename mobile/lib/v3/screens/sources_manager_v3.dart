@@ -703,9 +703,13 @@ class _WalletCard extends StatelessWidget {
           action('Deposit', PhRegular.bank,
               () => _SourceRowTile.moveMoney(context, s, sourceId,
                   toCash: false)),
-          const SizedBox(width: 6),
-          action('Set balance', PhRegular.pencilSimple,
-              () => _SourceRowTile.setBalances(context, s, sourceId)),
+          // Only on your own view: from someone else's, the figure shown
+          // isn't yours, and saving it rewrote the shared opening balance.
+          if (s.scope == s.myId) ...[
+            const SizedBox(width: 6),
+            action('Set balance', PhRegular.pencilSimple,
+                () => _SourceRowTile.setBalances(context, s, sourceId)),
+          ],
         ]),
       ],
     );
