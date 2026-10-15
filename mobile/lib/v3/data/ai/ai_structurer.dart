@@ -402,6 +402,9 @@ Return only JSON matching the schema.''';
               // `additionalProperties`, so it gets the permissive variant.
               'responseSchema': forGemini(schema(strict: false)),
               'temperature': 0,
+              // Short structured answers don't need the model to think first.
+              if (config.effectiveModel.contains('lite'))
+                'thinkingConfig': {'thinkingLevel': 'minimal'},
             },
           }),
         )

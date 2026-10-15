@@ -35,8 +35,9 @@ function catalog(): Model[] {
     out.push({ id: "openai:gpt-4o-mini", label: "GPT-4o mini (OpenAI)", vision: true });
   }
   if (Deno.env.get("GEMINI_API_KEY")) {
-    out.push({ id: "gemini:gemini-3.8-flash", label: "Gemini 3.8 Flash", vision: true });
+    // Flash-Lite first: about 1 s; 3.8 Flash took 25-40 s in testing.
     out.push({ id: "gemini:gemini-3.5-flash-lite", label: "Gemini 3.5 Flash-Lite", vision: true });
+    out.push({ id: "gemini:gemini-3.8-flash", label: "Gemini 3.8 Flash", vision: true });
   }
   return out;
 }
@@ -71,9 +72,12 @@ async function callGemini(model: string, b: any): Promise<Response> {
               : []),
           ],
         }],
-        generationConfig: b.schema
-          ? { responseMimeType: "application/json", responseSchema: b.schema, temperature: 0 }
-          : { temperature: 0.4 },
+        generationConfig: {
+          ...(b.schema
+            ? { responseMimeType: "application/json", responseSchema: b.schema, temperature: 0 }
+            : { temperature: 0.4 }),
+          ...(model.includes("lite") ? { thinkingConfig: { thinkingLevel: "minimal" } } : {}),
+        },
       }),
     },
   );

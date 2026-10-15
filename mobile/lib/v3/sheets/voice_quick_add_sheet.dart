@@ -203,6 +203,8 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
         categories: s.categories,
         members: s.members,
         myName: s.me?.name ?? '',
+        sources: s.sources,
+        sourceOf: s.sourceOf,
       );
       await _say(answer.error != null
           ? 'Sorry, I couldn’t work that out.'

@@ -102,6 +102,14 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
     _scrollToBottom();
 
     final s = context.read<V3State>();
+    // The last answered question, so "exclude loan account" refines it.
+    final last = _messages.reversed
+        .where((m) => !m.isUser && m.result?.query != null)
+        .firstOrNull;
+    final lastQuestion = _messages.reversed
+        .skip(1)
+        .where((m) => m.isUser)
+        .firstOrNull;
     final result = await AskKinPurseEngine.ask(
       question: clean,
       config: config,
@@ -109,6 +117,10 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
       categories: s.categories,
       members: s.members,
       myName: s.me?.name ?? 'User',
+      sources: s.sources,
+      sourceOf: s.sourceOf,
+      previous: last?.result?.query,
+      previousQuestion: lastQuestion?.text,
     );
 
     if (!mounted) return;

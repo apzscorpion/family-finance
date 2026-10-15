@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+
 import '../../../services/app_log.dart';
 import '../../v3_design.dart';
 import '../v3_models.dart';
@@ -20,6 +24,16 @@ class AskKinPurseQuery {
   final DateTime? compareEndDate;
   final String explanation; // What the AI understood
 
+  /// Only expenses shared with or paid for someone else.
+  final bool sharedOnly;
+
+  /// Account to keep, or to leave out (matched by name).
+  final String? account;
+  final String? excludeAccount;
+
+  /// What the model returned, so a follow-up can refine it.
+  final Map<String, dynamic> raw;
+
   const AskKinPurseQuery({
     required this.intent,
     this.category,
@@ -31,6 +45,10 @@ class AskKinPurseQuery {
     this.compareStartDate,
     this.compareEndDate,
     required this.explanation,
+    this.sharedOnly = false,
+    this.account,
+    this.excludeAccount,
+    this.raw = const {},
   });
 
   factory AskKinPurseQuery.fromJson(Map<String, dynamic> j) {
@@ -54,6 +72,10 @@ class AskKinPurseQuery {
       compareStartDate: parseDate(j['compare_start_date']),
       compareEndDate: parseDate(j['compare_end_date']),
       explanation: j['explanation']?.toString() ?? 'Filtered financial records',
+      sharedOnly: j['shared_with_others'] == true,
+      account: j['account']?.toString(),
+      excludeAccount: j['exclude_account']?.toString(),
+      raw: j,
     );
   }
 }
@@ -69,6 +91,9 @@ class AskKinPurseResult {
   final List<TxnRow>? compareTxns;
   final String? error;
 
+  /// What was asked, so the next message can refine it.
+  final AskKinPurseQuery? query;
+
   const AskKinPurseResult({
     required this.answerText,
     required this.primaryAmount,
@@ -78,6 +103,7 @@ class AskKinPurseResult {
     required this.matchingTxns,
     this.compareTxns,
     this.error,
+    this.query,
   });
 
   bool get hasComparison => compareAmount != null;
@@ -101,6 +127,11 @@ Extract:
 6. "start_date" & "end_date": ISO-8601 (YYYY-MM-DD) date range for the main query.
 7. "compare_start_date" & "compare_end_date": ISO-8601 (YYYY-MM-DD) date range if comparing with a previous period (e.g. "last month vs this month").
 8. "explanation": A friendly, concise 1-line summary of what you are calculating (e.g. "Total groceries spending in October compared to September").
+9. "shared_with_others": true when the question is about spending for or with other people (split, shared, paid for someone), else null.
+10. "account": account name to limit to (e.g. "Salary"), or null.
+11. "exclude_account": account name to leave out (e.g. "exclude loan account" -> "Loan"), or null.
+
+If a previous question and its filters are given and the new message refines it ("exclude loan account", "only last month", "and for Sara?"), keep the previous filters and apply only the change.
 
 Return ONLY JSON matching the schema.
 ''';
@@ -124,6 +155,9 @@ Return ONLY JSON matching the schema.
           'compare_start_date': {'type': ['string', 'null']},
           'compare_end_date': {'type': ['string', 'null']},
           'explanation': {'type': 'string'},
+          'shared_with_others': {'type': ['boolean', 'null']},
+          'account': {'type': ['string', 'null']},
+          'exclude_account': {'type': ['string', 'null']},
         },
         'required': ['intent', 'explanation'],
         if (strict) 'additionalProperties': false,
@@ -151,6 +185,10 @@ Return ONLY JSON matching the schema.
     required List<CategoryRow> categories,
     required List<MemberRow> members,
     required String myName,
+    List<SourceRow> sources = const [],
+    String? Function(TxnRow)? sourceOf,
+    AskKinPurseQuery? previous,
+    String? previousQuestion,
   }) async {
     final now = DateTime.now();
     final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
@@ -161,6 +199,13 @@ Return ONLY JSON matching the schema.
       ..writeln("Today's Date: $todayStr")
       ..writeln('Known Categories: $catNames')
       ..writeln('Known Family Members: $memberNames (Current User: $myName)')
+      ..writeln('Known Accounts: ${sources.map((x) => x.name).join(', ')}');
+    if (previous != null) {
+      prompt
+        ..writeln('Previous question: "${previousQuestion ?? ''}"')
+        ..writeln('Previous filters: ${jsonEncode(previous.raw)}');
+    }
+    prompt
       ..writeln()
       ..writeln('User Question: "$question"');
 
@@ -184,7 +229,19 @@ Return ONLY JSON matching the schema.
 
     try {
       final query = AskKinPurseQuery.fromJson(result.data!);
-      return _executeLocally(query, txns, categories, members);
+      final r = executeLocally(query, txns, categories, members,
+          sources: sources, sourceOf: sourceOf);
+      return AskKinPurseResult(
+        answerText: r.answerText,
+        primaryAmount: r.primaryAmount,
+        compareAmount: r.compareAmount,
+        percentageDiff: r.percentageDiff,
+        count: r.count,
+        matchingTxns: r.matchingTxns,
+        compareTxns: r.compareTxns,
+        error: r.error,
+        query: query,
+      );
     } catch (e, stack) {
       AppLog.error('AskKinPurseEngine.ask', e, stack);
       return AskKinPurseResult(
@@ -198,12 +255,30 @@ Return ONLY JSON matching the schema.
   }
 
   /// Evaluates the query locally against the provided in-memory transactions.
-  static AskKinPurseResult _executeLocally(
+  @visibleForTesting
+  static AskKinPurseResult executeLocally(
     AskKinPurseQuery query,
     List<TxnRow> allTxns,
     List<CategoryRow> categories,
-    List<MemberRow> members,
-  ) {
+    List<MemberRow> members, {
+    List<SourceRow> sources = const [],
+    String? Function(TxnRow)? sourceOf,
+  }) {
+    String? accountId(String? name) {
+      if (name == null || name.trim().isEmpty) return null;
+      final q = name.toLowerCase();
+      for (final src in sources) {
+        if (src.name.toLowerCase().contains(q) || q.contains(src.name.toLowerCase())) {
+          return src.id;
+        }
+      }
+      return null;
+    }
+
+    final keepAccount = accountId(query.account);
+    final dropAccount = accountId(query.excludeAccount);
+    String? accountOf(TxnRow t) => sourceOf?.call(t) ?? t.sourceId;
+
     // 1. Resolve Category ID if name supplied
     String? categoryId;
     if (query.category != null && query.category!.isNotEmpty) {
@@ -249,6 +324,17 @@ Return ONLY JSON matching the schema.
       if (memberId != null && t.userId != memberId && t.paidBy != memberId) {
         return false;
       }
+
+      // Shared with, or paid for, someone else
+      if (query.sharedOnly &&
+          !(t.isExpense &&
+              t.shares.keys.any((k) => k != (t.paidBy ?? t.userId)))) {
+        return false;
+      }
+
+      // Account filters
+      if (keepAccount != null && accountOf(t) != keepAccount) return false;
+      if (dropAccount != null && accountOf(t) == dropAccount) return false;
 
       // Merchant/title filter
       if (query.merchant != null && query.merchant!.isNotEmpty) {

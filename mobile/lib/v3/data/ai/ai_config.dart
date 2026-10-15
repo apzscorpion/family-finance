@@ -28,7 +28,8 @@ extension AiProviderInfo on AiProvider {
 
   /// A sensible current model per provider. Always editable.
   String get defaultModel => switch (this) {
-    AiProvider.gemini => 'gemini-3.8-flash',
+    // Flash-Lite answers in about a second; 3.8 Flash took 25-40 s.
+    AiProvider.gemini => 'gemini-3.5-flash-lite',
     AiProvider.claude => 'claude-opus-5-5',
     AiProvider.openai => 'gpt-4o-mini',
     AiProvider.compatible => 'llama3.1',
@@ -232,7 +233,11 @@ class AiConfig {
     };
     return AiConfig(
       provider: provider,
-      model: j['model'] is String ? j['model'] as String : '',
+      // 3.8 Flash took 25-40 s an answer; saved picks of it use the fast
+      // default. shortcut: drop this once that model speeds up.
+      model: j['model'] is String && j['model'] != 'gemini-3.8-flash'
+          ? j['model'] as String
+          : '',
       baseUrl: j['base_url'] is String ? j['base_url'] as String : '',
       keys: keys,
       active: active,
