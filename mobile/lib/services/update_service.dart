@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 
 class UpdateService {
-  static const String currentVersion = '1.10.27';
+  static const String currentVersion = '1.10.28';
   static const String githubRepo = 'apzscorpion/family-finance';
   // APKs live on GitHub Releases, not in the repo, so clones stay small. The
   // version comes from the same release, so it always matches the download.
