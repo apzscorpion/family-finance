@@ -666,6 +666,10 @@ class _V3AddSheetState extends State<V3AddSheet> {
   /// filed under the payer; [_selectedMembers] only decides who owes them.
   String? _payer;
 
+  /// Whose income this is; null means mine. Someone else's waits for them
+  /// to approve it.
+  String? _incomeFor;
+
   /// Toggle to repeat monthly on this day of month
   bool _repeatMonthly = false;
 
@@ -845,6 +849,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
       _sourceId = e.sourceId;
       _note.text = e.title;
       _payer = e.paidBy ?? e.userId;
+      if (e.type == 'income') _incomeFor = e.userId;
       // Income paid_by is who paid you; "me" there means nobody recorded.
       if (e.type == 'income' && _payer == e.userId) _payer = '';
       if (e.shares.isNotEmpty) {
@@ -944,12 +949,14 @@ class _V3AddSheetState extends State<V3AddSheet> {
 
     // The entry stays under whoever paid; "For" only creates what others owe.
     final isIncome = _type == 'income';
-    final payer = isIncome ? s.myId : (_payer ?? s.myId);
+    final payer = isIncome ? (_incomeFor ?? s.myId) : (_payer ?? s.myId);
     final forUserId = payer;
-    // Income: paid_by is who paid you; empty means someone outside the family.
+    // Income: paid_by is who paid them; empty means someone outside the family.
     final paidBy = isIncome
-        ? ((_payer?.isNotEmpty ?? false) ? _payer : s.myId)
+        ? ((_payer?.isNotEmpty ?? false) ? _payer : forUserId)
         : payer;
+    // Someone else's income goes to their own main account, not one of mine.
+    final sourceId = isIncome && forUserId != s.myId ? null : _sourceId;
     final shares = isIncome
         ? null
         : V3AddSheet.computeShares(
@@ -972,7 +979,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
             categoryKey: _catKey,
             subCategoryKey: _subKey,
             method: _method,
-            sourceId: _sourceId,
+            sourceId: sourceId,
             forUserId: forUserId,
             paidBy: paidBy,
             shares: shares,
@@ -985,7 +992,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
             categoryKey: _catKey,
             subCategoryKey: _subKey,
             method: _method,
-            sourceId: _sourceId,
+            sourceId: sourceId,
             forUserId: forUserId,
             paidBy: paidBy,
             shares: shares,
@@ -1014,7 +1021,13 @@ class _V3AddSheetState extends State<V3AddSheet> {
       if (_type == 'expense' && title.isNotEmpty) {
         CategoryMemoryService.remember(title, _catKey);
       }
+      final messenger = ScaffoldMessenger.maybeOf(context);
       Navigator.pop(context);
+      if (isIncome && forUserId != s.myId) {
+        messenger?.showSnackBar(SnackBar(
+            content: Text(
+                'Sent to ${s.memberName(forUserId)} to approve. It counts once they do.')));
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1296,6 +1309,40 @@ class _V3AddSheetState extends State<V3AddSheet> {
               ],
             ],
           ),
+          if (_type == 'income' && members.length > 1)
+            Row(
+              children: [
+                Text('Income for ',
+                    style: TextStyle(
+                        fontSize: 11.5, color: Nocturne.palette.muted)),
+                DropdownButton<String>(
+                  value: members.any((m) => m.userId == _incomeFor)
+                      ? _incomeFor
+                      : s.myId,
+                  isDense: true,
+                  dropdownColor: Nocturne.palette.surface,
+                  underline: const SizedBox.shrink(),
+                  style: TextStyle(
+                      fontSize: 12.5, color: Nocturne.palette.accentLight),
+                  items: [
+                    for (final m in members)
+                      DropdownMenuItem(
+                        value: m.userId,
+                        child: Text(m.userId == s.myId ? 'You' : m.name),
+                      ),
+                  ],
+                  onChanged: (v) => setState(
+                      () => _incomeFor = v == s.myId ? null : v),
+                ),
+                if (_incomeFor != null && _incomeFor != s.myId)
+                  Expanded(
+                    child: Text('  · they approve it first',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11, color: Nocturne.palette.warning)),
+                  ),
+              ],
+            ),
           const SizedBox(height: 8),
           if (_refineFailed)
             Padding(

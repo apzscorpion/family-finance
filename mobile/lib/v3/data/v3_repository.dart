@@ -78,6 +78,17 @@ class V3Repository {
     });
   }
 
+  /// Approve or reject income someone added for me.
+  Future<void> decideIncome(String txnId, bool approve) async {
+    await _db.rpc('decide_income',
+        params: {'p_txn': txnId, 'p_approve': approve});
+  }
+
+  /// Sends income I added, and they rejected, for approval again.
+  Future<void> resendIncome(String txnId) async {
+    await _db.rpc('resend_income', params: {'p_txn': txnId});
+  }
+
   /// Makes [userId] the primary owner; I stay an owner.
   Future<void> transferOwnership(String familyId, String userId) async {
     await _db.rpc('transfer_ownership',
@@ -328,7 +339,7 @@ class V3Repository {
     final rows = await _db
         .from('transactions')
         .select(
-            'id,family_id,user_id,paid_by,source_id,category_id,card_id,title,amount,type,method,origin,occurred_at,split,note,sub_category_id,categories!transactions_category_id_fkey(key),transaction_shares(user_id,amount)')
+            'id,family_id,user_id,paid_by,source_id,category_id,card_id,title,amount,type,method,origin,occurred_at,split,note,sub_category_id,status,added_by,categories!transactions_category_id_fkey(key),transaction_shares(user_id,amount)')
         .eq('family_id', familyId)
         .order('occurred_at', ascending: false)
         .limit(limit);
@@ -428,7 +439,7 @@ class V3Repository {
           if (note != null && note.isNotEmpty) 'note': note,
         })
         .select(
-            'id,family_id,user_id,paid_by,source_id,category_id,card_id,title,amount,type,method,origin,occurred_at,split,note,sub_category_id,categories!transactions_category_id_fkey(key),transaction_shares(user_id,amount)')
+            'id,family_id,user_id,paid_by,source_id,category_id,card_id,title,amount,type,method,origin,occurred_at,split,note,sub_category_id,status,added_by,categories!transactions_category_id_fkey(key),transaction_shares(user_id,amount)')
         .single();
 
     final created = TxnRow.fromJson(Map<String, dynamic>.from(row));

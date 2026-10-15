@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/nocturne.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
+import '../data/v3_models.dart';
 import '../v3_design.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
@@ -29,6 +30,40 @@ class NotificationsV3 extends StatelessWidget {
           body: a.reason ?? 'Waiting for your decision',
           time: _ago(a.createdAt),
           onTap: () => V3Sheets.openApproval(context, a),
+        ),
+      for (final t in s.incomeForMe)
+        _Notif(
+          icon: PhRegular.arrowCircleDown,
+          color: Nocturne.palette.income,
+          title: '${s.memberName(t.addedBy)} added ${s.money(t.amount)} income for you',
+          body: '${t.title.isEmpty ? 'Income' : t.title} · approve it to count it',
+          time: '',
+          onTap: () => _incomeDialog(context, s, t),
+        ),
+      for (final t in s.incomeIRejected)
+        _Notif(
+          icon: PhRegular.arrowCircleDown,
+          color: Nocturne.palette.muted,
+          title: 'You rejected ${s.money(t.amount)} from ${s.memberName(t.addedBy)}',
+          body: '${t.title.isEmpty ? 'Income' : t.title} · you can still approve it',
+          time: '',
+          onTap: () => _incomeDialog(context, s, t),
+        ),
+      for (final t in s.incomeISent)
+        _Notif(
+          icon: PhRegular.arrowCircleDown,
+          color: t.status == 'rejected'
+              ? Nocturne.palette.expense
+              : Nocturne.palette.warning,
+          title: t.status == 'rejected'
+              ? '${s.memberName(t.userId)} rejected ${s.money(t.amount)} income'
+              : 'Waiting for ${s.memberName(t.userId)} to approve ${s.money(t.amount)}',
+          body: '${t.title.isEmpty ? 'Income' : t.title}'
+              '${t.status == 'rejected' ? ' · tap to send again' : ''}',
+          time: '',
+          onTap: t.status == 'rejected'
+              ? () => _incomeDialog(context, s, t)
+              : () {},
         ),
       for (final d in s.myDebts)
         _Notif(
@@ -166,6 +201,50 @@ class NotificationsV3 extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// Approve or reject income added for me, or send rejected income again.
+  static Future<void> _incomeDialog(
+      BuildContext context, V3State s, TxnRow t) async {
+    final mine = t.userId == s.myId;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: Nocturne.palette.surface,
+        title: Text(
+            mine
+                ? 'Income from ${s.memberName(t.addedBy)}'
+                : 'Send to ${s.memberName(t.userId)} again?',
+            style: TextStyle(color: Nocturne.palette.text, fontSize: 17)),
+        content: Text(
+            '${s.money(t.amount)} · ${t.title.isEmpty ? 'Income' : t.title}\n'
+            '${mine ? 'It counts in your balance once you approve it.' : 'They can approve or reject it again.'}',
+            style: TextStyle(color: Nocturne.palette.subtle)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c),
+              child: Text('Close',
+                  style: TextStyle(color: Nocturne.palette.muted))),
+          if (mine && t.status == 'pending')
+            TextButton(
+                onPressed: () => Navigator.pop(c, 'reject'),
+                child: Text('Reject',
+                    style: TextStyle(color: Nocturne.palette.expense))),
+          TextButton(
+              onPressed: () => Navigator.pop(c, mine ? 'approve' : 'resend'),
+              child: Text(mine ? 'Approve' : 'Send again',
+                  style: TextStyle(color: Nocturne.palette.income))),
+        ],
+      ),
+    );
+    switch (choice) {
+      case 'approve':
+        await s.decideIncome(t.id, true);
+      case 'reject':
+        await s.decideIncome(t.id, false);
+      case 'resend':
+        await s.resendIncome(t.id);
+    }
   }
 
   static String _t(String v) =>

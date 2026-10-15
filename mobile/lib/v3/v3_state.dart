@@ -34,6 +34,10 @@ class V3State extends ChangeNotifier {
   List<CategoryRow> categories = [];
   List<SourceRow> sources = [];
   List<TxnRow> txns = [];
+
+  /// Income waiting on someone's approval, or rejected. Kept out of [txns]
+  /// so no balance or total counts it.
+  List<TxnRow> incomeRequests = [];
   List<BudgetRow> budgets = [];
   List<RecurringRow> recurring = [];
   List<CardRow> cards = [];
@@ -213,7 +217,11 @@ class V3State extends ChangeNotifier {
     members = (results[0] as List<MemberRow>?) ?? members;
     categories = (results[1] as List<CategoryRow>?) ?? categories;
     sources = (results[2] as List<SourceRow>?) ?? sources;
-    txns = [for (final t in (results[3] as List<TxnRow>?) ?? txns) _refile(t)];
+    final allTxns = results[3] as List<TxnRow>?;
+    if (allTxns != null) {
+      txns = [for (final t in allTxns) if (t.isPosted) _refile(t)];
+      incomeRequests = [for (final t in allTxns) if (!t.isPosted) t];
+    }
     budgets = (results[4] as List<BudgetRow>?) ?? budgets;
     recurring = (results[5] as List<RecurringRow>?) ?? recurring;
     cards = (results[6] as List<CardRow>?) ?? cards;
@@ -640,7 +648,37 @@ class V3State extends ChangeNotifier {
           if (e.value.abs() >= 0.5) (userId: e.key, amount: e.value),
       ];
 
-  int get attentionCount => approvals.length + myDebts.length;
+  int get attentionCount =>
+      approvals.length + myDebts.length + incomeForMe.length;
+
+  /// Income others added for me that I haven't approved yet.
+  List<TxnRow> get incomeForMe => [
+        for (final t in incomeRequests)
+          if (t.userId == myId && t.status == 'pending') t
+      ];
+
+  /// Income for me I rejected: I can still approve it.
+  List<TxnRow> get incomeIRejected => [
+        for (final t in incomeRequests)
+          if (t.userId == myId && t.status == 'rejected') t
+      ];
+
+  /// Income I added for others that is waiting or was rejected.
+  List<TxnRow> get incomeISent => [
+        for (final t in incomeRequests)
+          if (t.addedBy == myId && t.userId != myId) t
+      ];
+
+  Future<void> decideIncome(String txnId, bool approve) async {
+    await V3Repository.guard(
+        'decideIncome', () => _repo.decideIncome(txnId, approve));
+    await refresh();
+  }
+
+  Future<void> resendIncome(String txnId) async {
+    await V3Repository.guard('resendIncome', () => _repo.resendIncome(txnId));
+    await refresh();
+  }
 
   int get notifBadge =>
       attentionCount + detected.length + budgetAlerts.length;
@@ -716,7 +754,12 @@ class V3State extends ChangeNotifier {
       ),
     );
     if (created == null) return false;
-    txns = [_refile(created), ...txns];
+    if (created.isPosted) {
+      txns = [_refile(created), ...txns];
+    } else {
+      // Income for someone else: theirs to approve.
+      incomeRequests = [created, ...incomeRequests];
+    }
     notifyListeners();
     // Split entries move the server pair balances the owe pills read.
     if (shares != null && shares.isNotEmpty) unawaited(refresh());

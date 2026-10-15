@@ -302,6 +302,13 @@ class TxnRow {
   /// a second lookup per row.
   final String categoryKey;
 
+  /// posted | pending | rejected. Income someone adds for another person
+  /// waits for that person's approval; only posted entries count.
+  final String status;
+
+  /// Who entered it.
+  final String? addedBy;
+
   const TxnRow({
     required this.id,
     required this.familyId,
@@ -321,6 +328,8 @@ class TxnRow {
     this.split,
     this.note,
     this.categoryKey = 'shopping',
+    this.status = 'posted',
+    this.addedBy,
   });
 
   factory TxnRow.fromJson(Map<String, dynamic> j) {
@@ -350,11 +359,14 @@ class TxnRow {
           : null,
       note: j['note']?.toString(),
       categoryKey: cat is Map ? (cat['key']?.toString() ?? 'shopping') : 'shopping',
+      status: j['status']?.toString() ?? 'posted',
+      addedBy: j['added_by']?.toString(),
     );
   }
 
   bool get isExpense => type == 'expense';
   bool get isIncome => type == 'income';
+  bool get isPosted => status == 'posted';
 
   /// Same entry filed under main category [main] with sub-category [subId].
   TxnRow refiled(CategoryRow main, String subId) => TxnRow(
@@ -376,6 +388,8 @@ class TxnRow {
     split: split,
     note: note,
     categoryKey: main.key,
+    status: status,
+    addedBy: addedBy,
   );
 
   /// Whole calendar days between this transaction and today.
