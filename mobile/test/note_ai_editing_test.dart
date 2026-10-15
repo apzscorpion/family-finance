@@ -15,8 +15,10 @@ void main() {
     expect(bold.text, 'buy **milk** now');
     expect(bold.selection.textInside(bold.text), '**milk**');
     expect(toggleMark(bold, '**').text, 'buy milk now');
-    // Nothing selected: unchanged.
-    expect(toggleMark(sel('abc', 1, 1), '~~').text, 'abc');
+    // Nothing selected: an empty pair with the caret inside.
+    final pair = toggleMark(sel('abc', 1, 1), '~~');
+    expect(pair.text, 'a~~~~bc');
+    expect(pair.selection.baseOffset, 3);
   });
 
   test('carryOver keeps ids and ticked-by on untouched blocks and lines', () {

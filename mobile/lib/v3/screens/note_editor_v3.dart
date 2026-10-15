@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
@@ -118,6 +119,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     }
     _pushHistoryImmediate();
     _loadAiConfig();
+    FocusManager.instance.addListener(_onFocusMove);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -167,6 +169,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    FocusManager.instance.removeListener(_onFocusMove);
     _autosaveTimer?.cancel();
     _deltaBroadcastTimer?.cancel();
     _undoCoalesceTimer?.cancel();
@@ -179,6 +182,114 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     _presence?.setActiveNote(null);
     _title.dispose();
     super.dispose();
+  }
+
+  /// The block text field being typed in (never the title); drives the
+  /// formatting bar.
+  EditableTextState? _field;
+
+  void _onFocusMove() {
+    final f = FocusManager.instance.primaryFocus?.context
+        ?.findAncestorStateOfType<EditableTextState>();
+    // Ignore the title and fields in sheets/dialogs (AI chat, link prompt).
+    final next =
+        f != null &&
+            f.widget.controller != _title &&
+            f.context.findAncestorStateOfType<_NoteEditorV3State>() == this
+        ? f
+        : null;
+    if (mounted && next != _field) setState(() => _field = next);
+  }
+
+  void _format(String mark) {
+    final f = _field;
+    if (f == null || !f.mounted) return;
+    f.userUpdateTextEditingValue(
+      toggleMark(f.textEditingValue, mark),
+      SelectionChangedCause.toolbar,
+    );
+  }
+
+  Future<void> _addLink() async {
+    final f = _field;
+    if (f == null) return;
+    final value = f.textEditingValue;
+    final p = Nocturne.palette;
+    // Not disposed: the dialog's exit animation may still read it.
+    final ctrl = TextEditingController();
+    final url = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: p.surface,
+        title: Text('Add link', style: TextStyle(color: p.text, fontSize: 17)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          style: TextStyle(color: p.text),
+          cursorColor: p.accent,
+          decoration: InputDecoration(
+            hintText: 'https://example.com',
+            hintStyle: TextStyle(color: p.faint),
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: p.subtle)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: Text('Add', style: TextStyle(color: p.accentLight)),
+          ),
+        ],
+      ),
+    );
+    if (url == null || !f.mounted) return;
+    f.userUpdateTextEditingValue(
+      insertLink(value, url),
+      SelectionChangedCause.toolbar,
+    );
+  }
+
+  /// Heading <-> text, keeping the block id so collaborators see an edit.
+  void _toggleHeading(NoteBlock b) => _replaceBlock(
+    b.id,
+    NoteBlock(
+      id: b.id,
+      kind: b.kind == NoteBlockKind.heading
+          ? NoteBlockKind.paragraph
+          : NoteBlockKind.heading,
+      text: b.kind == NoteBlockKind.heading
+          ? b.text
+          : b.text.replaceAll('\n', ' '),
+    ),
+  );
+
+  Future<void> _addImage() async {
+    try {
+      // Small enough to live inline in the note JSON.
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 70,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty || !mounted) return;
+      final at = _blocks.indexWhere((b) => b.id == _focusedBlock);
+      _add(
+        NoteBlock.image(base64Encode(bytes)),
+        afterIndex: at == -1 ? null : at,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not add the image')),
+      );
+    }
   }
 
   void _onPresenceChanged() {
@@ -683,6 +794,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
           count += b.rows.length;
         case NoteBlockKind.heading:
         case NoteBlockKind.paragraph:
+        case NoteBlockKind.image:
           count += 1;
       }
     }
@@ -892,7 +1004,9 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     NoteBlock? focused;
     if (_focusedBlock != null) {
       for (final b in _blocks) {
-        if (b.id == _focusedBlock && !b.isEmpty) {
+        if (b.id == _focusedBlock &&
+            !b.isEmpty &&
+            b.kind != NoteBlockKind.image) {
           focused = b;
           break;
         }
@@ -911,7 +1025,11 @@ class _NoteEditorV3State extends State<NoteEditorV3>
       }
       await _restructureRawWithAi(
         allText,
-        replaceIds: _blocks.map((b) => b.id).toSet(),
+        // Images have no text for the AI; leave them in place.
+        replaceIds: {
+          for (final b in _blocks)
+            if (b.kind != NoteBlockKind.image) b.id,
+        },
       );
     }
   }
@@ -934,7 +1052,10 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     await showNoteAiChat(
       context,
       turns: _aiTurns,
-      focusLabel: focused == -1 || _blocks[focused].isEmpty
+      focusLabel:
+          focused == -1 ||
+              _blocks[focused].isEmpty ||
+              _blocks[focused].kind == NoteBlockKind.image
           ? null
           : _blocks[focused].plain,
       ask: _askAi,
@@ -1072,7 +1193,8 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                 ),
               ),
               const SizedBox(height: 8),
-              if (block.kind != NoteBlockKind.todo)
+              if (block.kind != NoteBlockKind.todo &&
+                  block.kind != NoteBlockKind.image)
                 _MenuTile(
                   icon: PhRegular.listChecks,
                   label: 'Convert to checklist',
@@ -1090,7 +1212,8 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                     _replaceBlock(block.id, NoteStructure.toTable(block));
                   },
                 ),
-              if (block.kind != NoteBlockKind.paragraph)
+              if (block.kind != NoteBlockKind.paragraph &&
+                  block.kind != NoteBlockKind.image)
                 _MenuTile(
                   icon: PhRegular.note,
                   label: 'Convert to paragraph',
@@ -1105,13 +1228,12 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                   label: 'Convert to heading',
                   onTap: () {
                     Navigator.pop(ctx);
-                    _replaceBlock(
-                      block.id,
-                      NoteBlock.heading(block.text.trim()),
-                    );
+                    _toggleHeading(block);
                   },
                 ),
-              if (_aiConfig.isConfigured && !block.isEmpty)
+              if (_aiConfig.isConfigured &&
+                  !block.isEmpty &&
+                  block.kind != NoteBlockKind.image)
                 _MenuTile(
                   icon: PhRegular.sparkle,
                   label: 'Restructure block with AI',
@@ -1407,20 +1529,14 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                   ),
                 ],
               ),
-              // Keyboard-docked formatting bar
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: AnimatedPadding(
-                  duration: const Duration(milliseconds: 160),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.only(
-                    bottom: bottomInset > 0 ? bottomInset + 8 : 14,
-                  ),
-                  child: Center(child: _toolbar()),
+              // Formatting bar for the block being typed in, above the keyboard.
+              if (_field != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: bottomInset,
+                  child: _formatBar(),
                 ),
-              ),
             ],
           ),
         ),
@@ -1488,11 +1604,13 @@ class _NoteEditorV3State extends State<NoteEditorV3>
           onTap: _redo,
         ),
         _IconBtn(
-          icon: PhRegular.shareNetwork,
-          enabled: true,
-          onTap: _shareNote,
+          icon: PhRegular.sparkle,
+          enabled: !_aiBusy,
+          color: _aiConfig.isConfigured ? Nocturne.palette.accentLight : null,
+          tooltip: 'Ask AI to edit this note',
+          onTap: _openAiChat,
         ),
-        _IconBtn(icon: PhRegular.trash, enabled: true, onTap: _delete),
+        _moreMenu(),
         GestureDetector(
           onTap: _dirty ? () => _save(pruneEmpty: false) : null,
           behavior: HitTestBehavior.opaque,
@@ -1573,101 +1691,186 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     );
   }
 
-  Widget _toolbar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: Nocturne.mix(Nocturne.palette.surface, 95),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Nocturne.palette.edge, width: 1),
-        boxShadow: Nocturne.shadowMd,
-      ),
+  /// Top-bar menu: AI, adding blocks, paste, share and delete.
+  Widget _moreMenu() {
+    final p = Nocturne.palette;
+    PopupMenuItem<VoidCallback> item(
+      IconData icon,
+      String label,
+      VoidCallback run, {
+      Color? color,
+    }) => PopupMenuItem(
+      value: run,
+      height: 44,
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          _ToolbarBtn(
-            icon: PhRegular.listChecks,
-            tooltip: 'Add checklist',
-            onTap: () => _add(NoteBlock.todo()),
-          ),
-          _ToolbarBtn(
-            icon: PhRegular.textbox,
-            tooltip: 'Add heading',
-            onTap: () => _add(NoteBlock.heading()),
-          ),
-          _ToolbarBtn(
-            icon: PhRegular.table,
-            tooltip: 'Add table',
-            onTap: () => _add(NoteBlock.table()),
-          ),
-          _ToolbarBtn(
-            icon: PhRegular.note,
-            tooltip: 'Add text paragraph',
-            onTap: () => _add(NoteBlock.paragraph()),
-          ),
-          _ToolbarBtn(
-            icon: PhRegular.clipboardText,
-            tooltip: 'Paste clipboard as a list or table',
-            onTap: _pasteFromToolbar,
-          ),
-          Container(
-            width: 1,
-            height: 20,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            color: Nocturne.palette.edge,
-          ),
-          Tooltip(
-            message: 'Ask AI to edit this note',
-            triggerMode: TooltipTriggerMode.longPress,
-            child: GestureDetector(
-              onTap: _aiBusy ? null : _openAiChat,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _aiConfig.isConfigured
-                      ? Nocturne.palette.tint
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: _aiBusy
-                    ? SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Nocturne.palette.accentLight,
-                        ),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            PhRegular.sparkle,
-                            size: 16,
-                            color: _aiConfig.isConfigured
-                                ? Nocturne.palette.accentLight
-                                : Nocturne.palette.subtle,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'AI',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: _aiConfig.isConfigured
-                                  ? Nocturne.palette.accentLight
-                                  : Nocturne.palette.subtle,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
+          Icon(icon, size: 18, color: color ?? p.neutral300),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 14, color: color ?? p.text),
             ),
           ),
         ],
+      ),
+    );
+    return PopupMenuButton<VoidCallback>(
+      tooltip: 'More options',
+      color: p.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: p.edge),
+      ),
+      onSelected: (run) => run(),
+      itemBuilder: (_) => [
+        item(
+          PhRegular.sparkle,
+          'Ask AI to edit this note',
+          _openAiChat,
+          color: p.accentLight,
+        ),
+        item(
+          PhRegular.sparkle,
+          'Restructure with AI',
+          _restructureNoteOrBlockWithAi,
+        ),
+        const PopupMenuDivider(),
+        item(PhRegular.note, 'Add text', () => _add(NoteBlock.paragraph())),
+        item(PhRegular.textbox, 'Add heading', () => _add(NoteBlock.heading())),
+        item(
+          PhRegular.listChecks,
+          'Add checklist',
+          () => _add(NoteBlock.todo()),
+        ),
+        item(PhRegular.table, 'Add table', () => _add(NoteBlock.table())),
+        item(PhRegular.image, 'Add image', _addImage),
+        item(
+          PhRegular.clipboardText,
+          'Paste as list or table',
+          _pasteFromToolbar,
+        ),
+        const PopupMenuDivider(),
+        item(PhRegular.shareNetwork, 'Share note', _shareNote),
+        item(PhRegular.trash, 'Delete note', _delete, color: p.expense),
+      ],
+      child: SizedBox(
+        width: 38,
+        height: 38,
+        child: Icon(PhRegular.dotsThreeVertical, size: 20, color: p.neutral300),
+      ),
+    );
+  }
+
+  /// Bottom bar while a block is being typed in: inline formatting, block
+  /// type, image, and the block's own menu.
+  Widget _formatBar() {
+    final p = Nocturne.palette;
+    // Table cells are plain text fields: no inline markers there.
+    final rich = _field?.widget.controller is MarkupController;
+    final i = _blocks.indexWhere((b) => b.id == _focusedBlock);
+    final block = i == -1 ? null : _blocks[i];
+    final kind = block?.kind;
+    final textual =
+        kind == NoteBlockKind.paragraph || kind == NoteBlockKind.heading;
+    Widget sep() => Container(
+      width: 1,
+      height: 20,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      color: p.edge,
+    );
+    // Taps here must not count as "outside" the field (web unfocuses).
+    return TextFieldTapRegion(
+      child: Container(
+        height: 46,
+        decoration: BoxDecoration(
+          color: p.surface,
+          border: Border(top: BorderSide(color: p.edge)),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Row(
+            children: [
+              if (rich) ...[
+                _ToolbarBtn(
+                  icon: PhRegular.textB,
+                  tooltip: 'Bold',
+                  onTap: () => _format('**'),
+                ),
+                _ToolbarBtn(
+                  icon: PhRegular.textItalic,
+                  tooltip: 'Italic',
+                  onTap: () => _format('*'),
+                ),
+                _ToolbarBtn(
+                  glyph: 'U',
+                  glyphStyle: const TextStyle(
+                    decoration: TextDecoration.underline,
+                  ),
+                  tooltip: 'Underline',
+                  onTap: () => _format('__'),
+                ),
+                _ToolbarBtn(
+                  icon: PhRegular.textStrikethrough,
+                  tooltip: 'Strikethrough',
+                  onTap: () => _format('~~'),
+                ),
+                _ToolbarBtn(
+                  icon: PhRegular.link,
+                  tooltip: 'Link',
+                  onTap: _addLink,
+                ),
+                sep(),
+              ],
+              if (textual)
+                _ToolbarBtn(
+                  glyph: 'H',
+                  glyphStyle: TextStyle(
+                    color: kind == NoteBlockKind.heading
+                        ? p.accentLight
+                        : null,
+                  ),
+                  tooltip: kind == NoteBlockKind.heading
+                      ? 'Make normal text'
+                      : 'Make heading',
+                  onTap: () => _toggleHeading(block!),
+                ),
+              if (textual || kind == NoteBlockKind.todo)
+                _ToolbarBtn(
+                  icon: PhRegular.listChecks,
+                  color: kind == NoteBlockKind.todo ? p.accentLight : null,
+                  tooltip: kind == NoteBlockKind.todo
+                      ? 'Turn checklist into text'
+                      : 'Turn into checklist',
+                  onTap: () => _replaceBlock(
+                    block!.id,
+                    kind == NoteBlockKind.todo
+                        ? NoteStructure.toParagraph(block)
+                        : NoteStructure.toTodo(block),
+                  ),
+                ),
+              _ToolbarBtn(
+                icon: PhRegular.image,
+                tooltip: 'Insert image',
+                onTap: _addImage,
+              ),
+              sep(),
+              if (i != -1)
+                _ToolbarBtn(
+                  icon: PhRegular.dotsThree,
+                  tooltip: 'Block options: move, duplicate, delete, type',
+                  onTap: () => _openBlockMenu(i),
+                ),
+              _ToolbarBtn(
+                icon: PhRegular.caretDown,
+                tooltip: 'Done editing',
+                onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1702,12 +1905,20 @@ class _NoteEditorV3State extends State<NoteEditorV3>
 }
 
 class _ToolbarBtn extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+
+  /// Shown instead of [icon] (for marks with no icon, like U and H).
+  final String? glyph;
+  final TextStyle? glyphStyle;
+  final Color? color;
   final String tooltip;
   final VoidCallback onTap;
 
   const _ToolbarBtn({
-    required this.icon,
+    this.icon,
+    this.glyph,
+    this.glyphStyle,
+    this.color,
     required this.tooltip,
     required this.onTap,
   });
@@ -1726,7 +1937,16 @@ class _ToolbarBtn extends StatelessWidget {
           width: 38,
           height: 36,
           alignment: Alignment.center,
-          child: Icon(icon, size: 19, color: Nocturne.palette.text),
+          child: icon != null
+              ? Icon(icon, size: 19, color: color ?? Nocturne.palette.text)
+              : Text(
+                  glyph ?? '',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: color ?? Nocturne.palette.text,
+                  ).merge(glyphStyle),
+                ),
         ),
       ),
     ),
@@ -1771,26 +1991,43 @@ class _IconBtn extends StatelessWidget {
   final IconData icon;
   final bool enabled;
   final VoidCallback onTap;
+  final Color? color;
+  final String? tooltip;
 
   const _IconBtn({
     required this.icon,
     required this.enabled,
     required this.onTap,
+    this.color,
+    this.tooltip,
   });
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: enabled ? onTap : null,
-    behavior: HitTestBehavior.opaque,
-    child: Opacity(
-      opacity: enabled ? 1 : 0.35,
-      child: SizedBox(
-        width: 38,
-        height: 38,
-        child: Icon(icon, size: 19, color: Nocturne.palette.neutral300),
+  Widget build(BuildContext context) {
+    final btn = GestureDetector(
+      onTap: enabled ? onTap : null,
+      behavior: HitTestBehavior.opaque,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.35,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Icon(
+            icon,
+            size: 19,
+            color: color ?? Nocturne.palette.neutral300,
+          ),
+        ),
       ),
-    ),
-  );
+    );
+    return tooltip == null
+        ? btn
+        : Tooltip(
+            message: tooltip!,
+            triggerMode: TooltipTriggerMode.longPress,
+            child: btn,
+          );
+  }
 }
 
 class _MetaChip extends StatelessWidget {
@@ -1944,6 +2181,10 @@ class _BlockRow extends StatelessWidget {
                       block: block,
                       onFocus: onFocus,
                       onChanged: onChanged,
+                    ),
+                    NoteBlockKind.image => _ImageBlock(
+                      data: block.text,
+                      onTap: onOpenMenu,
                     ),
                   },
                 ),
@@ -2321,7 +2562,8 @@ class _HeadingBlockState extends State<_HeadingBlock> {
   }
 
   @override
-  Widget build(BuildContext context) => TextField(
+  Widget build(BuildContext context) => LinkTapArea(
+    child: TextField(
     controller: _c,
     onTap: widget.onFocus,
     onChanged: (v) {
@@ -2349,6 +2591,7 @@ class _HeadingBlockState extends State<_HeadingBlock> {
         fontWeight: FontWeight.w700,
         color: Nocturne.palette.faint,
       ),
+    ),
     ),
   );
 }
@@ -2432,7 +2675,8 @@ class _ParagraphBlockState extends State<_ParagraphBlock> {
           },
         ),
       },
-      child: TextField(
+      child: LinkTapArea(
+        child: TextField(
         controller: _c,
         onTap: widget.onFocus,
         onChanged: (v) {
@@ -2482,6 +2726,7 @@ class _ParagraphBlockState extends State<_ParagraphBlock> {
           hintText: 'Write something, type / for blocks, or paste a list…',
           hintStyle: TextStyle(fontSize: 15, color: Nocturne.palette.faint),
         ),
+      ),
       ),
     );
   }
@@ -2767,7 +3012,8 @@ class _TodoRowState extends State<_TodoRow> {
           ),
           const SizedBox(width: 11),
           Expanded(
-            child: TextField(
+            child: LinkTapArea(
+              child: TextField(
               controller: _c,
               onTap: widget.onFocus,
               onChanged: widget.onText,
@@ -2789,6 +3035,7 @@ class _TodoRowState extends State<_TodoRow> {
                 hintStyle: TextStyle(fontSize: 15, color: Nocturne.palette.faint),
               ),
             ),
+            ),
           ),
           if (by != null)
             Container(
@@ -2804,6 +3051,69 @@ class _TodoRowState extends State<_TodoRow> {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// A picture stored inline as base64; tap for the block menu.
+class _ImageBlock extends StatefulWidget {
+  final String data;
+  final VoidCallback onTap;
+
+  const _ImageBlock({required this.data, required this.onTap});
+
+  @override
+  State<_ImageBlock> createState() => _ImageBlockState();
+}
+
+class _ImageBlockState extends State<_ImageBlock> {
+  Uint8List? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _decode();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ImageBlock old) {
+    super.didUpdateWidget(old);
+    if (old.data != widget.data) _decode();
+  }
+
+  void _decode() {
+    try {
+      _bytes = base64Decode(widget.data);
+    } catch (_) {
+      _bytes = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Nocturne.palette;
+    final broken = Container(
+      height: 80,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: p.line,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(PhRegular.image, color: p.faint),
+    );
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: _bytes == null
+          ? broken
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.memory(
+                _bytes!,
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+                errorBuilder: (_, _, _) => broken,
+              ),
+            ),
     );
   }
 }
