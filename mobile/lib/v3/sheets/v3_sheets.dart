@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../../theme/nocturne_palette.dart';
 import '../data/bill_scan.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
@@ -138,20 +139,22 @@ class _SheetShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final maxH = MediaQuery.of(context).size.height * 0.92;
     return Container(
       constraints: BoxConstraints(maxHeight: maxH),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: const [
           BoxShadow(
             color: Color(0x66000000),
             blurRadius: 50,
             offset: Offset(0, -20),
           ),
         ],
-        border: Border(top: BorderSide(color: Nocturne.neutral700, width: 1)),
+        border: Border(top: BorderSide(color: palette.edge, width: 1)),
       ),
       padding: EdgeInsets.only(
         left: 16,
@@ -162,13 +165,13 @@ class _SheetShell extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // the grab handle: 38×4, neutral-700
+          // the grab handle: 38×4
           Container(
             width: 38,
             height: 4,
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: Nocturne.neutral700,
+              color: palette.edge,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -185,27 +188,31 @@ class _SheetTitle extends StatelessWidget {
   const _SheetTitle(this.title, [this.subtitle]);
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: Nocturne.text,
-        ),
-      ),
-      if (subtitle != null) ...[
-        const SizedBox(height: 2),
+  Widget build(BuildContext context) {
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
         Text(
-          subtitle!,
-          style: const TextStyle(fontSize: 12, color: Nocturne.neutral500),
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: palette.text,
+          ),
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            style: TextStyle(fontSize: 12, color: palette.muted),
+          ),
+        ],
       ],
-    ],
-  );
+    );
+  }
 }
 
 // ── Scope sheet ─────────────────────────────────────────────────────────────
@@ -299,16 +306,17 @@ class _ScopeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? Nocturne.accent900 : Nocturne.bg,
+          color: selected ? p.tint : p.raised,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? Nocturne.accent600 : Nocturne.neutral900,
+            color: selected ? p.tintEdge : p.edge,
             width: 1,
           ),
         ),
@@ -331,15 +339,15 @@ class _ScopeOption extends StatelessWidget {
                     name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14, color: Nocturne.text),
+                    style: TextStyle(fontSize: 14, color: p.text),
                   ),
                   Text(
                     sub,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
-                      color: Nocturne.neutral500,
+                      color: p.muted,
                     ),
                   ),
                 ],
@@ -348,16 +356,16 @@ class _ScopeOption extends StatelessWidget {
             const SizedBox(width: 8),
             V3Num(
               amount,
-              style: const TextStyle(fontSize: 13, color: Nocturne.neutral300),
+              style: TextStyle(fontSize: 13, color: p.subtle),
             ),
             const SizedBox(width: 8),
             SizedBox(
               width: 18,
               child: selected
-                  ? const Icon(
+                  ? Icon(
                       PhFill.checkCircle,
                       size: 18,
-                      color: Nocturne.accent300,
+                      color: p.accent,
                     )
                   : null,
             ),
@@ -376,6 +384,7 @@ class V3SourceSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
 
     return SingleChildScrollView(
       child: Column(
@@ -402,14 +411,14 @@ class V3SourceSheet extends StatelessWidget {
                   height: 34,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Nocturne.bg,
+                    color: p.raised,
                     borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: Nocturne.neutral800, width: 1),
+                    border: Border.all(color: p.edge, width: 1),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     PhRegular.slidersHorizontal,
                     size: 16,
-                    color: Nocturne.neutral300,
+                    color: p.subtle,
                   ),
                 ),
               ),
@@ -422,7 +431,7 @@ class V3SourceSheet extends StatelessWidget {
             inText: s.moneyShort(s.totalIncome),
             outText: s.moneyShort(s.totalSpent),
             fraction: s.budgetFraction,
-            color: Nocturne.accent500,
+            color: p.accent500,
             icon: PhRegular.wallet,
             selected: s.srcFilter == null,
             onTap: () {
@@ -487,16 +496,17 @@ class _SourceOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
-          color: selected ? Nocturne.accent900 : Nocturne.bg,
+          color: selected ? p.tint : p.raised,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? Nocturne.accent600 : Nocturne.neutral900,
+            color: selected ? p.tintEdge : p.edge,
             width: 1,
           ),
         ),
@@ -516,17 +526,17 @@ class _SourceOption extends StatelessWidget {
                           name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Nocturne.text,
+                            color: p.text,
                           ),
                         ),
                       ),
                       V3Num(
                         left,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Nocturne.text,
+                          color: p.text,
                         ),
                       ),
                     ],
@@ -539,16 +549,16 @@ class _SourceOption extends StatelessWidget {
                     children: [
                       Text(
                         'In $inText',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Nocturne.neutral500,
+                          color: p.muted,
                         ),
                       ),
                       Text(
                         'Spent $outText',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Nocturne.neutral500,
+                          color: p.muted,
                         ),
                       ),
                     ],
@@ -560,10 +570,10 @@ class _SourceOption extends StatelessWidget {
             SizedBox(
               width: 18,
               child: selected
-                  ? const Icon(
+                  ? Icon(
                       PhFill.checkCircle,
                       size: 18,
-                      color: Nocturne.accent300,
+                      color: p.accent,
                     )
                   : null,
             ),
@@ -1018,6 +1028,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final keys = const [
       '1',
       '2',
@@ -1831,15 +1842,15 @@ class _V3AddSheetState extends State<V3AddSheet> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: p.raised,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Nocturne.neutral800, width: 1),
+              border: Border.all(color: p.edge, width: 1),
             ),
             child: Row(
               children: [
-                const Text(
+                Text(
                   '₹',
-                  style: TextStyle(fontSize: 20, color: Nocturne.neutral500),
+                  style: TextStyle(fontSize: 20, color: p.muted),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1849,8 +1860,8 @@ class _V3AddSheetState extends State<V3AddSheet> {
                       fontSize: 26,
                       fontWeight: FontWeight.w600,
                       color: _type == 'income'
-                          ? NocturneSemantic.income
-                          : Nocturne.text,
+                          ? p.income
+                          : p.text,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
@@ -1862,16 +1873,16 @@ class _V3AddSheetState extends State<V3AddSheet> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Nocturne.accent900,
+                      color: p.tint,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Nocturne.accent700, width: 1),
+                      border: Border.all(color: p.tintEdge, width: 1),
                     ),
                     child: Text(
                       '= ₹${CalcEngine.format(evaluated)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.accent200,
+                        color: p.accent,
                       ),
                     ),
                   ),
@@ -1953,38 +1964,42 @@ class _V3AddSheetState extends State<V3AddSheet> {
     required IconData icon,
     required String title,
     required List<Widget> children,
-  }) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Nocturne.bg,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: Nocturne.neutral800, width: 1),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 16, color: Nocturne.accent300),
-            const SizedBox(width: 6),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: Nocturne.text,
+  }) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: p.raised,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: p.edge, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: p.accent),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: p.text,
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ...children,
-      ],
-    ),
-  );
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...children,
+        ],
+      ),
+    );
+  }
 
   Widget _splitChip(String label, String mode, {bool? selectedOverride}) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final sel = selectedOverride ?? _splitMode == mode;
     return GestureDetector(
       onTap: () => setState(() => _splitMode = mode),
@@ -1992,10 +2007,10 @@ class _V3AddSheetState extends State<V3AddSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
-          color: sel ? Nocturne.neutral700 : Nocturne.surface,
+          color: sel ? p.tint : p.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: sel ? Nocturne.neutral500 : Nocturne.neutral800,
+            color: sel ? p.tintEdge : p.edge,
             width: 1,
           ),
         ),
@@ -2004,7 +2019,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
           style: TextStyle(
             fontSize: 11,
             fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
-            color: sel ? Nocturne.text : Nocturne.neutral400,
+            color: sel ? p.accent : p.muted,
           ),
         ),
       ),
@@ -2035,6 +2050,7 @@ class _CalcKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final isOp = ['+', '-', '×', '÷', '='].contains(label);
     return GestureDetector(
       onTap: onTap,
@@ -2043,23 +2059,21 @@ class _CalcKey extends StatelessWidget {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isOp ? Nocturne.neutral800 : Nocturne.bg,
+          color: isOp ? p.tint : p.raised,
           borderRadius: BorderRadius.circular(11),
           border: Border.all(
-            color: isOp
-                ? Nocturne.accent600.withValues(alpha: 0.3)
-                : Nocturne.neutral900,
+            color: isOp ? p.tintEdge : p.edge,
             width: 1,
           ),
         ),
         child: label == '<'
-            ? const Icon(PhRegular.backspace, size: 19, color: Nocturne.text)
+            ? Icon(PhRegular.backspace, size: 19, color: p.text)
             : Text(
                 label,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: isOp ? FontWeight.w600 : FontWeight.w500,
-                  color: isOp ? Nocturne.accent200 : Nocturne.text,
+                  color: isOp ? p.accent : p.text,
                 ),
               ),
       ),
@@ -2165,6 +2179,7 @@ class V3DetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final style = s.catStyle(txn.categoryKey);
     final who = s.memberById(txn.userId);
     final src = s.sourceById(txn.sourceId);
@@ -2196,17 +2211,17 @@ class V3DetailSheet extends StatelessWidget {
               Text(
                 txn.title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w500,
-                  color: Nocturne.text,
+                  color: p.text,
                 ),
               ),
               Text(
                 style.name,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Nocturne.neutral500,
+                  color: p.muted,
                 ),
               ),
               const SizedBox(height: 8),
@@ -2217,8 +2232,8 @@ class V3DetailSheet extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                   letterSpacing: -0.68,
                   color: txn.isExpense
-                      ? Nocturne.text
-                      : NocturneSemantic.income,
+                      ? p.text
+                      : p.income,
                 ),
               ),
             ],
@@ -2227,8 +2242,9 @@ class V3DetailSheet extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: p.raised,
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: p.edge, width: 1),
             ),
             child: Column(
               children: [
@@ -2240,9 +2256,9 @@ class V3DetailSheet extends StatelessWidget {
                       children: [
                         Text(
                           rows[i].$1,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            color: Nocturne.neutral500,
+                            color: p.muted,
                           ),
                         ),
                         Flexible(
@@ -2251,9 +2267,9 @@ class V3DetailSheet extends StatelessWidget {
                             textAlign: TextAlign.right,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Nocturne.text,
+                              color: p.text,
                             ),
                           ),
                         ),
@@ -2270,8 +2286,9 @@ class V3DetailSheet extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: Nocturne.accent900,
+                color: p.tint,
                 borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: p.tintEdge, width: 1),
               ),
               child: Row(
                 children: [
@@ -2280,7 +2297,7 @@ class V3DetailSheet extends StatelessWidget {
                       offset: const Offset(-6, 0),
                       child: V3Avatar(
                         initial: s.memberById(id)?.initial ?? '?',
-                        color: s.memberById(id)?.color ?? Nocturne.neutral700,
+                        color: s.memberById(id)?.color ?? p.faint,
                         size: 26,
                         fontSize: 10.5,
                       ),
@@ -2292,9 +2309,9 @@ class V3DetailSheet extends StatelessWidget {
                           ? 'Paid for ${txn.splitWith.map(s.memberName).join(', ')} · nothing owed'
                           : 'Owes ${s.memberName(txn.paidBy)}: '
                                 '${txn.splitWith.map((id) => '${s.memberName(id)} ${V3Design.inr(txn.shareOf(id))}').join(' · ')}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
-                        color: Nocturne.accent100,
+                        color: p.text,
                       ),
                     ),
                   ),

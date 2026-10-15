@@ -1578,6 +1578,7 @@ class _EmptyGoalsBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return GestureDetector(
       onTap: () => V3Sheets.openGoals(context),
       behavior: HitTestBehavior.opaque,
@@ -1585,19 +1586,19 @@ class _EmptyGoalsBanner extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: p.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Nocturne.neutral800),
+          border: Border.all(color: p.edge),
         ),
-        child: const Row(
+        child: Row(
           children: [
             V3IconTile(
               icon: PhRegular.target,
-              color: Nocturne.accent300,
+              color: p.accent,
               size: 34,
               radius: 10,
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1608,17 +1609,17 @@ class _EmptyGoalsBanner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w500,
-                      color: Nocturne.text,
+                      color: p.text,
                     ),
                   ),
                   Text(
                     'Tap to set a target for Umrah, a holiday, or an emergency fund',
-                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                    style: TextStyle(fontSize: 11.5, color: p.muted),
                   ),
                 ],
               ),
             ),
-            Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+            Icon(PhRegular.caretRight, size: 14, color: p.faint),
           ],
         ),
       ),
@@ -1632,6 +1633,7 @@ class _FaithSuiteBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final goldGrams = s.totalGoldGrams;
     final charity = s.totalCharityGiven;
 
@@ -1642,9 +1644,9 @@ class _FaithSuiteBanner extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: p.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Nocturne.neutral800),
+          border: Border.all(color: p.edge),
         ),
         child: Row(
           children: [
@@ -1664,20 +1666,20 @@ class _FaithSuiteBanner extends StatelessWidget {
                     goldGrams > 0
                         ? '${goldGrams.toStringAsFixed(1)}g Gold · ${s.moneyShort(charity)} Sadaqah'
                         : 'Faith & Islamic Finance Suite',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w500,
-                      color: Nocturne.text,
+                      color: p.text,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Calculate 2.5% Zakat with Nisab, track precious metals, and log charity',
-                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                    style: TextStyle(fontSize: 11.5, color: p.muted),
                   ),
                 ],
               ),
             ),
-            const Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+            Icon(PhRegular.caretRight, size: 14, color: p.faint),
           ],
         ),
       ),
@@ -1766,6 +1768,7 @@ class _GuardianBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final protectedCount = s.members.where((m) => m.isProtectedMember).length;
     final cardCount = s.creditCards.length;
     final expiringCount = s.cardsWithExpiringPoints.length;
@@ -1781,10 +1784,10 @@ class _GuardianBanner extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: p.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: expiringCount > 0 ? NocturneSemantic.warning : Nocturne.neutral800,
+            color: expiringCount > 0 ? p.warning : p.edge,
             width: expiringCount > 0 ? 1.2 : 1,
           ),
         ),
@@ -1792,7 +1795,7 @@ class _GuardianBanner extends StatelessWidget {
           children: [
             V3IconTile(
               icon: expiringCount > 0 ? PhRegular.warning : PhRegular.lockSimple,
-              color: expiringCount > 0 ? NocturneSemantic.warning : NocturneSemantic.income,
+              color: expiringCount > 0 ? p.warning : p.income,
               size: 34,
               radius: 10,
             ),
@@ -1802,22 +1805,22 @@ class _GuardianBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Guardian Mode & Card Optimizer',
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Nocturne.text,
+                      color: p.text,
                     ),
                   ),
                   Text(
                     summary,
-                    style: const TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                    style: TextStyle(fontSize: 11.5, color: p.muted),
                   ),
                 ],
               ),
             ),
-            const Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+            Icon(PhRegular.caretRight, size: 14, color: p.faint),
           ],
         ),
       ),
@@ -1893,6 +1896,7 @@ class _RefundWatchdogBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final pendingCount = s.pendingRefundsCount;
     final delayedCount = s.delayedRefunds.length;
 
@@ -1907,10 +1911,10 @@ class _RefundWatchdogBanner extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: p.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: delayedCount > 0 ? NocturneSemantic.warning : Nocturne.neutral800,
+            color: delayedCount > 0 ? p.warning : p.edge,
             width: delayedCount > 0 ? 1.2 : 1,
           ),
         ),
@@ -1918,7 +1922,7 @@ class _RefundWatchdogBanner extends StatelessWidget {
           children: [
             V3IconTile(
               icon: delayedCount > 0 ? PhRegular.warning : PhRegular.arrowCounterClockwise,
-              color: delayedCount > 0 ? NocturneSemantic.warning : Nocturne.accent200,
+              color: delayedCount > 0 ? p.warning : p.accentLight,
               size: 34,
               radius: 10,
             ),
@@ -1928,24 +1932,24 @@ class _RefundWatchdogBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Never Lose A Refund Again',
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Nocturne.text,
+                      color: p.text,
                     ),
                   ),
                   Text(
                     summary,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                    style: TextStyle(fontSize: 11.5, color: p.muted),
                   ),
                 ],
               ),
             ),
-            const Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+            Icon(PhRegular.caretRight, size: 14, color: p.faint),
           ],
         ),
       ),
@@ -1958,6 +1962,7 @@ class _SpendRoastBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return GestureDetector(
       onTap: () => V3Sheets.openSpendRoast(context),
       behavior: HitTestBehavior.opaque,
@@ -1965,19 +1970,19 @@ class _SpendRoastBanner extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: p.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Nocturne.neutral800),
+          border: Border.all(color: p.edge),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            V3IconTile(
+            const V3IconTile(
               icon: PhRegular.sparkle,
               color: Color(0xFFFF8A80),
               size: 34,
               radius: 10,
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1988,19 +1993,19 @@ class _SpendRoastBanner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Nocturne.text,
+                      color: p.text,
                     ),
                   ),
                   Text(
                     'Shareable monthly roast · Personal grocery inflation · Universal UPI split',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                    style: TextStyle(fontSize: 11.5, color: p.muted),
                   ),
                 ],
               ),
             ),
-            Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+            Icon(PhRegular.caretRight, size: 14, color: p.faint),
           ],
         ),
       ),
@@ -2013,6 +2018,7 @@ class _MagicAiBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return GestureDetector(
       onTap: () => V3Sheets.openMagicAi(context),
       behavior: HitTestBehavior.opaque,
@@ -2020,19 +2026,19 @@ class _MagicAiBanner extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: p.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Nocturne.neutral800),
+          border: Border.all(color: p.edge),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            V3IconTile(
+            const V3IconTile(
               icon: PhRegular.sparkle,
               color: Color(0xFFC084FC),
               size: 34,
               radius: 10,
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2043,19 +2049,19 @@ class _MagicAiBanner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Nocturne.text,
+                      color: p.text,
                     ),
                   ),
                   Text(
                     'What-if goal slider · Duplicate subscriptions · Polite reminders',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                    style: TextStyle(fontSize: 11.5, color: p.muted),
                   ),
                 ],
               ),
             ),
-            Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+            Icon(PhRegular.caretRight, size: 14, color: p.faint),
           ],
         ),
       ),
@@ -2126,6 +2132,7 @@ class _ComingUp extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, i) {
               final r = s.recurring[i];
+              final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
               final style = s.catStyle(r.categoryKey);
               final days = r.dueInDays;
               final soon = days <= 3;
@@ -2137,9 +2144,9 @@ class _ComingUp extends StatelessWidget {
                   width: 154,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Nocturne.surface,
+                    color: p.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Nocturne.neutral900, width: 1),
+                    border: Border.all(color: p.edge, width: 1),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2160,8 +2167,8 @@ class _ComingUp extends StatelessWidget {
                               fontWeight:
                                   soon ? FontWeight.w600 : FontWeight.w400,
                               color: soon
-                                  ? NocturneSemantic.warning
-                                  : Nocturne.neutral500,
+                                  ? p.warning
+                                  : p.muted,
                             ),
                           ),
                         ],
@@ -2170,16 +2177,16 @@ class _ComingUp extends StatelessWidget {
                       Text(r.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 13, color: Nocturne.text)),
+                          style: TextStyle(
+                              fontSize: 13, color: p.text)),
                       V3Num(
                         '${r.isIncome ? '+' : ''}${s.money(r.amount)}',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: r.isIncome
-                              ? NocturneSemantic.income
-                              : Nocturne.text,
+                              ? p.income
+                              : p.text,
                         ),
                       ),
                       const Spacer(),
@@ -2200,13 +2207,13 @@ class _ComingUp extends StatelessWidget {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: r.isIncome
-                                ? Nocturne.mix(NocturneSemantic.income, 14)
+                                ? Nocturne.mix(p.income, 14)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(9),
                             border: Border.all(
                                 color: r.isIncome
-                                    ? NocturneSemantic.income
-                                    : Nocturne.accent700,
+                                    ? p.income
+                                    : p.accentLight,
                                 width: 1),
                           ),
                           child: Text(
@@ -2215,8 +2222,8 @@ class _ComingUp extends StatelessWidget {
                               fontSize: 11.5,
                               fontWeight: FontWeight.w500,
                               color: r.isIncome
-                                  ? NocturneSemantic.income
-                                  : Nocturne.accent200,
+                                  ? p.income
+                                  : p.accentLight,
                             ),
                           ),
                         ),
@@ -2238,24 +2245,25 @@ class _EmptyRecurringBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Nocturne.surface,
+        color: p.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Nocturne.neutral800, width: 1),
+        border: Border.all(color: p.edge, width: 1),
       ),
       child: Row(
         children: [
-          const V3IconTile(
+          V3IconTile(
             icon: PhRegular.arrowsClockwise,
-            color: Nocturne.accent400,
+            color: p.accent,
             size: 38,
             radius: 12,
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -2264,11 +2272,11 @@ class _EmptyRecurringBanner extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w500,
-                        color: Nocturne.text)),
-                SizedBox(height: 2),
+                        color: p.text)),
+                const SizedBox(height: 2),
                 Text(
                   'Track monthly salary, rent, or EMIs to record on a set date.',
-                  style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                  style: TextStyle(fontSize: 11.5, color: p.muted),
                 ),
               ],
             ),
@@ -2279,15 +2287,15 @@ class _EmptyRecurringBanner extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: p.raised,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Nocturne.neutral700, width: 1),
+                border: Border.all(color: p.edge, width: 1),
               ),
-              child: const Text('Set up',
+              child: Text('Set up',
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Nocturne.accent200)),
+                      color: p.accent)),
             ),
           ),
         ],

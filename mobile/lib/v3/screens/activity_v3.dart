@@ -178,35 +178,36 @@ class _ActivityV3State extends State<ActivityV3> {
   Future<void> _confirmDeleteSelected(V3State s) async {
     if (_selectedIds.isEmpty || _deleting) return;
     final count = _selectedIds.length;
+    final p = context.read<ThemeController?>()?.palette ?? Nocturne.palette;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: p.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
           'Delete $count transaction${count == 1 ? '' : 's'}?',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Nocturne.text,
+            color: p.text,
           ),
         ),
         content: Text(
           'This will permanently remove the $count selected transaction${count == 1 ? '' : 's'} from your workspace.',
-          style: const TextStyle(fontSize: 13, color: Nocturne.neutral400),
+          style: TextStyle(fontSize: 13, color: p.muted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: Nocturne.neutral400)),
+            child: Text('Cancel',
+                style: TextStyle(color: p.muted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Delete',
               style: TextStyle(
-                color: NocturneSemantic.expense,
+                color: p.expense,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -238,17 +239,18 @@ class _ActivityV3State extends State<ActivityV3> {
     final imported = s.importedTxns;
     if (imported.isEmpty || _deleting) return;
     final count = imported.length;
+    final p = context.read<ThemeController?>()?.palette ?? Nocturne.palette;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: p.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
           'Delete $count imported transaction${count == 1 ? '' : 's'}?',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Nocturne.text,
+            color: p.text,
           ),
         ),
         content: Text(
@@ -506,22 +508,22 @@ class _ActivityV3State extends State<ActivityV3> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Nocturne.surface,
+                          color: palette.surface,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: Nocturne.neutral800, width: 1),
+                              color: palette.edge, width: 1),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(PhRegular.shareNetwork,
-                                size: 12, color: Nocturne.neutral300),
-                            SizedBox(width: 4),
+                                size: 12, color: palette.subtle),
+                            const SizedBox(width: 4),
                             Text('Export',
                                 style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w500,
-                                    color: Nocturne.neutral300)),
+                                    color: palette.subtle)),
                           ],
                         ),
                       ),
@@ -537,36 +539,36 @@ class _ActivityV3State extends State<ActivityV3> {
             margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: Nocturne.neutral800, width: 1),
+              border: Border.all(color: palette.edge, width: 1),
             ),
             child: Row(
               children: [
-                const Icon(PhRegular.magnifyingGlass,
-                    size: 18, color: Nocturne.neutral500),
+                Icon(PhRegular.magnifyingGlass,
+                    size: 18, color: palette.muted),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _search,
                     onChanged: (_) => setState(() {}),
                     style:
-                        const TextStyle(fontSize: 14, color: Nocturne.text),
-                    cursorColor: Nocturne.accent,
-                    decoration: const InputDecoration(
+                        TextStyle(fontSize: 14, color: palette.text),
+                    cursorColor: palette.accent,
+                    decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
                       hintText: 'Search merchant, category, member',
                       hintStyle: TextStyle(
-                          fontSize: 14, color: Nocturne.neutral600),
+                          fontSize: 14, color: palette.muted),
                     ),
                   ),
                 ),
                 if (_search.text.isNotEmpty)
                   GestureDetector(
                     onTap: () => setState(_search.clear),
-                    child: const Icon(PhFill.xCircle,
-                        size: 16, color: Nocturne.neutral500),
+                    child: Icon(PhFill.xCircle,
+                        size: 16, color: palette.muted),
                   ),
               ],
             ),
@@ -576,7 +578,7 @@ class _ActivityV3State extends State<ActivityV3> {
             margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(11),
             ),
             child: Row(
@@ -595,12 +597,12 @@ class _ActivityV3State extends State<ActivityV3> {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: _type == o.$1
-                              ? Nocturne.accent900
+                              ? palette.tint
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: _type == o.$1
-                                ? Nocturne.accent600
+                                ? palette.tintEdge
                                 : Colors.transparent,
                             width: 1,
                           ),
@@ -611,9 +613,10 @@ class _ActivityV3State extends State<ActivityV3> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
+                            fontWeight: _type == o.$1 ? FontWeight.w600 : FontWeight.w400,
                             color: _type == o.$1
-                                ? Nocturne.accent100
-                                : Nocturne.neutral400,
+                                ? palette.accent
+                                : palette.muted,
                           ),
                         ),
                       ),
@@ -628,9 +631,9 @@ class _ActivityV3State extends State<ActivityV3> {
               margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Nocturne.surface,
+                color: palette.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Nocturne.accent700, width: 1),
+                border: Border.all(color: palette.accent, width: 1),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1143,29 +1146,32 @@ class _MiniStat extends StatelessWidget {
       {required this.label, required this.value, required this.color});
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-        decoration: BoxDecoration(
-          color: Nocturne.surface,
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label,
-                style:
-                    const TextStyle(fontSize: 11, color: Nocturne.neutral500)),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: V3Num(value,
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: color)),
-            ),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: p.surface,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: p.edge, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label,
+              style: TextStyle(fontSize: 11, color: p.muted)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: V3Num(value,
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: color)),
+          ),
+        ],
+      ),
+    );
+  }
 }
