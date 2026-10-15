@@ -152,6 +152,11 @@
     </application>
 
     <queries>
+        <!-- Voice assistant replies: Android 11+ hides the TTS engine from
+             flutter_tts unless it is declared here. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
