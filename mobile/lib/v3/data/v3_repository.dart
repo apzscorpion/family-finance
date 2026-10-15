@@ -269,37 +269,10 @@ class V3Repository {
     }).eq('id', id);
   }
 
-  Future<List<SourceOpeningRow>> sourceOpenings(String familyId) async {
-    final rows = await _db
-        .from('source_openings')
-        .select('source_id,user_id,opening_balance,opening_cash')
-        .eq('family_id', familyId);
-    return (rows as List)
-        .map((r) => SourceOpeningRow.fromJson(Map<String, dynamic>.from(r as Map)))
-        .toList();
-  }
-
-  /// Sets my own opening balance for [sourceId].
-  Future<void> setMyOpening({
-    required String familyId,
-    required String sourceId,
-    required double openingBalance,
-    required double openingCash,
-  }) async {
-    await _db.from('source_openings').upsert({
-      'source_id': sourceId,
-      'user_id': currentUserId,
-      'family_id': familyId,
-      'opening_balance': openingBalance,
-      'opening_cash': openingCash,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    });
-  }
-
   Future<List<WalletMoveRow>> walletMoves(String familyId) async {
     final rows = await _db
         .from('wallet_moves')
-        .select('id,source_id,amount,to_cash,occurred_at,created_by')
+        .select('id,source_id,amount,to_cash,occurred_at')
         .eq('family_id', familyId);
     return (rows as List)
         .map((r) => WalletMoveRow.fromJson(Map<String, dynamic>.from(r as Map)))
@@ -320,7 +293,7 @@ class V3Repository {
           'amount': amount,
           'to_cash': toCash,
         })
-        .select('id,source_id,amount,to_cash,occurred_at,created_by')
+        .select('id,source_id,amount,to_cash,occurred_at')
         .single();
     return WalletMoveRow.fromJson(Map<String, dynamic>.from(row));
   }

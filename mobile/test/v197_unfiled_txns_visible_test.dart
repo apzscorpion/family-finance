@@ -41,9 +41,6 @@ void main() {
       SourceRow(id: 'loan', name: 'Loan', kind: 'loan', openingBalance: 0, sortOrder: 0),
       SourceRow(id: 'sal', name: 'Salary', kind: 'income', openingBalance: 1000, sortOrder: 1),
     ];
-    state.openings = const [
-      SourceOpeningRow(sourceId: 'sal', userId: 'user-asif', openingBalance: 1000),
-    ];
     state.txns = [
       _txn('old-import', 100),
       _txn('salary-spend', 50, sourceId: 'sal', origin: 'manual'),
@@ -89,13 +86,10 @@ void main() {
 
     final mine = view('user-asif');
     final w = mine.wallet('sal');
-    // Balances are per person: Sinu's charge to Salary is hers, not his.
-    expect(w.cash + w.bank, 7938);
-    expect(mine.balance, 7938);
+    expect(w.cash + w.bank, 7893); // explicit charges still count
+    expect(mine.balance, 7893);
     // The reported bug: Sinu viewing Asif saw his account-less pay vanish.
-    expect(view('user-sinu').balance, 7938);
-    // Sinu's own view: her own money only, no opening of hers set.
-    expect((view('user-sinu')..scope = 'user-sinu').balance, 1855);
+    expect(view('user-sinu').balance, 7893);
     // The family view holds everyone's.
     expect((view('user-sinu')..scope = 'family').balance, 9793);
   });
