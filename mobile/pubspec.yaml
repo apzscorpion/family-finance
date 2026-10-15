@@ -64,6 +64,10 @@ dependencies:
   # leaves the phone and only the last 4 digits are kept.
   google_mlkit_text_recognition: ^0.17.1
 
+  # Voice assistant speaks its replies with the phone's own TTS engine.
+  # Offline, no permission.
+  flutter_tts: ^4.2.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -201,7 +201,7 @@ class MainActivity : FlutterFragmentActivity() {
                                 )
                                 putExtra(
                                     android.speech.RecognizerIntent.EXTRA_PROMPT,
-                                    "Speak expense (e.g. '450 petrol HDFC')"
+                                    call.argument<String>("prompt") ?: "Speak expense (e.g. '450 petrol HDFC')"
                                 )
                                 putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3)
                             }
