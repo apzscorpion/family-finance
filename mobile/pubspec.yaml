@@ -68,6 +68,10 @@ dependencies:
   # Offline, no permission.
   flutter_tts: ^4.2.5
 
+  # "Download" on a chat photo saves it into the gallery via MediaStore, so
+  # Android 10+ needs no storage permission.
+  gal: ^2.3.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
