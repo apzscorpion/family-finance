@@ -763,6 +763,15 @@ class _BuiltInCardState extends State<_BuiltInCard> {
               'the daily limit; an owner or admin can approve other models.',
               style: TextStyle(fontSize: 12, color: p.muted),
             ),
+            if (info?['app_admin'] == true) ...[
+              const SizedBox(height: 10),
+              TextButton.icon(
+                onPressed: () => _AppAdminSheet.open(context),
+                icon: Icon(PhRegular.shieldCheck, size: 16, color: p.accent),
+                label: Text('App admin: keys and usage',
+                    style: TextStyle(color: p.accent)),
+              ),
+            ],
             if (choices.isNotEmpty) ...[
               const SizedBox(height: 10),
               DropdownButton<String?>(
@@ -786,6 +795,106 @@ class _BuiltInCardState extends State<_BuiltInCard> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// App admins only (the server checks the email): the provider keys the
+/// free AI runs on, and who used how much this week.
+class _AppAdminSheet extends StatefulWidget {
+  const _AppAdminSheet();
+
+  static Future<void> open(BuildContext context) => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Nocturne.palette.surface,
+        builder: (_) => ChangeNotifierProvider.value(
+          value: context.read<V3State>(),
+          child: const _AppAdminSheet(),
+        ),
+      );
+
+  @override
+  State<_AppAdminSheet> createState() => _AppAdminSheetState();
+}
+
+class _AppAdminSheetState extends State<_AppAdminSheet> {
+  Map<String, dynamic>? _data;
+  final _shown = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<V3State>().aiAdmin().then((d) {
+      if (mounted) setState(() => _data = d ?? const {});
+    });
+  }
+
+  String _mask(String v) =>
+      v.length <= 8 ? '••••' : '${v.substring(0, 6)}••••${v.substring(v.length - 4)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Nocturne.palette;
+    final d = _data;
+    final keys = [for (final k in (d?['keys'] as List?) ?? const []) if (k is Map) k];
+    final usage = [for (final u in (d?['usage'] as List?) ?? const []) if (u is Map) u];
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.75,
+        child: d == null
+            ? Center(child: CircularProgressIndicator(color: p.accent))
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Text('KinPurse AI · app admin',
+                      style: TextStyle(fontSize: 17, color: p.text)),
+                  const SizedBox(height: 4),
+                  Text(
+                      d['error'] != null
+                          ? '${d['error']}'
+                          : 'Default limit ${d['default_limit']} a day. Keys live on the server only.',
+                      style: TextStyle(fontSize: 12.5, color: p.muted)),
+                  const SizedBox(height: 12),
+                  Text('PROVIDER KEYS', style: TextStyle(fontSize: 11, color: p.muted)),
+                  for (final k in keys)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('${k['name']}', style: TextStyle(color: p.text)),
+                      subtitle: SelectableText(
+                          _shown.contains(k['name'])
+                              ? '${k['value']}'
+                              : _mask('${k['value']}'),
+                          style: TextStyle(fontSize: 12, color: p.subtle)),
+                      trailing: IconButton(
+                        icon: Icon(
+                            _shown.contains(k['name'])
+                                ? PhRegular.eyeSlash
+                                : PhRegular.eye,
+                            color: p.accent),
+                        onPressed: () => setState(() => _shown.contains(k['name'])
+                            ? _shown.remove(k['name'])
+                            : _shown.add('${k['name']}')),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Text('USE, LAST 7 DAYS', style: TextStyle(fontSize: 11, color: p.muted)),
+                  if (usage.isEmpty)
+                    Text('No requests yet', style: TextStyle(color: p.faint)),
+                  for (final u in usage)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(children: [
+                        Expanded(
+                            child: Text('${u['name']}',
+                                style: TextStyle(color: p.text))),
+                        Text('${u['day']}  ·  ${u['count']}',
+                            style: TextStyle(color: p.subtle)),
+                      ]),
+                    ),
+                ],
+              ),
       ),
     );
   }

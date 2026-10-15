@@ -11,6 +11,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const DEFAULT_LIMIT = Number(Deno.env.get("AI_DAILY_LIMIT") ?? "30");
 
+const adminEmails = () =>
+  (Deno.env.get("ADMIN_EMAILS") ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+
 type Model = { id: string; label: string; vision: boolean };
 
 // Only providers whose key is set on the server are offered.
@@ -20,7 +23,13 @@ function catalog(): Model[] {
     out.push({ id: "groq:llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)", vision: false });
   }
   if (Deno.env.get("OPENROUTER_API_KEY")) {
-    out.push({ id: "openrouter:meta-llama/llama-3.3-70b-instruct:free", label: "Llama 3.3 70B (OpenRouter)", vision: false });
+    // Low cost first: a free model, then a cheap reliable one.
+    out.push({ id: "openrouter:google/gemma-4-31b-it:free", label: "Gemma 4 31B (free)", vision: true });
+    out.push({ id: "openrouter:anthropic/claude-haiku-5.5", label: "Claude Haiku 5.5 (low cost)", vision: true });
+  }
+  if (Deno.env.get("NVIDIA_API_KEY")) {
+    // NVIDIA's API catalog: free developer access, rate limited.
+    out.push({ id: "nvidia:meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B (NVIDIA)", vision: false });
   }
   if (Deno.env.get("OPENAI_API_KEY")) {
     out.push({ id: "openai:gpt-4o-mini", label: "GPT-4o mini (OpenAI)", vision: true });
@@ -74,6 +83,7 @@ const OPENAI_STYLE: Record<string, { url: string; key: string }> = {
   groq: { url: "https://api.groq.com/openai/v1/chat/completions", key: "GROQ_API_KEY" },
   openrouter: { url: "https://openrouter.ai/api/v1/chat/completions", key: "OPENROUTER_API_KEY" },
   openai: { url: "https://api.openai.com/v1/chat/completions", key: "OPENAI_API_KEY" },
+  nvidia: { url: "https://integrate.api.nvidia.com/v1/chat/completions", key: "NVIDIA_API_KEY" },
 };
 
 async function callOpenAiStyle(provider: string, model: string, b: any): Promise<Response> {
@@ -140,11 +150,52 @@ Deno.serve(async (req) => {
   const allowed = membership?.ai_models ?? [];
   const models = catalog();
 
+  const today = new Date().toISOString().slice(0, 10);
+
   if (body.op === "info") {
     const { data: row } = await admin.from("ai_usage").select("count")
-      .eq("user_id", user.id).eq("day", new Date().toISOString().slice(0, 10)).maybeSingle();
+      .eq("user_id", user.id).eq("day", today).maybeSingle();
     const used = row?.count ?? 0;
-    return json({ limit, used, remaining: Math.max(0, limit - used), models, allowed });
+    // Family owners also see each member's use today.
+    let members_used: Record<string, number> | undefined;
+    if (body.family_id) {
+      const { data: me } = await admin.from("family_memberships").select("role")
+        .eq("family_id", body.family_id).eq("user_id", user.id).maybeSingle();
+      if (me?.role === "owner") {
+        const { data: ms } = await admin.from("family_memberships").select("user_id")
+          .eq("family_id", body.family_id);
+        const ids = (ms ?? []).map((m: any) => m.user_id);
+        const { data: rows } = await admin.from("ai_usage").select("user_id, count")
+          .eq("day", today).in("user_id", ids);
+        members_used = Object.fromEntries((rows ?? []).map((r: any) => [r.user_id, r.count]));
+      }
+    }
+    const isAppAdmin = adminEmails().includes((user.email ?? "").toLowerCase());
+    return json({ limit, used, remaining: Math.max(0, limit - used), models, allowed, members_used, app_admin: isAppAdmin });
+  }
+
+  // App admins (ADMIN_EMAILS): every provider key and everyone's use.
+  if (body.op === "admin") {
+    if (!adminEmails().includes((user.email ?? "").toLowerCase())) {
+      return json({ error: "Not allowed" }, 403);
+    }
+    const keys = ["GEMINI_API_KEY", "OPENROUTER_API_KEY", "NVIDIA_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY"]
+      .filter((k) => Deno.env.get(k))
+      .map((k) => ({ name: k, value: Deno.env.get(k) }));
+    const { data: rows } = await admin.from("ai_usage").select("user_id, day, count")
+      .gte("day", new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10))
+      .order("day", { ascending: false });
+    const ids = [...new Set((rows ?? []).map((r: any) => r.user_id))];
+    const { data: people } = ids.length
+      ? await admin.from("profiles").select("id, full_name").in("id", ids)
+      : { data: [] };
+    const names = Object.fromEntries((people ?? []).map((p: any) => [p.id, p.full_name]));
+    return json({
+      default_limit: DEFAULT_LIMIT,
+      models,
+      keys,
+      usage: (rows ?? []).map((r: any) => ({ ...r, name: names[r.user_id] ?? "Member" })),
+    });
   }
 
   if (String(body.input ?? "").length > 60000) {

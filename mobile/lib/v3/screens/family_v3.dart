@@ -537,6 +537,14 @@ Future<void> _aiAccess(BuildContext context, V3State s, MemberRow m) async {
                       : 'Only an owner changes the limit.',
                 ),
               ),
+              if (info?['members_used'] is Map)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                      'Used today: ${(info!['members_used'] as Map)[m.userId] ?? 0}',
+                      style: TextStyle(
+                          fontSize: 12.5, color: Nocturne.palette.subtle)),
+                ),
               const SizedBox(height: 12),
               Text('Models they may choose',
                   style: TextStyle(

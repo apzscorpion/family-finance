@@ -69,6 +69,15 @@ class V3Repository {
         : <String, dynamic>{};
   }
 
+  /// App admins only (checked on the server): provider keys and everyone's
+  /// use over the last week.
+  Future<Map<String, dynamic>> aiAdmin() async {
+    final res = await _db.functions.invoke('ai-proxy', body: {'op': 'admin'});
+    return res.data is Map
+        ? Map<String, dynamic>.from(res.data as Map)
+        : <String, dynamic>{};
+  }
+
   /// Owner: daily limit (null = default); owner or admin: approved models.
   Future<void> setMemberAi(
       String familyId, String userId, int? limit, List<String> models) async {
