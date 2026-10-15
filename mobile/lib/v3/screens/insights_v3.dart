@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../../theme/nocturne_palette.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
 import '../v3_design.dart';
@@ -27,6 +28,8 @@ class _InsightsV3State extends State<InsightsV3> {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final days = s.maxDays;
 
     // Spend per day, index 0 = today.
@@ -80,8 +83,8 @@ class _InsightsV3State extends State<InsightsV3> {
 
     return RefreshIndicator(
       onRefresh: s.refresh,
-      color: Nocturne.accent300,
-      backgroundColor: Nocturne.surface,
+      color: palette.accent,
+      backgroundColor: palette.surface,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 112),
         children: [
@@ -95,11 +98,11 @@ class _InsightsV3State extends State<InsightsV3> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Insights',
+                      Text('Insights',
                           style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w500,
-                              color: Nocturne.text)),
+                              color: palette.text)),
                       GestureDetector(
                         onTap: () => V3Sheets.openScope(context),
                         behavior: HitTestBehavior.opaque,
@@ -110,13 +113,13 @@ class _InsightsV3State extends State<InsightsV3> {
                               child: Text(s.scopeName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 12,
-                                      color: Nocturne.neutral500)),
+                                      color: palette.muted)),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(PhBold.caretDown,
-                                size: 10, color: Nocturne.neutral500),
+                            Icon(PhBold.caretDown,
+                                size: 10, color: palette.muted),
                           ],
                         ),
                       ),
@@ -129,21 +132,21 @@ class _InsightsV3State extends State<InsightsV3> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Nocturne.surface,
+                      color: palette.surface,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Nocturne.neutral800, width: 1),
+                      border: Border.all(color: palette.edge, width: 1),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(PhRegular.calendar, size: 12, color: Nocturne.accent300),
-                        SizedBox(width: 4),
+                        Icon(PhRegular.calendar, size: 12, color: palette.accent),
+                        const SizedBox(width: 4),
                         Text(
                           'Calendar',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Nocturne.text,
+                            color: palette.text,
                           ),
                         ),
                       ],
@@ -157,21 +160,21 @@ class _InsightsV3State extends State<InsightsV3> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Nocturne.surface,
+                      color: palette.surface,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Nocturne.accent700, width: 1),
+                      border: Border.all(color: palette.edge, width: 1),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(PhRegular.sparkle, size: 12, color: Nocturne.accent300),
-                        SizedBox(width: 4),
+                        Icon(PhRegular.sparkle, size: 12, color: palette.accent),
+                        const SizedBox(width: 4),
                         Text(
                           'Recap',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Nocturne.accent300,
+                            color: palette.accentLight,
                           ),
                         ),
                       ],
@@ -182,7 +185,7 @@ class _InsightsV3State extends State<InsightsV3> {
                 V3Segmented(
                   labels: const ['7D', '30D'],
                   selected: s.period == '7d' ? 0 : 1,
-                  ground: Nocturne.surface,
+                  ground: palette.surface,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 11, vertical: 5),
                   onChanged: (i) {
@@ -198,25 +201,25 @@ class _InsightsV3State extends State<InsightsV3> {
             margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Nocturne.neutral900, width: 1),
+              border: Border.all(color: palette.edge, width: 1),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(tipLabel,
-                    style: const TextStyle(
-                        fontSize: 11.5, color: Nocturne.neutral500)),
+                    style: TextStyle(
+                        fontSize: 11.5, color: palette.muted)),
                 const SizedBox(height: 2),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     V3Num(s.money(tipAmount),
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.w500,
-                            color: Nocturne.text)),
+                            color: palette.text)),
                     const SizedBox(width: 8),
                     if (selected == null && prev > 0)
                       Padding(
@@ -226,8 +229,8 @@ class _InsightsV3State extends State<InsightsV3> {
                           style: TextStyle(
                             fontSize: 12,
                             color: delta > 0
-                                ? NocturneSemantic.expense
-                                : NocturneSemantic.income,
+                                ? palette.expense
+                                : palette.income,
                           ),
                         ),
                       ),

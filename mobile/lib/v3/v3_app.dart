@@ -249,7 +249,8 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
     final nav = context.watch<V3Nav>();
     final s = context.watch<V3State>();
     final chat = context.read<ChatController?>();
-    final palette = Nocturne.palette;
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
 
     if (!_unlocked && s.prefs.lockApp && !kIsWeb) {
       return Scaffold(
@@ -361,7 +362,7 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
         }
       },
       child: Scaffold(
-        backgroundColor: Nocturne.bg,
+        backgroundColor: palette.bg,
         body: Stack(
           children: [
             SafeArea(
@@ -496,42 +497,46 @@ class _PageOverlay extends StatelessWidget {
         child: Transform.translate(
             offset: Offset(28 * (1 - t), 0), child: child),
       ),
-      child: ColoredBox(
-        color: Nocturne.bg,
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              if (!hideOuterBar)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 6, 16, 2),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: nav.closePage,
-                        behavior: HitTestBehavior.opaque,
-                        child: const SizedBox(
-                          width: 42,
-                          height: 42,
-                          child: Icon(PhRegular.arrowLeft,
-                              size: 22, color: Nocturne.text),
+      child: Builder(builder: (context) {
+        final palette =
+            context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
+        return ColoredBox(
+          color: palette.bg,
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                if (!hideOuterBar)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 6, 16, 2),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: nav.closePage,
+                          behavior: HitTestBehavior.opaque,
+                          child: SizedBox(
+                            width: 42,
+                            height: 42,
+                            child: Icon(PhRegular.arrowLeft,
+                                size: 22, color: palette.text),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: Text(nav.titleFor(page),
-                            style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                                color: Nocturne.text)),
-                      ),
-                    ],
+                        Expanded(
+                          child: Text(nav.titleFor(page),
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                  color: palette.text)),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              Expanded(child: _pageBody(page)),
-            ],
+                Expanded(child: _pageBody(page)),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 
@@ -557,6 +562,8 @@ class _V3BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final nav = context.watch<V3Nav>();
     final unreadDm = context.watch<ChatController?>()?.totalUnread ?? 0;
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     const items = [
       (PhRegular.house, 'Home'),
       (PhRegular.listBullets, 'Activity'),
@@ -571,9 +578,9 @@ class _V3BottomBar extends StatelessWidget {
         top: 8,
         bottom: MediaQuery.of(context).padding.bottom > 0 ? 8 : 10,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.bg,
-        border: Border(top: BorderSide(color: Nocturne.neutral900, width: 1)),
+      decoration: BoxDecoration(
+        color: palette.bg,
+        border: Border(top: BorderSide(color: palette.line, width: 1)),
       ),
       // The row must be height-bounded. _AddButton centres its button, and an
       // unbounded Center inside a Row's Expanded grows to the full available
@@ -584,11 +591,11 @@ class _V3BottomBar extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _tab(nav, items[0], 0),
-            _tab(nav, items[1], 1),
+            _tab(nav, items[0], 0, palette),
+            _tab(nav, items[1], 1, palette),
             const _AddButton(),
-            _tab(nav, items[2], 2),
-            _tab(nav, items[3], 3, badgeCount: unreadDm),
+            _tab(nav, items[2], 2, palette),
+            _tab(nav, items[3], 3, palette, badgeCount: unreadDm),
           ],
         ),
       ),
@@ -598,7 +605,8 @@ class _V3BottomBar extends StatelessWidget {
   Widget _tab(
     V3Nav nav,
     (IconData, String) item,
-    int i, {
+    int i,
+    NocturnePalette palette, {
     int badgeCount = 0,
   }) {
     final active = nav.tab == i && nav.page == null;
@@ -614,7 +622,7 @@ class _V3BottomBar extends StatelessWidget {
               children: [
                 Icon(item.$1,
                     size: 22,
-                    color: active ? Nocturne.accent300 : Nocturne.neutral600),
+                    color: active ? palette.accent : palette.muted),
                 if (badgeCount > 0)
                   Positioned(
                     right: -6,
@@ -625,16 +633,16 @@ class _V3BottomBar extends StatelessWidget {
                         vertical: 1,
                       ),
                       decoration: BoxDecoration(
-                        color: Nocturne.accent600,
+                        color: palette.accent,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Nocturne.bg, width: 1.5),
+                        border: Border.all(color: palette.bg, width: 1.5),
                       ),
                       child: Text(
                         badgeCount > 9 ? '9+' : '$badgeCount',
                         style: const TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.accent100,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -645,7 +653,8 @@ class _V3BottomBar extends StatelessWidget {
             Text(item.$2,
                 style: TextStyle(
                     fontSize: 11,
-                    color: active ? Nocturne.accent200 : Nocturne.neutral600)),
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                    color: active ? palette.accent : palette.muted)),
           ],
         ),
       ),
@@ -658,6 +667,8 @@ class _AddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return Expanded(
       child: Center(
         child: GestureDetector(
@@ -672,15 +683,15 @@ class _AddButton extends StatelessWidget {
               height: 56,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Nocturne.accent700,
+                color: palette.fab,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Nocturne.accent400, width: 1),
+                border: Border.all(color: palette.fabEdge, width: 1),
                 boxShadow: [
                   BoxShadow(
-                      color: Nocturne.mix(Nocturne.accent, 45), blurRadius: 22),
+                      color: palette.glow, blurRadius: 22),
                 ],
               ),
-              child: Icon(PhBold.plus, size: 24, color: Nocturne.accent100),
+              child: Icon(PhBold.plus, size: 24, color: palette.fabIcon),
             ),
           ),
         ),

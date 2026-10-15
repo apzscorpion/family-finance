@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../../theme/nocturne_palette.dart';
 import '../data/data_export.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
@@ -338,10 +339,13 @@ class _ActivityV3State extends State<ActivityV3> {
     final allShownSelected =
         items.isNotEmpty && items.every((t) => _selectedIds.contains(t.id));
 
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
+
     return RefreshIndicator(
       onRefresh: s.refresh,
-      color: Nocturne.accent300,
-      backgroundColor: Nocturne.surface,
+      color: palette.accent,
+      backgroundColor: palette.surface,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 112),
         children: [
@@ -355,11 +359,11 @@ class _ActivityV3State extends State<ActivityV3> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Activity',
+                      Text('Activity',
                           style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w500,
-                              color: Nocturne.text)),
+                              color: palette.text)),
                       GestureDetector(
                         onTap: () => V3Sheets.openScope(context),
                         behavior: HitTestBehavior.opaque,
@@ -370,13 +374,13 @@ class _ActivityV3State extends State<ActivityV3> {
                               child: Text(s.scopeName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 12,
-                                      color: Nocturne.neutral500)),
+                                      color: palette.muted)),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(PhBold.caretDown,
-                                size: 10, color: Nocturne.neutral500),
+                            Icon(PhBold.caretDown,
+                                size: 10, color: palette.muted),
                           ],
                         ),
                       ),
@@ -387,8 +391,8 @@ class _ActivityV3State extends State<ActivityV3> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text('${items.length}',
-                        style: const TextStyle(
-                            fontSize: 12, color: Nocturne.neutral500)),
+                        style: TextStyle(
+                            fontSize: 12, color: palette.muted)),
                     if (!V3Sheets.readOnly) ...[
                       const SizedBox(width: 8),
                       GestureDetector(
@@ -405,13 +409,13 @@ class _ActivityV3State extends State<ActivityV3> {
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: _selecting
-                                ? Nocturne.accent900
-                                : Nocturne.surface,
+                                ? palette.tint
+                                : palette.surface,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: _selecting
-                                  ? Nocturne.accent600
-                                  : Nocturne.neutral800,
+                                  ? palette.tintEdge
+                                  : palette.edge,
                               width: 1,
                             ),
                           ),
@@ -424,8 +428,8 @@ class _ActivityV3State extends State<ActivityV3> {
                                     : PhRegular.listChecks,
                                 size: 12,
                                 color: _selecting
-                                    ? Nocturne.accent100
-                                    : Nocturne.neutral300,
+                                    ? palette.accentLight
+                                    : palette.subtle,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -434,8 +438,8 @@ class _ActivityV3State extends State<ActivityV3> {
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
                                   color: _selecting
-                                      ? Nocturne.accent100
-                                      : Nocturne.neutral300,
+                                      ? palette.accentLight
+                                      : palette.subtle,
                                 ),
                               ),
                             ],
@@ -450,10 +454,10 @@ class _ActivityV3State extends State<ActivityV3> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Nocturne.surface,
+                            color: palette.surface,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                                color: Nocturne.neutral800, width: 1),
+                                color: palette.edge, width: 1),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,

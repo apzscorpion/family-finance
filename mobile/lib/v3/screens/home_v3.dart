@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../../theme/nocturne_palette.dart';
 import '../data/chat_controller.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
@@ -27,20 +28,21 @@ class HomeV3 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
 
     return Container(
-      decoration: const BoxDecoration(
-        // body{background:radial-gradient(70% 55% at 50% 0%,#1f2236,var(--color-bg))}
+      decoration: BoxDecoration(
         gradient: RadialGradient(
-          center: Alignment(0, -1),
+          center: const Alignment(0, -1),
           radius: 1.1,
-          colors: [Color(0xFF1F2236), Nocturne.bg],
+          colors: [palette.raised, palette.bg],
         ),
       ),
       child: RefreshIndicator(
         onRefresh: s.refresh,
-        color: Nocturne.accent300,
-        backgroundColor: Nocturne.surface,
+        color: palette.accent,
+        backgroundColor: palette.surface,
         child: ListView(
           padding: const EdgeInsets.only(top: 10, bottom: 112),
           children: [
@@ -186,6 +188,8 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final unreadDm = context.watch<ChatController?>()?.totalUnread ?? 0;
     final member = s.scopeMember;
     final greetingName = s.me?.name ?? '';
@@ -202,11 +206,11 @@ class _Header extends StatelessWidget {
                 children: [
                   V3Avatar(
                     initial: member?.initial ?? '',
-                    color: member?.color ?? Nocturne.accent700,
+                    color: member?.color ?? palette.accent,
                     icon: s.isFamily ? PhRegular.users : null,
                     size: 40,
                     fontSize: 15,
-                    ringColor: Nocturne.accent700,
+                    ringColor: palette.accent,
                   ),
                   const SizedBox(width: 11),
                   Expanded(
@@ -220,8 +224,8 @@ class _Header extends StatelessWidget {
                               : 'Good morning, $greetingName',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 11.5, color: Nocturne.neutral500),
+                          style: TextStyle(
+                              fontSize: 11.5, color: palette.muted),
                         ),
                         Row(
                           children: [
@@ -230,15 +234,15 @@ class _Header extends StatelessWidget {
                                 s.scopeName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
-                                    color: Nocturne.text),
+                                    color: palette.text),
                               ),
                             ),
                             const SizedBox(width: 5),
-                            const Icon(PhBold.caretDown,
-                                size: 12, color: Nocturne.neutral500),
+                            Icon(PhBold.caretDown,
+                                size: 12, color: palette.muted),
                           ],
                         ),
                       ],
@@ -289,6 +293,8 @@ class _HeaderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -297,15 +303,15 @@ class _HeaderButton extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: palette.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Nocturne.neutral800, width: 1),
+          border: Border.all(color: palette.edge, width: 1),
         ),
         child: Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            Icon(icon, size: 19, color: Nocturne.neutral300),
+            Icon(icon, size: 19, color: palette.subtle),
             if (showDot)
               Positioned(
                 top: 0,
@@ -314,12 +320,12 @@ class _HeaderButton extends StatelessWidget {
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(
-                    color: Nocturne.accent,
+                    color: palette.accent,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Nocturne.surface, width: 2),
+                    border: Border.all(color: palette.surface, width: 2),
                     boxShadow: [
                       BoxShadow(
-                          color: Nocturne.mix(Nocturne.accent, 80),
+                          color: palette.glow,
                           blurRadius: 8),
                     ],
                   ),
@@ -376,47 +382,40 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final spent = s.totalSpent;
     final limit = s.budgetLimit;
     final remaining = limit - spent;
     final pct = (s.budgetFraction * 100).round();
     final source = s.sourceById(s.srcFilter);
 
-    // The design layers two backgrounds and a hairline:
-    //
-    //   background:
-    //     radial-gradient(90% 80% at 100% 0%,
-    //       color-mix(in oklch,var(--color-accent) 26%,transparent),
-    //       transparent 60%),
-    //     linear-gradient(170deg,#262840,var(--color-surface) 75%)
-    //
-    //   plus a 1px top edge:
-    //     linear-gradient(90deg,transparent,var(--color-accent-500),transparent)
-    //
-    // Flutter takes one gradient per decoration, so the radial sits in an
-    // overlay above the linear base and below the content.
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-              color: Color(0x61000000), blurRadius: 44, offset: Offset(0, 20)),
+              color: palette.isDark
+                  ? const Color(0x61000000)
+                  : const Color(0x1F000000),
+              blurRadius: 44,
+              offset: const Offset(0, 20)),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: Stack(
           children: [
-            // base: linear-gradient(170deg, #262840, surface 75%)
+            // base: linear-gradient(170deg, raised, surface 75%)
             Positioned.fill(
               child: DecoratedBox(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment(-0.17, -1),
-                    end: Alignment(0.17, 1),
-                    colors: [Color(0xFF262840), Nocturne.surface],
-                    stops: [0, 0.75],
+                    begin: const Alignment(-0.17, -1),
+                    end: const Alignment(0.17, 1),
+                    colors: [palette.raised, palette.surface],
+                    stops: const [0, 0.75],
                   ),
                 ),
               ),
@@ -429,8 +428,8 @@ class _HeroCard extends StatelessWidget {
                     center: Alignment.topRight,
                     radius: 1.15,
                     colors: [
-                      Nocturne.mix(Nocturne.accent, 26),
-                      Nocturne.accent.withValues(alpha: 0),
+                      palette.accent.withValues(alpha: 0.22),
+                      palette.accent.withValues(alpha: 0),
                     ],
                     stops: const [0, 0.6],
                   ),
@@ -438,7 +437,7 @@ class _HeroCard extends StatelessWidget {
               ),
             ),
             // the bright hairline along the top edge
-            const Positioned(
+            Positioned(
               left: 0,
               right: 0,
               top: 0,
@@ -448,9 +447,9 @@ class _HeroCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Color(0x00968AE0),
-                        Nocturne.accent500,
-                        Color(0x00968AE0),
+                        palette.accent500.withValues(alpha: 0),
+                        palette.accent500,
+                        palette.accent500.withValues(alpha: 0),
                       ],
                     ),
                   ),
@@ -460,245 +459,389 @@ class _HeroCard extends StatelessWidget {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Nocturne.accent800, width: 1),
+                border: Border.all(color: palette.headerBorder, width: 1),
               ),
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-              child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Flexible(
-                child: GestureDetector(
-                  onTap: () => V3Sheets.openSources(context),
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    height: 28,
-                    padding: const EdgeInsets.only(left: 8, right: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0x47000000),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Nocturne.accent700, width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(source?.design.icon ?? PhRegular.wallet,
-                            size: 14, color: Nocturne.accent300),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            source?.name ?? 'All sources',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 12, color: Nocturne.accent100),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Icon(PhBold.caretDown,
-                            size: 10, color: Nocturne.neutral400),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              V3Segmented(
-                labels: const ['7D', '30D'],
-                selected: s.period == '7d' ? 0 : 1,
-                onChanged: (i) => s.setPeriod(i == 0 ? '7d' : '30d'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Spent is the hero on its own line; balance sits below, smaller, so
-          // 7-digit amounts never fight for the same row.
-          Text(
-            s.isFamily ? 'FAMILY SPENT' : '${s.scopeName.toUpperCase()} SPENT',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                fontSize: 11, color: Nocturne.accent300, letterSpacing: 0.88),
-          ),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: V3Num(
-              s.money(spent),
-              style: const TextStyle(
-                fontSize: 38,
-                fontWeight: FontWeight.w600,
-                color: Nocturne.text,
-                letterSpacing: -0.9,
-                height: 1.1,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Builder(builder: (_) {
-            final balColor = s.balance >= 0
-                ? NocturneSemantic.income
-                : NocturneSemantic.expense;
-            final ids = source != null
-                ? [source.id]
-                : [for (final src in s.sources) src.id];
-            var cash = 0.0, bank = 0.0;
-            for (final id in ids) {
-              final w = s.wallet(id);
-              cash += w.cash;
-              bank += w.bank;
-            }
-            return GestureDetector(
-              onTap: ids.isEmpty
-                  ? null
-                  : () => SourcesManagerV3.openWallet(context, ids),
-              behavior: HitTestBehavior.opaque,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    source != null
-                        ? '${source.name.toUpperCase()} BALANCE'
-                        : 'TOTAL BALANCE',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 11, color: balColor, letterSpacing: 0.88),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                V3Num(
-                  s.money(s.balance),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: balColor,
-                    letterSpacing: -0.3,
-                    height: 1.1,
-                  ),
-                ),
-              ],
-                  ),
-                  if (ids.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(PhRegular.coins,
-                            size: 13, color: Nocturne.accent300),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            'Cash ${s.moneyShort(cash)}  ·  Bank ${s.moneyShort(bank)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 12, color: Nocturne.accent200),
+                    children: [
+                      Flexible(
+                        child: GestureDetector(
+                          onTap: () => V3Sheets.openSources(context),
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            height: 28,
+                            padding: const EdgeInsets.only(left: 8, right: 10),
+                            decoration: BoxDecoration(
+                              color: palette.isDark
+                                  ? const Color(0x47000000)
+                                  : palette.line,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                  color: palette.edge, width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(source?.design.icon ?? PhRegular.wallet,
+                                    size: 14, color: palette.accent),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    source?.name ?? 'All sources',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: palette.text),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Icon(PhBold.caretDown,
+                                    size: 10, color: palette.muted),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 2),
-                        const Icon(PhBold.caretRight,
-                            size: 10, color: Nocturne.accent300),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
-          if (limit > 0)
-            Row(
-              children: [
-                Icon(
-                  remaining >= 0 ? PhRegular.trendDown : PhRegular.trendUp,
-                  size: 13,
-                  color: remaining >= 0
-                      ? NocturneSemantic.income
-                      : NocturneSemantic.expense,
-                ),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    remaining >= 0
-                        ? '${s.moneyShort(remaining)} left of ${V3Design.inrShort(limit)}'
-                        : '${s.moneyShort(remaining.abs())} over budget',
+                      ),
+                      const Spacer(),
+                      V3Segmented(
+                        labels: const ['7D', '30D'],
+                        selected: s.period == '7d' ? 0 : 1,
+                        onChanged: (i) => s.setPeriod(i == 0 ? '7d' : '30d'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    s.isFamily
+                        ? 'FAMILY SPENT'
+                        : '${s.scopeName.toUpperCase()} SPENT',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12,
-                      color: remaining >= 0
-                          ? NocturneSemantic.income
-                          : NocturneSemantic.expense,
+                        fontSize: 11,
+                        color: palette.accentLight,
+                        letterSpacing: 0.88),
+                  ),
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: V3Num(
+                      s.money(spent),
+                      style: TextStyle(
+                        fontSize: 38,
+                        fontWeight: FontWeight.w600,
+                        color: palette.text,
+                        letterSpacing: -0.9,
+                        height: 1.1,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            )
-          else
-            const Text('No budgets set yet',
-                style: TextStyle(fontSize: 12, color: Nocturne.neutral500)),
-          const SizedBox(height: 16),
-          V3ProgressBar(
-            fraction: s.budgetFraction,
-            fill:
-                s.overThreshold ? NocturneSemantic.warning : Nocturne.accent500,
-            threshold: limit > 0 ? s.threshold / 100 : null,
-            track: const Color(0x52000000),
-          ),
-          const SizedBox(height: 7),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  limit <= 0
-                      ? 'Set a budget to track this'
-                      : s.overThreshold
-                          ? 'Past the ${s.threshold}% alert mark'
-                          : 'On track for ${s.periodLabel.toLowerCase()}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: s.overThreshold
-                        ? NocturneSemantic.warning
-                        : Nocturne.neutral500,
+                  const SizedBox(height: 6),
+                  Builder(builder: (_) {
+                    if (!s.isFamily) {
+                      // Viewing an individual member
+                      final memberId = s.scope;
+                      final isMe = memberId == s.myId;
+                      final totals = s.memberTotals(memberId);
+                      final netSavings = totals.net;
+                      final netColor =
+                          netSavings >= 0 ? palette.income : palette.expense;
+                      final pairBal = s.balanceWith(memberId);
+                      final settled = pairBal.abs() < 0.5;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  isMe
+                                      ? 'MY NET SAVINGS'
+                                      : '${s.scopeName.toUpperCase()} NET SAVINGS',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: netColor,
+                                    letterSpacing: 0.88,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              V3Num(
+                                s.money(netSavings),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: netColor,
+                                  letterSpacing: -0.3,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Earned ${s.moneyShort(totals.income)}  ·  Spent ${s.moneyShort(totals.spent)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: palette.muted),
+                          ),
+                          if (!isMe) ...[
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () =>
+                                  SharedWithSheet.open(context, memberId),
+                              behavior: HitTestBehavior.opaque,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: settled
+                                      ? (palette.isDark
+                                          ? const Color(0x30FFFFFF)
+                                          : palette.edge)
+                                      : (pairBal > 0
+                                          ? palette.income.withValues(alpha: 0.15)
+                                          : palette.expense
+                                              .withValues(alpha: 0.15)),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: settled
+                                        ? palette.edge
+                                        : (pairBal > 0
+                                            ? palette.income
+                                            : palette.expense),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      settled
+                                          ? PhRegular.checkCircle
+                                          : PhRegular.handCoins,
+                                      size: 13,
+                                      color: settled
+                                          ? palette.subtle
+                                          : (pairBal > 0
+                                              ? palette.income
+                                              : palette.expense),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      settled
+                                          ? 'Settled up with ${s.scopeName}'
+                                          : (pairBal > 0
+                                              ? '${s.scopeName} owes you ${s.money(pairBal)}'
+                                              : 'You owe ${s.scopeName} ${s.money(-pairBal)}'),
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: settled
+                                            ? palette.subtle
+                                            : (pairBal > 0
+                                                ? palette.income
+                                                : palette.expense),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      PhBold.caretRight,
+                                      size: 10,
+                                      color: settled
+                                          ? palette.muted
+                                          : (pairBal > 0
+                                              ? palette.income
+                                              : palette.expense),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    }
+
+                    final balColor =
+                        s.balance >= 0 ? palette.income : palette.expense;
+                    final ids = source != null
+                        ? [source.id]
+                        : [for (final src in s.sources) src.id];
+                    var cash = 0.0, bank = 0.0;
+                    for (final id in ids) {
+                      final w = s.wallet(id);
+                      cash += w.cash;
+                      bank += w.bank;
+                    }
+                    return GestureDetector(
+                      onTap: ids.isEmpty
+                          ? null
+                          : () => SourcesManagerV3.openWallet(context, ids),
+                      behavior: HitTestBehavior.opaque,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  source != null
+                                      ? '${source.name.toUpperCase()} BALANCE'
+                                      : 'TOTAL BALANCE',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: balColor,
+                                      letterSpacing: 0.88),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              V3Num(
+                                s.money(s.balance),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: balColor,
+                                  letterSpacing: -0.3,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (ids.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(PhRegular.coins,
+                                    size: 13, color: palette.accent),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    'Cash ${s.moneyShort(cash)}  ·  Bank ${s.moneyShort(bank)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: palette.muted),
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                Icon(PhBold.caretRight,
+                                    size: 10, color: palette.accent),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                  if (limit > 0)
+                    Row(
+                      children: [
+                        Icon(
+                          remaining >= 0
+                              ? PhRegular.trendDown
+                              : PhRegular.trendUp,
+                          size: 13,
+                          color: remaining >= 0
+                              ? palette.income
+                              : palette.expense,
+                        ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            remaining >= 0
+                                ? '${s.moneyShort(remaining)} left of ${V3Design.inrShort(limit)}'
+                                : '${s.moneyShort(remaining.abs())} over budget',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: remaining >= 0
+                                  ? palette.income
+                                  : palette.expense,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text('No budgets set yet',
+                        style: TextStyle(
+                            fontSize: 12, color: palette.muted)),
+                  const SizedBox(height: 16),
+                  V3ProgressBar(
+                    fraction: s.budgetFraction,
+                    fill: s.overThreshold
+                        ? palette.warning
+                        : palette.accent500,
+                    threshold: limit > 0 ? s.threshold / 100 : null,
+                    track: palette.isDark
+                        ? const Color(0x52000000)
+                        : palette.line,
                   ),
-                ),
-              ),
-              Text('$pct%',
-                  style: const TextStyle(
-                      fontSize: 11.5, color: Nocturne.neutral500)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _HeroStat(
-                  label: 'Income',
-                  value: s.moneyShort(s.totalIncome),
-                  color: NocturneSemantic.income),
-              const SizedBox(width: 8),
-              _HeroStat(
-                  label: 'Net saved',
-                  value: s.moneyShort(s.totalIncome - spent),
-                  color: (s.totalIncome - spent) >= 0
-                      ? NocturneSemantic.income
-                      : NocturneSemantic.expense),
-              const SizedBox(width: 8),
-              _HeroStat(
-                  label: limit > 0 ? 'Safe / day' : 'Per day',
-                  value: limit > 0
-                      ? s.moneyShort(s.safeToSpendToday)
-                      : s.moneyShort(spent / s.maxDays),
-                  color: limit > 0 ? Nocturne.accent200 : Nocturne.text,
-                  onTap: () => V3Sheets.openMagicAi(context, initialTab: 0)),
-            ],
-          ),
+                  const SizedBox(height: 7),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          limit <= 0
+                              ? 'Set a budget to track this'
+                              : s.overThreshold
+                                  ? 'Past the ${s.threshold}% alert mark'
+                                  : 'On track for ${s.periodLabel.toLowerCase()}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: s.overThreshold
+                                ? palette.warning
+                                : palette.muted,
+                          ),
+                        ),
+                      ),
+                      Text('$pct%',
+                          style: TextStyle(
+                              fontSize: 11.5, color: palette.muted)),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      _HeroStat(
+                          label: 'Income',
+                          value: s.moneyShort(s.totalIncome),
+                          color: palette.income),
+                      const SizedBox(width: 8),
+                      _HeroStat(
+                          label: 'Net saved',
+                          value: s.moneyShort(s.totalIncome - spent),
+                          color: (s.totalIncome - spent) >= 0
+                              ? palette.income
+                              : palette.expense),
+                      const SizedBox(width: 8),
+                      _HeroStat(
+                          label: limit > 0 ? 'Safe / day' : 'Per day',
+                          value: limit > 0
+                              ? s.moneyShort(s.safeToSpendToday)
+                              : s.moneyShort(spent / s.maxDays),
+                          color: limit > 0 ? palette.accent : palette.text,
+                          onTap: () =>
+                              V3Sheets.openMagicAi(context, initialTab: 0)),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -724,11 +867,14 @@ class _HeroStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final body = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: const Color(0x3D000000),
+        color: palette.isDark ? const Color(0x3D000000) : palette.line,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.edge, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -738,11 +884,12 @@ class _HeroStat extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(label,
-                  style: const TextStyle(
-                      fontSize: 10.5, color: Nocturne.neutral500)),
+                  style: TextStyle(
+                      fontSize: 10.5, color: palette.muted)),
               if (onTap != null) ...[
                 const SizedBox(width: 3),
-                const Icon(PhBold.caretRight, size: 8, color: Nocturne.neutral500),
+                Icon(PhBold.caretRight,
+                    size: 8, color: palette.muted),
               ],
             ],
           ),

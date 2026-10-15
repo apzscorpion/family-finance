@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../../theme/nocturne_palette.dart';
 
 /// Shared building blocks for the v3 screens, each matching a repeated pattern
 /// in `Family Spend Tracker v3.dc.html`.
@@ -29,6 +31,7 @@ class V3SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return Padding(
       padding: margin,
       child: Row(
@@ -38,20 +41,20 @@ class V3SectionHeader extends StatelessWidget {
         textBaseline: badge != null ? null : TextBaseline.alphabetic,
         children: [
           Text(title,
-              style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w500, color: Nocturne.text)),
+              style: TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w500, color: p.text)),
           if (badge != null) ...[const SizedBox(width: 8), badge!],
           const Spacer(),
           if (meta != null)
             Text(meta!,
-                style: const TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+                style: TextStyle(fontSize: 12, color: p.muted)),
           if (actionLabel != null)
             GestureDetector(
               onTap: onAction,
               behavior: HitTestBehavior.opaque,
               child: Text(actionLabel!,
-                  style: const TextStyle(
-                      fontSize: 12, color: Nocturne.accent300)),
+                  style: TextStyle(
+                      fontSize: 12, color: p.accentLight)),
             ),
         ],
       ),
@@ -81,13 +84,14 @@ class V3Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return Container(
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        color: background ?? Nocturne.surface,
+        color: background ?? p.surface,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: border ?? Nocturne.neutral900, width: 1),
+        border: Border.all(color: border ?? p.edge, width: 1),
       ),
       child: child,
     );
@@ -100,8 +104,10 @@ class V3RowDivider extends StatelessWidget {
   const V3RowDivider({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      Container(height: 1, color: Nocturne.neutral900);
+  Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
+    return Container(height: 1, color: p.line);
+  }
 }
 
 /// A rounded square icon tile: `width/height`, `border-radius`, a tinted
@@ -148,7 +154,7 @@ class V3Avatar extends StatelessWidget {
   final double size;
   final double fontSize;
   final Color? ringColor;
-  final Color ringGround;
+  final Color? ringGround;
   final double opacity;
   final IconData? icon;
 
@@ -159,25 +165,26 @@ class V3Avatar extends StatelessWidget {
     this.size = 40,
     this.fontSize = 15,
     this.ringColor,
-    this.ringGround = Nocturne.bg,
+    this.ringGround,
     this.opacity = 1,
     this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final inner = Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       child: icon != null
-          ? Icon(icon, size: fontSize + 1, color: Nocturne.text)
+          ? Icon(icon, size: fontSize + 1, color: p.text)
           : Text(initial,
               style: TextStyle(
                   fontSize: fontSize,
                   fontWeight: FontWeight.w600,
-                  color: Nocturne.text)),
+                  color: p.text)),
     );
 
     final avatar = ringColor == null
@@ -187,7 +194,7 @@ class V3Avatar extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: ringColor!, width: 1),
-              color: ringGround,
+              color: ringGround ?? p.bg,
             ),
             child: inner,
           );
@@ -289,6 +296,7 @@ class V3Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -296,10 +304,10 @@ class V3Chip extends StatelessWidget {
         height: height,
         padding: EdgeInsets.only(left: leading != null ? 4 : 12, right: 12),
         decoration: BoxDecoration(
-          color: selected ? Nocturne.accent900 : Nocturne.surface,
+          color: selected ? p.tint : p.surface,
           borderRadius: BorderRadius.circular(height / 2),
           border: Border.all(
-            color: selected ? Nocturne.accent600 : Nocturne.neutral800,
+            color: selected ? p.tintEdge : p.edge,
             width: 1,
           ),
         ),
@@ -308,18 +316,19 @@ class V3Chip extends StatelessWidget {
           children: [
             if (leading != null) ...[leading!, const SizedBox(width: 7)],
             if (icon != null) ...[
-              Icon(icon, size: 14, color: iconColor ?? Nocturne.neutral400),
+              Icon(icon, size: 14, color: iconColor ?? p.muted),
               const SizedBox(width: 6),
             ],
             Text(label,
                 style: TextStyle(
                     fontSize: 12.5,
-                    color: selected ? Nocturne.accent100 : Nocturne.neutral300)),
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    color: selected ? p.accentLight : p.subtle)),
             if (trailing != null) ...[
               const SizedBox(width: 6),
               Text(trailing!,
-                  style: const TextStyle(
-                      fontSize: 10.5, color: Nocturne.neutral500)),
+                  style: TextStyle(
+                      fontSize: 10.5, color: p.faint)),
             ],
           ],
         ),
@@ -334,7 +343,7 @@ class V3Segmented extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onChanged;
   final double height;
-  final Color ground;
+  final Color? ground;
   final EdgeInsets padding;
 
   const V3Segmented({
@@ -343,16 +352,17 @@ class V3Segmented extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.height = 26,
-    this.ground = const Color(0x47000000),
+    this.ground,
     this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
   });
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: ground,
+        color: ground ?? (p.isDark ? const Color(0x47000000) : p.line),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -365,15 +375,16 @@ class V3Segmented extends StatelessWidget {
               child: Container(
                 padding: padding,
                 decoration: BoxDecoration(
-                  color: i == selected ? Nocturne.accent700 : Colors.transparent,
+                  color: i == selected ? p.tint : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   labels[i],
                   style: TextStyle(
                     fontSize: 11,
+                    fontWeight: i == selected ? FontWeight.w600 : FontWeight.w400,
                     color:
-                        i == selected ? Nocturne.accent100 : Nocturne.neutral400,
+                        i == selected ? p.accentLight : p.muted,
                   ),
                 ),
               ),

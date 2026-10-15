@@ -236,7 +236,9 @@ class V3State extends ChangeNotifier {
     ]);
     balances = {
       for (var i = 0; i < others.length; i++)
-        if (bals[i] != null) others[i].userId: bals[i]!,
+        others[i].userId: ((bals[i] != null && bals[i]!.abs() > 0.001)
+            ? bals[i]!
+            : pairBalanceSync(others[i].userId)),
     };
 
     if (!_scopeChosen) {
@@ -744,7 +746,7 @@ class V3State extends ChangeNotifier {
     if (me == null) return const [];
     return txns.where((t) {
       if (!t.isExpense) return false;
-      final payer = t.paidBy;
+      final payer = t.paidBy ?? t.userId;
       if (payer == me) return t.shares.containsKey(otherUserId);
       if (payer == otherUserId) return t.shares.containsKey(me);
       return false;
@@ -756,18 +758,62 @@ class V3State extends ChangeNotifier {
   double signedShare(TxnRow t, String otherUserId) {
     final me = myId;
     if (me == null) return 0;
-    if (t.paidBy == me) return t.shareOf(otherUserId);
-    if (t.paidBy == otherUserId) return -t.shareOf(me);
+    final payer = t.paidBy ?? t.userId;
+    if (payer == me) return t.shareOf(otherUserId);
+    if (payer == otherUserId) return -t.shareOf(me);
     return 0;
   }
 
+  /// In-memory net balance with [otherUserId]. Positive means they owe me.
+  /// Combines all signed shares across shared expenses and all open settlements.
+  double pairBalanceSync(String otherUserId) {
+    final me = myId;
+    if (me == null || me == otherUserId) return 0.0;
+    var bal = 0.0;
+    for (final t in txns) {
+      if (!t.isExpense) continue;
+      bal += signedShare(t, otherUserId);
+    }
+    for (final s in settlements) {
+      if (s.status == 'open') {
+        if (s.fromUser == otherUserId && s.toUser == me) {
+          bal += s.amount;
+        } else if (s.fromUser == me && s.toUser == otherUserId) {
+          bal -= s.amount;
+        }
+      }
+    }
+    return bal;
+  }
+
   /// Net balance with one person. Positive means they owe me.
-  Future<double> pairBalance(String otherUserId) async =>
-      await V3Repository.guard(
-        'pairBalance',
-        () => _repo.pairBalance(familyId, otherUserId),
-      ) ??
-      0;
+  Future<double> pairBalance(String otherUserId) async {
+    final remote = await V3Repository.guard(
+      'pairBalance',
+      () => _repo.pairBalance(familyId, otherUserId),
+    );
+    if (remote != null && remote.abs() > 0.001) return remote;
+    return pairBalanceSync(otherUserId);
+  }
+
+  /// Synchronous balance lookup with fallback to client ledger.
+  double balanceWith(String otherUserId) =>
+      balances[otherUserId] ?? pairBalanceSync(otherUserId);
+
+  /// Totals for a specific member across all their recorded transactions.
+  ({double income, double spent, double net}) memberTotals(String userId) {
+    var inAmt = 0.0;
+    var outAmt = 0.0;
+    for (final t in txns) {
+      if (t.userId != userId) continue;
+      if (t.isExpense) {
+        outAmt += t.amount;
+      } else {
+        inAmt += t.amount;
+      }
+    }
+    return (income: inAmt, spent: outAmt, net: inAmt - outAmt);
+  }
 
   Future<bool> settleWith(String otherUserId, double amount) async {
     final me = myId;

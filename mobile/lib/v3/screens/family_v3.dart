@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../services/upi_service.dart';
 import '../../theme/nocturne.dart';
+import '../../theme/nocturne_palette.dart';
 import '../data/chat_controller.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
@@ -21,14 +22,16 @@ class FamilyV3 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final chat = context.watch<ChatController?>();
     final unreadTotal = chat?.totalUnread ?? 0;
     final spendByMember = {for (final e in s.byMember) e.key.userId: e.value};
 
     return RefreshIndicator(
       onRefresh: s.refresh,
-      color: Nocturne.accent300,
-      backgroundColor: Nocturne.surface,
+      color: palette.accent,
+      backgroundColor: palette.surface,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 112),
         children: [
@@ -52,22 +55,22 @@ class FamilyV3 extends StatelessWidget {
                               child: Text(s.family?.name ?? 'Family',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w500,
-                                      color: Nocturne.text)),
+                                      color: palette.text)),
                             ),
                             const SizedBox(width: 6),
-                            const Icon(PhRegular.pencilSimple,
-                                size: 14, color: Nocturne.neutral500),
+                            Icon(PhRegular.pencilSimple,
+                                size: 14, color: palette.muted),
                           ],
                         ),
                       ),
                       Text(
                           '${s.members.where((m) => m.isActive).length} members · '
                           '${s.family?.kind ?? 'Family'}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Nocturne.neutral500)),
+                          style: TextStyle(
+                              fontSize: 12, color: palette.muted)),
                     ],
                   ),
                 ),
@@ -80,13 +83,13 @@ class FamilyV3 extends StatelessWidget {
                     height: 40,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Nocturne.surface,
+                      color: palette.surface,
                       borderRadius: BorderRadius.circular(12),
                       border:
-                          Border.all(color: Nocturne.neutral800, width: 1),
+                          Border.all(color: palette.edge, width: 1),
                     ),
-                    child: const Icon(PhRegular.slidersHorizontal,
-                        size: 19, color: Nocturne.neutral300),
+                    child: Icon(PhRegular.slidersHorizontal,
+                        size: 19, color: palette.subtle),
                   ),
                 ),
               ],
@@ -98,9 +101,9 @@ class FamilyV3 extends StatelessWidget {
             margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: palette.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.accent800, width: 1),
+              border: Border.all(color: palette.edge, width: 1),
             ),
             child: Row(
               children: [
@@ -109,17 +112,17 @@ class FamilyV3 extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Workspace code',
+                      Text('Workspace code',
                           style: TextStyle(
-                              fontSize: 11, color: Nocturne.neutral500)),
+                              fontSize: 11, color: palette.muted)),
                       const SizedBox(height: 2),
                       Text(
                         s.family?.inviteCode ?? '',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           letterSpacing: 2.8,
                           fontFamily: 'monospace',
-                          color: Nocturne.accent200,
+                          color: palette.accentLight,
                         ),
                       ),
                     ],
@@ -140,17 +143,17 @@ class FamilyV3 extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(9),
-                      border: Border.all(color: Nocturne.accent, width: 1),
+                      border: Border.all(color: palette.accent, width: 1),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(PhRegular.copy,
-                            size: 14, color: Nocturne.accent200),
-                        SizedBox(width: 6),
+                            size: 14, color: palette.accent),
+                        const SizedBox(width: 6),
                         Text('Copy',
                             style: TextStyle(
-                                fontSize: 12.5, color: Nocturne.accent200)),
+                                fontSize: 12.5, color: palette.accentLight)),
                       ],
                     ),
                   ),
@@ -167,18 +170,18 @@ class FamilyV3 extends StatelessWidget {
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
               decoration: BoxDecoration(
-                color: Nocturne.surface,
+                color: palette.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: unreadTotal > 0 ? Nocturne.accent700 : Nocturne.neutral800,
+                  color: unreadTotal > 0 ? palette.accent : palette.edge,
                   width: 1,
                 ),
               ),
               child: Row(
                 children: [
-                  const V3IconTile(
+                  V3IconTile(
                     icon: PhRegular.chatCircleDots,
-                    color: Nocturne.accent300,
+                    color: palette.accent,
                     size: 36,
                     radius: 11,
                   ),
@@ -507,9 +510,13 @@ class _MemberRowTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final m = s.members[index];
     final isMe = m.userId == s.myId;
     final canManage = (s.isOwner || s.me?.role == 'admin') && !isMe;
+    final pairBal = s.balanceWith(m.userId);
+    final hasDebt = pairBal.abs() >= 0.5;
 
     return GestureDetector(
       onTap: isMe ? null : () => SharedWithSheet.open(context, m.userId),
@@ -536,41 +543,79 @@ class _MemberRowTile extends StatelessWidget {
                       child: Text(isMe ? '${m.name} (you)' : m.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w500,
-                              color: Nocturne.text)),
+                              color: palette.text)),
                     ),
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
-                        color: Nocturne.neutral800,
+                        color: palette.isDark ? Nocturne.neutral800 : palette.edge,
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(m.role,
-                          style: const TextStyle(
-                              fontSize: 10, color: Nocturne.neutral200)),
+                          style: TextStyle(
+                              fontSize: 10, color: palette.subtle)),
                     ),
                     if (!m.isActive) ...[
                       const SizedBox(width: 6),
-                      const Text('disabled',
+                      Text('disabled',
                           style: TextStyle(
                               fontSize: 10,
-                              color: NocturneSemantic.expense)),
+                              color: palette.expense)),
                     ],
                   ],
                 ),
-                Text(
-                  [
-                    if (m.relationship.isNotEmpty) m.relationship,
-                    '${s.moneyShort(spent)} this period',
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 11.5, color: Nocturne.neutral500),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        [
+                          if (m.relationship.isNotEmpty) m.relationship,
+                          '${s.moneyShort(spent)} spent',
+                        ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11.5, color: palette.muted),
+                      ),
+                    ),
+                    if (!isMe && hasDebt) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: pairBal > 0
+                              ? palette.income.withValues(alpha: 0.15)
+                              : palette.expense.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: pairBal > 0
+                                ? palette.income
+                                : palette.expense,
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          pairBal > 0
+                              ? 'Owes you ${s.moneyShort(pairBal)}'
+                              : 'You owe ${s.moneyShort(-pairBal)}',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w600,
+                            color: pairBal > 0
+                                ? palette.income
+                                : palette.expense,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -593,21 +638,21 @@ class _MemberRowTile extends StatelessWidget {
                 }
               },
               behavior: HitTestBehavior.opaque,
-              child: const SizedBox(
+              child: SizedBox(
                 width: 34,
                 height: 34,
                 child: Icon(PhRegular.bellRinging,
-                    size: 17, color: NocturneSemantic.warning),
+                    size: 17, color: palette.warning),
               ),
             ),
             GestureDetector(
               onTap: () => context.read<V3Nav>().openChat(m.userId),
               behavior: HitTestBehavior.opaque,
-              child: const SizedBox(
+              child: SizedBox(
                 width: 34,
                 height: 34,
                 child: Icon(PhRegular.chatCircleDots,
-                    size: 18, color: Nocturne.accent300),
+                    size: 18, color: palette.accent),
               ),
             ),
           ],
@@ -615,11 +660,11 @@ class _MemberRowTile extends StatelessWidget {
             GestureDetector(
               onTap: () => _manage(context, s, index),
               behavior: HitTestBehavior.opaque,
-              child: const SizedBox(
+              child: SizedBox(
                 width: 32,
                 height: 32,
                 child: Icon(PhRegular.dotsThree,
-                    size: 18, color: Nocturne.neutral500),
+                    size: 18, color: palette.muted),
               ),
             ),
         ],
@@ -752,16 +797,19 @@ class SharedWithSheet extends StatefulWidget {
   final String otherId;
   const SharedWithSheet({super.key, required this.otherId});
 
-  static Future<void> open(BuildContext context, String otherId) =>
-      showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Nocturne.surface,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        builder: (_) => SharedWithSheet(otherId: otherId),
-      );
+  static Future<void> open(BuildContext context, String otherId) {
+    final palette =
+        context.read<ThemeController?>()?.palette ?? Nocturne.palette;
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: palette.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => SharedWithSheet(otherId: otherId),
+    );
+  }
 
   @override
   State<SharedWithSheet> createState() => _SharedWithSheetState();
@@ -775,6 +823,8 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
+    final palette =
+        context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final other = s.memberById(widget.otherId);
     final name = other?.name ?? 'Them';
     final ledger = s.ledgerWith(widget.otherId);
@@ -801,7 +851,7 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
               children: [
                 V3Avatar(
                     initial: other?.initial ?? '?',
-                    color: other?.color ?? Nocturne.neutral700,
+                    color: other?.color ?? palette.accent,
                     size: 40,
                     fontSize: 15),
                 const SizedBox(width: 12),
@@ -809,10 +859,10 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                   child: Text('You & $name',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.text)),
+                          color: palette.text)),
                 ),
               ],
             ),
@@ -820,7 +870,12 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
             FutureBuilder<double>(
               future: _balance,
               builder: (_, snap) {
-                final b = snap.data;
+                final syncBal = s.pairBalanceSync(widget.otherId);
+                final b = (snap.hasData && snap.data != 0.0)
+                    ? snap.data!
+                    : (snap.connectionState == ConnectionState.done
+                        ? (snap.data ?? syncBal)
+                        : (syncBal.abs() >= 0.5 ? syncBal : snap.data));
                 final settled = b != null && b.abs() < 0.5;
                 final text = b == null
                     ? 'Working out the balance…'
@@ -832,7 +887,7 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                 return Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Nocturne.bg,
+                    color: palette.isDark ? palette.bg : palette.line,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
@@ -843,10 +898,10 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: b == null || settled
-                                    ? Nocturne.neutral300
+                                    ? palette.muted
                                     : b > 0
-                                        ? NocturneSemantic.income
-                                        : NocturneSemantic.expense)),
+                                        ? palette.income
+                                        : palette.expense)),
                       ),
                       if (b != null && !settled) ...[
                         if (b < 0 && other != null && other.upiId != null && other.upiId!.isNotEmpty) ...[
@@ -854,8 +909,8 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                             padding: const EdgeInsets.only(right: 6),
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: NocturneSemantic.income,
-                                foregroundColor: Nocturne.bg,
+                                backgroundColor: palette.income,
+                                foregroundColor: palette.isDark ? palette.bg : Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 10, vertical: 6),
                                 minimumSize: Size.zero,
@@ -884,8 +939,8 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                             setState(() =>
                                 _balance = s.pairBalance(widget.otherId));
                           },
-                          child: const Text('Settle up',
-                              style: TextStyle(color: Nocturne.accent300)),
+                          child: Text('Settle up',
+                              style: TextStyle(color: palette.accent)),
                         ),
                       ],
                     ],
@@ -896,36 +951,38 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
             const SizedBox(height: 10),
             Row(
               children: [
-                _stat('You paid for $name', s.moneyShort(paidForThem)),
+                _stat('You paid for $name', s.moneyShort(paidForThem), palette),
                 const SizedBox(width: 8),
-                _stat('$name paid for you', s.moneyShort(paidForMe)),
+                _stat('$name paid for you', s.moneyShort(paidForMe), palette),
                 const SizedBox(width: 8),
-                _stat('Split together', s.moneyShort(together)),
+                _stat('Split together', s.moneyShort(together), palette),
               ],
             ),
             const SizedBox(height: 16),
-            const Text('SHARED ENTRIES',
+            Text('SHARED ENTRIES',
                 style: TextStyle(
                     fontSize: 11,
                     letterSpacing: 0.8,
-                    color: Nocturne.neutral500)),
+                    color: palette.muted)),
             const SizedBox(height: 6),
             if (ledger.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18),
                 child: Text('Nothing shared yet.',
                     style:
-                        TextStyle(fontSize: 13, color: Nocturne.neutral500)),
+                        TextStyle(fontSize: 13, color: palette.muted)),
               ),
-            for (final t in ledger) _entry(s, t, name),
+            for (final t in ledger) _entry(s, t, name, palette),
           ],
         ),
       ),
     );
   }
 
-  Widget _entry(V3State s, TxnRow t, String name) {
+  Widget _entry(V3State s, TxnRow t, String name, NocturnePalette palette) {
     final v = s.signedShare(t, widget.otherId);
+    final payer = t.paidBy ?? t.userId;
+    final isMe = payer == s.myId;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -938,12 +995,12 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style:
-                        const TextStyle(fontSize: 13.5, color: Nocturne.text)),
+                        TextStyle(fontSize: 13.5, color: palette.text)),
                 Text(
-                  '${t.paidBy == s.myId ? 'You' : name} paid '
+                  '${isMe ? 'You' : name} paid '
                   '${s.moneyShort(t.amount)}',
-                  style: const TextStyle(
-                      fontSize: 11.5, color: Nocturne.neutral500),
+                  style: TextStyle(
+                      fontSize: 11.5, color: palette.muted),
                 ),
               ],
             ),
@@ -954,19 +1011,19 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: v >= 0
-                    ? NocturneSemantic.income
-                    : NocturneSemantic.expense),
+                    ? palette.income
+                    : palette.expense),
           ),
         ],
       ),
     );
   }
 
-  Widget _stat(String label, String value) => Expanded(
+  Widget _stat(String label, String value, NocturnePalette palette) => Expanded(
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Nocturne.bg,
+            color: palette.isDark ? palette.bg : palette.line,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -974,17 +1031,17 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
             children: [
               Text(label,
                   maxLines: 2,
-                  style: const TextStyle(
-                      fontSize: 10.5, color: Nocturne.neutral500)),
+                  style: TextStyle(
+                      fontSize: 10.5, color: palette.muted)),
               const SizedBox(height: 4),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(value,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text)),
+                        color: palette.text)),
               ),
             ],
           ),
