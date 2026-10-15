@@ -196,12 +196,12 @@ class _ImportV3State extends State<ImportV3> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: Nocturne.surface,
+          backgroundColor: Nocturne.palette.surface,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Password-Protected Statement?',
+          title: Text('Password-Protected Statement?',
               style: TextStyle(
-                  color: Nocturne.text,
+                  color: Nocturne.palette.text,
                   fontSize: 16,
                   fontWeight: FontWeight.bold)),
           content: Column(
@@ -210,8 +210,8 @@ class _ImportV3State extends State<ImportV3> {
             children: [
               Text(
                 'Indian banks lock PDF statements with passwords.\n\n${BankStatementService.getPasswordHint(doc.fileName)}\n\nTip: You can print/export the unlocked PDF or paste your statement text into the box below.',
-                style: const TextStyle(
-                    color: Nocturne.neutral300, fontSize: 12.5, height: 1.45),
+                style: TextStyle(
+                    color: Nocturne.palette.neutral300, fontSize: 12.5, height: 1.45),
               ),
             ],
           ),
@@ -219,7 +219,7 @@ class _ImportV3State extends State<ImportV3> {
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
               child:
-                  const Text('Got it', style: TextStyle(color: Nocturne.accent)),
+                  Text('Got it', style: TextStyle(color: Nocturne.palette.accent)),
             ),
           ],
         ),
@@ -296,32 +296,32 @@ class _ImportV3State extends State<ImportV3> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
           'Delete $count imported transaction${count == 1 ? '' : 's'}?',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Nocturne.text,
+            color: Nocturne.palette.text,
           ),
         ),
         content: Text(
           'This will permanently remove all $count imported transaction${count == 1 ? '' : 's'}. Manually added entries will not be touched.',
-          style: const TextStyle(fontSize: 13, color: Nocturne.neutral400),
+          style: TextStyle(fontSize: 13, color: Nocturne.palette.subtle),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: Nocturne.neutral400)),
+            child: Text('Cancel',
+                style: TextStyle(color: Nocturne.palette.subtle)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Delete all',
               style: TextStyle(
-                color: NocturneSemantic.expense,
+                color: Nocturne.palette.expense,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -379,7 +379,7 @@ class _ImportV3State extends State<ImportV3> {
         }
       },
       child: Scaffold(
-        backgroundColor: Nocturne.bg,
+        backgroundColor: Nocturne.palette.bg,
         body: SafeArea(
           child: Column(
             children: [
@@ -389,18 +389,18 @@ class _ImportV3State extends State<ImportV3> {
                   children: [
                     V3Press(
                       onTap: _handleBack,
-                      child: const Padding(
+                      child: Padding(
                         padding: EdgeInsets.all(8),
                         child: Icon(PhRegular.arrowLeft,
-                            size: 20, color: Nocturne.text),
+                            size: 20, color: Nocturne.palette.text),
                       ),
                     ),
                     const SizedBox(width: 2),
-                    const Text('Import expenses',
+                    Text('Import expenses',
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: Nocturne.text)),
+                            color: Nocturne.palette.text)),
                     const Spacer(),
                     GestureDetector(
                       onTap: _openCsvHelp,
@@ -409,22 +409,22 @@ class _ImportV3State extends State<ImportV3> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Nocturne.surface,
+                          color: Nocturne.palette.surface,
                           borderRadius: BorderRadius.circular(10),
                           border:
-                              Border.all(color: Nocturne.neutral800, width: 1),
+                              Border.all(color: Nocturne.palette.edge, width: 1),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(PhRegular.info,
-                                size: 16, color: Nocturne.accent200),
+                                size: 16, color: Nocturne.palette.accentLight),
                             SizedBox(width: 5),
                             Text('Format & AI Prompt',
                                 style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w500,
-                                    color: Nocturne.accent200)),
+                                    color: Nocturne.palette.accentLight)),
                           ],
                         ),
                       ),
@@ -451,23 +451,23 @@ class _ImportV3State extends State<ImportV3> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(15),
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Nocturne.accent600, Nocturne.accent800],
+                        colors: [Nocturne.palette.tintEdge, Nocturne.palette.accent800],
                       ),
                       border:
-                          Border.all(color: Nocturne.accent400, width: 1),
+                          Border.all(color: Nocturne.palette.fabEdge, width: 1),
                     ),
                     child: Text(
                       _busy
                           ? 'Importing…'
                           : 'Import $selected transaction'
                               '${selected == 1 ? '' : 's'}',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.accent100),
+                          color: Nocturne.palette.accentLight),
                     ),
                   ),
                 ),
@@ -484,14 +484,14 @@ class _ImportV3State extends State<ImportV3> {
     final imported = s.importedTxns;
 
     return [
-      const Padding(
+      Padding(
         padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
         child: Text(
           'Bring in spending from a bank export, a spreadsheet, or a note '
           'you already keep. Nothing is saved until you have seen what was '
           'read.',
           style: TextStyle(
-              fontSize: 12.5, height: 1.5, color: Nocturne.neutral400),
+              fontSize: 12.5, height: 1.5, color: Nocturne.palette.subtle),
         ),
       ),
       if (imported.isNotEmpty) ...[
@@ -500,35 +500,35 @@ class _ImportV3State extends State<ImportV3> {
           margin: const EdgeInsets.symmetric(horizontal: 16),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Nocturne.surface,
+            color: Nocturne.palette.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Nocturne.neutral800, width: 1),
+            border: Border.all(color: Nocturne.palette.edge, width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(PhRegular.downloadSimple,
-                      size: 16, color: Nocturne.accent200),
+                  Icon(PhRegular.downloadSimple,
+                      size: 16, color: Nocturne.palette.accentLight),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '${imported.length} imported transaction${imported.length == 1 ? '' : 's'} in workspace',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text,
+                        color: Nocturne.palette.text,
                       ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Need to clean up a previous import? Batch-select specific rows or delete all imported transactions.',
                 style: TextStyle(
-                    fontSize: 12, height: 1.4, color: Nocturne.neutral400),
+                    fontSize: 12, height: 1.4, color: Nocturne.palette.subtle),
               ),
               const SizedBox(height: 10),
               Row(
@@ -540,23 +540,23 @@ class _ImportV3State extends State<ImportV3> {
                         height: 38,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: Nocturne.bg,
+                          color: Nocturne.palette.bg,
                           borderRadius: BorderRadius.circular(11),
                           border: Border.all(
-                              color: Nocturne.neutral700, width: 1),
+                              color: Nocturne.palette.faint, width: 1),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(PhRegular.listChecks,
-                                size: 15, color: Nocturne.accent200),
+                                size: 15, color: Nocturne.palette.accentLight),
                             SizedBox(width: 6),
                             Text(
                               'Batch select',
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w500,
-                                color: Nocturne.accent200,
+                                color: Nocturne.palette.accentLight,
                               ),
                             ),
                           ],
@@ -572,25 +572,25 @@ class _ImportV3State extends State<ImportV3> {
                         height: 38,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: Nocturne.mix(NocturneSemantic.expense, 16),
+                          color: Nocturne.mix(Nocturne.palette.expense, 16),
                           borderRadius: BorderRadius.circular(11),
                           border: Border.all(
-                            color: Nocturne.mix(NocturneSemantic.expense, 45),
+                            color: Nocturne.mix(Nocturne.palette.expense, 45),
                             width: 1,
                           ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(PhRegular.trash,
-                                size: 15, color: NocturneSemantic.expense),
+                            Icon(PhRegular.trash,
+                                size: 15, color: Nocturne.palette.expense),
                             const SizedBox(width: 6),
                             Text(
                               'Delete all (${imported.length})',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
-                                color: NocturneSemantic.expense,
+                                color: Nocturne.palette.expense,
                               ),
                             ),
                           ],
@@ -625,30 +625,30 @@ class _ImportV3State extends State<ImportV3> {
         subtitle: 'Read a table or list you already wrote',
         onTap: _pickNote,
       ),
-      const Padding(
+      Padding(
         padding: EdgeInsets.fromLTRB(16, 18, 16, 6),
         child: Text('Or paste a table',
-            style: TextStyle(fontSize: 12.5, color: Nocturne.neutral400)),
+            style: TextStyle(fontSize: 12.5, color: Nocturne.palette.subtle)),
       ),
       Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Nocturne.neutral800, width: 1),
+          border: Border.all(color: Nocturne.palette.edge, width: 1),
         ),
         child: TextField(
           controller: _paste,
           maxLines: 7,
-          style: const TextStyle(fontSize: 13.5, color: Nocturne.text),
-          cursorColor: Nocturne.accent,
-          decoration: const InputDecoration(
+          style: TextStyle(fontSize: 13.5, color: Nocturne.palette.text),
+          cursorColor: Nocturne.palette.accent,
+          decoration: InputDecoration(
             border: InputBorder.none,
             hintText: 'Coffee 120\nGroceries 1,240\n\n'
                 'or a | Date | Item | Amount | table',
             hintStyle:
-                TextStyle(fontSize: 13.5, color: Nocturne.neutral600),
+                TextStyle(fontSize: 13.5, color: Nocturne.palette.faint),
           ),
         ),
       ),
@@ -661,11 +661,11 @@ class _ImportV3State extends State<ImportV3> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: Nocturne.accent, width: 1),
+              border: Border.all(color: Nocturne.palette.accent, width: 1),
             ),
-            child: const Text('Read pasted text',
+            child: Text('Read pasted text',
                 style:
-                    TextStyle(fontSize: 14.5, color: Nocturne.accent200)),
+                    TextStyle(fontSize: 14.5, color: Nocturne.palette.accentLight)),
           ),
         ),
       ),
@@ -679,20 +679,20 @@ class _ImportV3State extends State<ImportV3> {
           padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
           child: Column(
             children: [
-              const Icon(PhRegular.receiptX,
-                  size: 38, color: Nocturne.neutral600),
+              Icon(PhRegular.receiptX,
+                  size: 38, color: Nocturne.palette.faint),
               const SizedBox(height: 10),
-              const Text('Nothing recognisable',
+              Text('Nothing recognisable',
                   style:
-                      TextStyle(fontSize: 14.5, color: Nocturne.neutral300)),
+                      TextStyle(fontSize: 14.5, color: Nocturne.palette.neutral300)),
               const SizedBox(height: 6),
               Text(
                 'No rows in ${_source ?? 'that source'} had both a '
                 'description and an amount. A column named Amount, or lines '
                 'like "Coffee 120", are read best.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 12.5, height: 1.5, color: Nocturne.neutral500),
+                style: TextStyle(
+                    fontSize: 12.5, height: 1.5, color: Nocturne.palette.muted),
               ),
               const SizedBox(height: 18),
               V3Press(
@@ -706,11 +706,11 @@ class _ImportV3State extends State<ImportV3> {
                   padding: const EdgeInsets.symmetric(horizontal: 22),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(13),
-                    border: Border.all(color: Nocturne.accent, width: 1),
+                    border: Border.all(color: Nocturne.palette.accent, width: 1),
                   ),
-                  child: const Text('Try another source',
+                  child: Text('Try another source',
                       style: TextStyle(
-                          fontSize: 14, color: Nocturne.accent200)),
+                          fontSize: 14, color: Nocturne.palette.accentLight)),
                 ),
               ),
             ],
@@ -730,21 +730,21 @@ class _ImportV3State extends State<ImportV3> {
         margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Nocturne.accent900,
+          color: Nocturne.palette.tint,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           children: [
-            const Icon(PhRegular.checkCircle,
-                size: 17, color: Nocturne.accent200),
+            Icon(PhRegular.checkCircle,
+                size: 17, color: Nocturne.palette.accentLight),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Read ${_rows.length} row${_rows.length == 1 ? '' : 's'} '
                 'from ${_source ?? 'the file'}. Untick anything you do not '
                 'want.',
-                style: const TextStyle(
-                    fontSize: 12, height: 1.45, color: Nocturne.accent200),
+                style: TextStyle(
+                    fontSize: 12, height: 1.45, color: Nocturne.palette.accentLight),
               ),
             ),
           ],
@@ -758,15 +758,15 @@ class _ImportV3State extends State<ImportV3> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Nocturne.accent800, Nocturne.accent900],
+              gradient: LinearGradient(
+                colors: [Nocturne.palette.accent800, Nocturne.palette.tint],
               ),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Nocturne.accent600),
+              border: Border.all(color: Nocturne.palette.tintEdge),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(PhRegular.sparkle, size: 18, color: Nocturne.accent100),
+                Icon(PhRegular.sparkle, size: 18, color: Nocturne.palette.accentLight),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -774,11 +774,11 @@ class _ImportV3State extends State<ImportV3> {
                     style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.accent100),
+                        color: Nocturne.palette.accentLight),
                   ),
                 ),
                 Icon(PhRegular.caretRight,
-                    size: 14, color: Nocturne.accent200),
+                    size: 14, color: Nocturne.palette.accentLight),
               ],
             ),
           ),
@@ -803,15 +803,15 @@ class _ImportV3State extends State<ImportV3> {
                   Icon(
                     allSelected ? PhFill.checkCircle : PhRegular.circle,
                     size: 16,
-                    color: allSelected ? Nocturne.accent : Nocturne.neutral500,
+                    color: allSelected ? Nocturne.palette.accent : Nocturne.palette.muted,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     allSelected ? 'Deselect all' : 'Select all',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
-                      color: Nocturne.accent200,
+                      color: Nocturne.palette.accentLight,
                     ),
                   ),
                 ],
@@ -821,29 +821,29 @@ class _ImportV3State extends State<ImportV3> {
             GestureDetector(
               onTap: _rows.any((r) => r.selected) ? _editSelected : null,
               behavior: HitTestBehavior.opaque,
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(PhRegular.pencilSimple,
-                      size: 15, color: Nocturne.accent200),
+                      size: 15, color: Nocturne.palette.accentLight),
                   SizedBox(width: 5),
                   Text('Edit selected',
                       style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w500,
-                          color: Nocturne.accent200)),
+                          color: Nocturne.palette.accentLight)),
                 ],
               ),
             ),
             const Spacer(),
-            const Text('Spent · ',
+            Text('Spent · ',
                 style: TextStyle(
-                    fontSize: 12.5, color: Nocturne.neutral400)),
+                    fontSize: 12.5, color: Nocturne.palette.subtle)),
             Text(s.money(total),
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: Nocturne.text)),
+                    color: Nocturne.palette.text)),
           ],
         ),
       ),
@@ -851,7 +851,7 @@ class _ImportV3State extends State<ImportV3> {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
@@ -890,19 +890,19 @@ extension on _ImportV3State {
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: Nocturne.surface,
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Nocturne.neutral800, width: 1),
+        border: Border.all(color: Nocturne.palette.edge, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('IMPORT INTO',
+          Text('IMPORT INTO',
               style: TextStyle(
                   fontSize: 11,
                   letterSpacing: 0.8,
                   fontWeight: FontWeight.w600,
-                  color: Nocturne.neutral400)),
+                  color: Nocturne.palette.subtle)),
           const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -920,13 +920,13 @@ extension on _ImportV3State {
                             horizontal: 11, vertical: 7),
                         decoration: BoxDecoration(
                           color: _intoSourceId == src.id
-                              ? Nocturne.accent900
-                              : Nocturne.bg,
+                              ? Nocturne.palette.tint
+                              : Nocturne.palette.bg,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                               color: _intoSourceId == src.id
-                                  ? Nocturne.accent400
-                                  : Nocturne.neutral800),
+                                  ? Nocturne.palette.fabEdge
+                                  : Nocturne.palette.edge),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -934,15 +934,15 @@ extension on _ImportV3State {
                             Icon(src.design.icon,
                                 size: 14,
                                 color: _intoSourceId == src.id
-                                    ? Nocturne.accent200
-                                    : Nocturne.neutral400),
+                                    ? Nocturne.palette.accentLight
+                                    : Nocturne.palette.subtle),
                             const SizedBox(width: 6),
                             Text(src.name,
                                 style: TextStyle(
                                     fontSize: 12.5,
                                     color: _intoSourceId == src.id
-                                        ? Nocturne.accent100
-                                        : Nocturne.neutral300)),
+                                        ? Nocturne.palette.accentLight
+                                        : Nocturne.palette.neutral300)),
                           ],
                         ),
                       ),
@@ -960,8 +960,8 @@ extension on _ImportV3State {
                 : '$routedElsewhere row${routedElsewhere == 1 ? '' : 's'} '
                     'filed elsewhere automatically (salary, loan, rent or the '
                     'account named in the file). Tap a row\'s account to change it.',
-            style: const TextStyle(
-                fontSize: 11.5, height: 1.4, color: Nocturne.neutral500),
+            style: TextStyle(
+                fontSize: 11.5, height: 1.4, color: Nocturne.palette.muted),
           ),
         ],
       ),
@@ -977,8 +977,8 @@ class _AccountPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: const BoxDecoration(
-          color: Nocturne.surface,
+        decoration: BoxDecoration(
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
@@ -988,11 +988,11 @@ class _AccountPicker extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('File under account',
+              Text('File under account',
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Nocturne.text)),
+                      color: Nocturne.palette.text)),
               const SizedBox(height: 6),
               for (final src in sources)
                 V3Press(
@@ -1002,16 +1002,16 @@ class _AccountPicker extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(src.design.icon,
-                            size: 18, color: Nocturne.neutral300),
+                            size: 18, color: Nocturne.palette.neutral300),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(src.name,
-                              style: const TextStyle(
-                                  fontSize: 14, color: Nocturne.text)),
+                              style: TextStyle(
+                                  fontSize: 14, color: Nocturne.palette.text)),
                         ),
                         if (src.id == current)
-                          const Icon(PhRegular.check,
-                              size: 16, color: Nocturne.accent),
+                          Icon(PhRegular.check,
+                              size: 16, color: Nocturne.palette.accent),
                       ],
                     ),
                   ),
@@ -1045,9 +1045,9 @@ class _SourceTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: Nocturne.palette.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.neutral800, width: 1),
+              border: Border.all(color: Nocturne.palette.edge, width: 1),
             ),
             child: Row(
               children: [
@@ -1056,10 +1056,10 @@ class _SourceTile extends StatelessWidget {
                   height: 40,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Nocturne.accent900,
+                    color: Nocturne.palette.tint,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, size: 19, color: Nocturne.accent200),
+                  child: Icon(icon, size: 19, color: Nocturne.palette.accentLight),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1067,17 +1067,17 @@ class _SourceTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title,
-                          style: const TextStyle(
-                              fontSize: 14.5, color: Nocturne.text)),
+                          style: TextStyle(
+                              fontSize: 14.5, color: Nocturne.palette.text)),
                       const SizedBox(height: 2),
                       Text(subtitle,
-                          style: const TextStyle(
-                              fontSize: 12, color: Nocturne.neutral500)),
+                          style: TextStyle(
+                              fontSize: 12, color: Nocturne.palette.muted)),
                     ],
                   ),
                 ),
-                const Icon(PhRegular.caretRight,
-                    size: 14, color: Nocturne.neutral600),
+                Icon(PhRegular.caretRight,
+                    size: 14, color: Nocturne.palette.faint),
               ],
             ),
           ),
@@ -1114,7 +1114,7 @@ class _RowTile extends StatelessWidget {
             Icon(
               row.selected ? PhFill.checkCircle : PhRegular.circle,
               size: 20,
-              color: row.selected ? Nocturne.accent : Nocturne.neutral600,
+              color: row.selected ? Nocturne.palette.accent : Nocturne.palette.faint,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1128,8 +1128,8 @@ class _RowTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       color: row.selected
-                          ? Nocturne.text
-                          : Nocturne.neutral500,
+                          ? Nocturne.palette.text
+                          : Nocturne.palette.muted,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1144,8 +1144,8 @@ class _RowTile extends StatelessWidget {
                       else if (row.category != null)
                         row.category!,
                     ].join(' · '),
-                    style: const TextStyle(
-                        fontSize: 11.5, color: Nocturne.neutral500),
+                    style: TextStyle(
+                        fontSize: 11.5, color: Nocturne.palette.muted),
                   ),
                 ],
               ),
@@ -1160,19 +1160,19 @@ class _RowTile extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Nocturne.bg,
+                    color: Nocturne.palette.bg,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                         color: row.pinned
-                            ? Nocturne.accent400
-                            : Nocturne.neutral800),
+                            ? Nocturne.palette.fabEdge
+                            : Nocturne.palette.edge),
                   ),
                   child: Text(
                     accountName ?? 'No account',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 11, color: Nocturne.accent200),
+                    style: TextStyle(
+                        fontSize: 11, color: Nocturne.palette.accentLight),
                   ),
                 ),
               ),
@@ -1184,10 +1184,10 @@ class _RowTile extends StatelessWidget {
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: !row.selected
-                    ? Nocturne.neutral600
+                    ? Nocturne.palette.faint
                     : row.isIncome
-                        ? NocturneSemantic.income
-                        : Nocturne.text,
+                        ? Nocturne.palette.income
+                        : Nocturne.palette.text,
               ),
             ),
           ],
@@ -1207,8 +1207,8 @@ class _NotePicker extends StatelessWidget {
     return Container(
       constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.7),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
@@ -1216,18 +1216,18 @@ class _NotePicker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Pick a note',
+          Text('Pick a note',
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Nocturne.text)),
+                  color: Nocturne.palette.text)),
           const SizedBox(height: 10),
           if (notes.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 28),
               child: Text('You have no notes yet',
                   style:
-                      TextStyle(fontSize: 13, color: Nocturne.neutral500)),
+                      TextStyle(fontSize: 13, color: Nocturne.palette.muted)),
             )
           else
             Flexible(
@@ -1247,15 +1247,15 @@ class _NotePicker extends StatelessWidget {
                                   ? PhRegular.lockSimple
                                   : PhRegular.users,
                               size: 17,
-                              color: Nocturne.neutral400),
+                              color: Nocturne.palette.subtle),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               n.title.isEmpty ? 'Untitled' : n.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 14, color: Nocturne.text),
+                              style: TextStyle(
+                                  fontSize: 14, color: Nocturne.palette.text),
                             ),
                           ),
                         ],
@@ -1341,10 +1341,10 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral700, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.faint, width: 1)),
       ),
       padding: EdgeInsets.fromLTRB(
         16,
@@ -1362,20 +1362,20 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Imported transactions',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Nocturne.text,
+                    color: Nocturne.palette.text,
                   ),
                 ),
               ),
@@ -1395,19 +1395,19 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Nocturne.bg,
+                      color: Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(8),
                       border:
-                          Border.all(color: Nocturne.neutral800, width: 1),
+                          Border.all(color: Nocturne.palette.edge, width: 1),
                     ),
                     child: Text(
                       allSelected
                           ? 'Deselect all'
                           : 'Select all (${rows.length})',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Nocturne.accent200,
+                        color: Nocturne.palette.accentLight,
                       ),
                     ),
                   ),
@@ -1416,12 +1416,12 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
           ),
           const SizedBox(height: 10),
           if (rows.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 28),
               child: Center(
                 child: Text(
                   'No imported transactions in this workspace.',
-                  style: TextStyle(fontSize: 13, color: Nocturne.neutral500),
+                  style: TextStyle(fontSize: 13, color: Nocturne.palette.muted),
                 ),
               ),
             )
@@ -1450,7 +1450,7 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
                             sel ? PhFill.checkCircle : PhRegular.circle,
                             size: 20,
                             color:
-                                sel ? Nocturne.accent : Nocturne.neutral500,
+                                sel ? Nocturne.palette.accent : Nocturne.palette.muted,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -1464,16 +1464,16 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
                                   style: TextStyle(
                                     fontSize: 13.5,
                                     color: sel
-                                        ? Nocturne.text
-                                        : Nocturne.neutral400,
+                                        ? Nocturne.palette.text
+                                        : Nocturne.palette.subtle,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '${d.day}/${d.month}/${d.year} · ${s.catStyle(t.categoryKey).name} · ${s.sourceById(t.sourceId)?.name ?? 'No account'}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11.5,
-                                    color: Nocturne.neutral500,
+                                    color: Nocturne.palette.muted,
                                   ),
                                 ),
                               ],
@@ -1486,8 +1486,8 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
                               color: t.isExpense
-                                  ? Nocturne.text
-                                  : NocturneSemantic.income,
+                                  ? Nocturne.palette.text
+                                  : Nocturne.palette.income,
                             ),
                           ),
                         ],
@@ -1506,25 +1506,25 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
                 height: 46,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Nocturne.bg,
+                  color: Nocturne.palette.bg,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                       color: _selectedIds.isEmpty
-                          ? Nocturne.neutral700
-                          : Nocturne.accent400),
+                          ? Nocturne.palette.faint
+                          : Nocturne.palette.fabEdge),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(PhRegular.pencilSimple,
-                        size: 16, color: Nocturne.accent200),
+                    Icon(PhRegular.pencilSimple,
+                        size: 16, color: Nocturne.palette.accentLight),
                     const SizedBox(width: 8),
                     Text(
                       'Edit ${_selectedIds.length} selected (account, type, category)',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.accent200),
+                          color: Nocturne.palette.accentLight),
                     ),
                   ],
                 ),
@@ -1540,13 +1540,13 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: _selectedIds.isEmpty
-                      ? Nocturne.neutral800
-                      : Nocturne.mix(NocturneSemantic.expense, 20),
+                      ? Nocturne.palette.edge
+                      : Nocturne.mix(Nocturne.palette.expense, 20),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: _selectedIds.isEmpty
-                        ? Nocturne.neutral700
-                        : NocturneSemantic.expense,
+                        ? Nocturne.palette.faint
+                        : Nocturne.palette.expense,
                     width: 1,
                   ),
                 ),
@@ -1557,8 +1557,8 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
                       PhRegular.trash,
                       size: 16,
                       color: _selectedIds.isEmpty
-                          ? Nocturne.neutral500
-                          : NocturneSemantic.expense,
+                          ? Nocturne.palette.muted
+                          : Nocturne.palette.expense,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -1569,8 +1569,8 @@ class _ManageImportedSheetState extends State<_ManageImportedSheet> {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: _selectedIds.isEmpty
-                            ? Nocturne.neutral500
-                            : NocturneSemantic.expense,
+                            ? Nocturne.palette.muted
+                            : Nocturne.palette.expense,
                       ),
                     ),
                   ],
@@ -1623,9 +1623,9 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
     HapticFeedback.mediumImpact();
     setState(() => _copied = true);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text('AI Prompt copied to clipboard! Paste into Gemini or ChatGPT.'),
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
       ),
     );
     Future.delayed(const Duration(seconds: 3), () {
@@ -1637,9 +1637,9 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
     Clipboard.setData(const ClipboardData(text: _sampleCsv));
     HapticFeedback.selectionClick();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text('Sample CSV copied to clipboard!'),
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
       ),
     );
   }
@@ -1648,8 +1648,8 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(
@@ -1663,35 +1663,35 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: Nocturne.neutral700,
+                  color: Nocturne.palette.faint,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             Row(
               children: [
-                const Icon(PhRegular.downloadSimple, size: 22, color: Nocturne.accent200),
+                Icon(PhRegular.downloadSimple, size: 22, color: Nocturne.palette.accentLight),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'CSV Format & AI Prompt Guide',
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
-                      color: Nocturne.text,
+                      color: Nocturne.palette.text,
                     ),
                   ),
                 ),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Icon(PhRegular.x, size: 20, color: Nocturne.neutral400),
+                  child: Icon(PhRegular.x, size: 20, color: Nocturne.palette.subtle),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Upload CSV files with specific dates, amounts, categories and sources. If you have raw bank statements or spreadsheets, copy our AI prompt below to instantly format them.',
-              style: TextStyle(fontSize: 12.5, height: 1.45, color: Nocturne.neutral400),
+              style: TextStyle(fontSize: 12.5, height: 1.45, color: Nocturne.palette.subtle),
             ),
             const SizedBox(height: 16),
 
@@ -1699,24 +1699,24 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Nocturne.accent800, width: 1.2),
+                border: Border.all(color: Nocturne.palette.accent800, width: 1.2),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(PhRegular.sparkle, size: 16, color: Nocturne.accent200),
+                      Icon(PhRegular.sparkle, size: 16, color: Nocturne.palette.accentLight),
                       const SizedBox(width: 8),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Prompt to give Gemini / ChatGPT',
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
-                            color: Nocturne.text,
+                            color: Nocturne.palette.text,
                           ),
                         ),
                       ),
@@ -1725,7 +1725,7 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: _copied ? NocturneSemantic.income : Nocturne.accent,
+                            color: _copied ? Nocturne.palette.income : Nocturne.palette.accent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -1752,7 +1752,7 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
                     ],
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     _aiPrompt,
                     maxLines: 8,
                     overflow: TextOverflow.ellipsis,
@@ -1760,7 +1760,7 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
                       fontSize: 11,
                       height: 1.4,
                       fontFamily: 'monospace',
-                      color: Nocturne.neutral300,
+                      color: Nocturne.palette.neutral300,
                     ),
                   ),
                 ],
@@ -1769,12 +1769,12 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
             const SizedBox(height: 16),
 
             // ── Supported Headers Explanation ──────────────────────────────
-            const Text(
+            Text(
               'Required & Supported Columns',
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
-                color: Nocturne.text,
+                color: Nocturne.palette.text,
               ),
             ),
             const SizedBox(height: 8),
@@ -1789,25 +1789,25 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
             // ── Sample CSV preview ─────────────────────────────────────────
             Row(
               children: [
-                const Text(
+                Text(
                   'Sample CSV Template',
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: Nocturne.text,
+                    color: Nocturne.palette.text,
                   ),
                 ),
                 const Spacer(),
                 GestureDetector(
                   onTap: _copySample,
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(PhRegular.copy, size: 13, color: Nocturne.accent200),
+                      Icon(PhRegular.copy, size: 13, color: Nocturne.palette.accentLight),
                       SizedBox(width: 4),
                       Text(
                         'Copy sample',
-                        style: TextStyle(fontSize: 11.5, color: Nocturne.accent200),
+                        style: TextStyle(fontSize: 11.5, color: Nocturne.palette.accentLight),
                       ),
                     ],
                   ),
@@ -1819,17 +1819,17 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Nocturne.neutral800, width: 1),
+                border: Border.all(color: Nocturne.palette.edge, width: 1),
               ),
-              child: const Text(
+              child: Text(
                 _sampleCsv,
                 style: TextStyle(
                   fontSize: 11,
                   height: 1.45,
                   fontFamily: 'monospace',
-                  color: Nocturne.neutral300,
+                  color: Nocturne.palette.neutral300,
                 ),
               ),
             ),
@@ -1848,16 +1848,16 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Nocturne.neutral700, width: 1),
+              border: Border.all(color: Nocturne.palette.faint, width: 1),
             ),
             child: Text(
               col,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w600,
-                color: Nocturne.accent200,
+                color: Nocturne.palette.accentLight,
               ),
             ),
           ),
@@ -1865,7 +1865,7 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
           Expanded(
             child: Text(
               desc,
-              style: const TextStyle(fontSize: 11.5, color: Nocturne.neutral400),
+              style: TextStyle(fontSize: 11.5, color: Nocturne.palette.subtle),
             ),
           ),
         ],
@@ -1881,8 +1881,8 @@ class _BankStatementIntroSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -1894,20 +1894,20 @@ class _BankStatementIntroSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          const Row(
+          Row(
             children: [
-              Icon(PhRegular.bank, size: 22, color: Nocturne.accent200),
+              Icon(PhRegular.bank, size: 22, color: Nocturne.palette.accentLight),
               SizedBox(width: 10),
               Text(
                 'Import Bank Statement PDF',
                 style: TextStyle(
-                  color: Nocturne.text,
+                  color: Nocturne.palette.text,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1915,44 +1915,44 @@ class _BankStatementIntroSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Load your last 6 months in 30 seconds without manual entry. All parsing runs 100% on your device.',
-            style: TextStyle(color: Nocturne.neutral300, fontSize: 12.5, height: 1.4),
+            style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 12.5, height: 1.4),
           ),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '🔑 Password format cheat-sheet:',
                   style: TextStyle(
-                    color: Nocturne.text,
+                    color: Nocturne.palette.text,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 SizedBox(height: 6),
                 Text('• SBI: Date of Birth (DDMMYYYY) + Last 5 digits of mobile',
-                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                    style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle)),
                 SizedBox(height: 3),
                 Text('• HDFC: Customer ID or PAN number (lowercase)',
-                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                    style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle)),
                 SizedBox(height: 3),
                 Text('• ICICI: First 4 letters of name + DDMM of birth',
-                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                    style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle)),
                 SizedBox(height: 3),
                 Text('• Axis: First 4 letters of name (UPPERCASE) + last 4 of account',
-                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                    style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle)),
                 SizedBox(height: 3),
                 Text('• Kotak: Customer CRN number',
-                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                    style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle)),
               ],
             ),
           ),
@@ -1962,7 +1962,7 @@ class _BankStatementIntroSheet extends StatelessWidget {
               Expanded(
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400)),
+                  child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1970,8 +1970,8 @@ class _BankStatementIntroSheet extends StatelessWidget {
                 flex: 2,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Nocturne.accent,
-                    foregroundColor: Nocturne.bg,
+                    backgroundColor: Nocturne.palette.accent,
+                    foregroundColor: Nocturne.palette.bg,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),

@@ -55,10 +55,10 @@ class _BatchEditSheetState extends State<BatchEditSheet> {
     return Container(
       constraints:
           BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral700, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.faint, width: 1)),
       ),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
       child: SafeArea(
@@ -69,14 +69,14 @@ class _BatchEditSheetState extends State<BatchEditSheet> {
           children: [
             Text(
               'Edit ${widget.count} transaction${widget.count == 1 ? '' : 's'}',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Nocturne.text),
+                  color: Nocturne.palette.text),
             ),
             const SizedBox(height: 4),
-            const Text('Only what you pick changes; the rest stays as it is.',
-                style: TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+            Text('Only what you pick changes; the rest stays as it is.',
+                style: TextStyle(fontSize: 12, color: Nocturne.palette.muted)),
             Flexible(
               child: SingleChildScrollView(
                 child: Column(
@@ -132,12 +132,12 @@ class _BatchEditSheetState extends State<BatchEditSheet> {
                 height: 50,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: edit.isEmpty ? Nocturne.neutral800 : Nocturne.accent700,
+                  color: edit.isEmpty ? Nocturne.palette.edge : Nocturne.palette.switchOn,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                       color: edit.isEmpty
-                          ? Nocturne.neutral700
-                          : Nocturne.accent400),
+                          ? Nocturne.palette.faint
+                          : Nocturne.palette.fabEdge),
                 ),
                 child: Text(
                   'Apply to ${widget.count}',
@@ -145,7 +145,7 @@ class _BatchEditSheetState extends State<BatchEditSheet> {
                     fontSize: 14.5,
                     fontWeight: FontWeight.w600,
                     color:
-                        edit.isEmpty ? Nocturne.neutral500 : Nocturne.accent100,
+                        edit.isEmpty ? Nocturne.palette.muted : Nocturne.palette.accentLight,
                   ),
                 ),
               ),
@@ -165,11 +165,11 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 16, bottom: 8),
         child: Text(text,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 11,
                 letterSpacing: 0.8,
                 fontWeight: FontWeight.w600,
-                color: Nocturne.neutral400)),
+                color: Nocturne.palette.subtle)),
       );
 }
 
@@ -202,22 +202,22 @@ class _Chip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? Nocturne.accent900 : Nocturne.bg,
+            color: selected ? Nocturne.palette.tint : Nocturne.palette.bg,
             borderRadius: BorderRadius.circular(11),
             border: Border.all(
-                color: selected ? Nocturne.accent400 : Nocturne.neutral800),
+                color: selected ? Nocturne.palette.fabEdge : Nocturne.palette.edge),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon,
                   size: 14,
-                  color: selected ? Nocturne.accent200 : Nocturne.neutral400),
+                  color: selected ? Nocturne.palette.accentLight : Nocturne.palette.subtle),
               const SizedBox(width: 6),
               Text(label,
                   style: TextStyle(
                       fontSize: 12.5,
-                      color: selected ? Nocturne.accent100 : Nocturne.neutral300)),
+                      color: selected ? Nocturne.palette.accentLight : Nocturne.palette.neutral300)),
             ],
           ),
         ),

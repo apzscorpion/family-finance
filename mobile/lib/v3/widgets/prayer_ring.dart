@@ -36,7 +36,7 @@ class PrayerVisuals {
   /// The deeper stop used by the ring gradient, so the arc reads as a sweep
   /// rather than a flat band.
   static Color deep(PrayerSlot slot) =>
-      Color.lerp(color(slot), Nocturne.bg, 0.45)!;
+      Color.lerp(color(slot), Nocturne.palette.bg, 0.45)!;
 
   /// 12-hour clock, matching the rest of the app's time formatting.
   static String clock(DateTime t) {
@@ -126,7 +126,7 @@ class _RingPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = stroke
-        ..color = Nocturne.neutral800,
+        ..color = Nocturne.palette.edge,
     );
 
     if (progress <= 0) return;
@@ -210,7 +210,7 @@ class _RailPainter extends CustomPainter {
     final trackPaint = Paint()
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
-      ..color = Nocturne.neutral800;
+      ..color = Nocturne.palette.edge;
 
     canvas.drawLine(Offset(7, y), Offset(size.width - 7, y), trackPaint);
 
@@ -248,7 +248,7 @@ class _RailPainter extends CustomPainter {
       canvas.drawCircle(
         Offset(x, y),
         isCurrent ? 4 : 3,
-        Paint()..color = passed ? colour : Nocturne.neutral700,
+        Paint()..color = passed ? colour : Nocturne.palette.faint,
       );
     }
   }

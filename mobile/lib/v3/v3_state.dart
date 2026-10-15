@@ -236,9 +236,8 @@ class V3State extends ChangeNotifier {
     ]);
     balances = {
       for (var i = 0; i < others.length; i++)
-        others[i].userId: ((bals[i] != null && bals[i]!.abs() > 0.001)
-            ? bals[i]!
-            : pairBalanceSync(others[i].userId)),
+        // A server 0 is a real answer (e.g. fully settled); fall back only on failure.
+        others[i].userId: bals[i] ?? pairBalanceSync(others[i].userId),
     };
 
     if (!_scopeChosen) {
@@ -701,6 +700,8 @@ class V3State extends ChangeNotifier {
     if (created == null) return false;
     txns = [_refile(created), ...txns];
     notifyListeners();
+    // Split entries move the server pair balances the owe pills read.
+    if (shares != null && shares.isNotEmpty) unawaited(refresh());
     return true;
   }
 
@@ -796,7 +797,7 @@ class V3State extends ChangeNotifier {
       'pairBalance',
       () => _repo.pairBalance(familyId, otherUserId),
     );
-    if (remote != null && remote.abs() > 0.001) return remote;
+    if (remote != null) return remote;
     return pairBalanceSync(otherUserId);
   }
 
@@ -827,8 +828,10 @@ class V3State extends ChangeNotifier {
   Future<void> deleteTransaction(String id) async {
     await V3Repository.guard(
         'deleteTransaction', () => _repo.deleteTransaction(id));
+    final split = txns.any((t) => t.id == id && t.shares.isNotEmpty);
     txns = txns.where((t) => t.id != id).toList();
     notifyListeners();
+    if (split) unawaited(refresh());
   }
 
   /// Applies the same change to many transactions at once. Null fields are
@@ -866,8 +869,11 @@ class V3State extends ChangeNotifier {
       'deleteTransactionsBulk',
       () => _repo.deleteTransactionsBulk(idSet.toList()),
     );
+    final split =
+        txns.any((t) => idSet.contains(t.id) && t.shares.isNotEmpty);
     txns = txns.where((t) => !idSet.contains(t.id)).toList();
     notifyListeners();
+    if (split) unawaited(refresh());
     return removed ?? idSet.length;
   }
 
@@ -1041,7 +1047,9 @@ class V3State extends ChangeNotifier {
   }
 
   Future<bool> contributeGoal(String goalId, double addAmount) async {
-    final target = goals.firstWhere((g) => g.id == goalId, orElse: () => goals.first);
+    final i = goals.indexWhere((g) => g.id == goalId);
+    if (i < 0) return false;
+    final target = goals[i];
     final newAmount = target.currentAmount + addAmount;
     final ok = await V3Repository.guard('contributeGoal', () async {
       await _repo.contributeToGoal(goalId: goalId, newAmount: newAmount);
@@ -1091,6 +1099,7 @@ class V3State extends ChangeNotifier {
     await V3Repository.guard('settle', () => _repo.settle(id));
     settlements = settlements.where((s) => s.id != id).toList();
     notifyListeners();
+    unawaited(refresh());
   }
 
   Future<void> decideApproval(String id, bool approve) async {
@@ -1576,7 +1585,7 @@ class V3State extends ChangeNotifier {
     // Sum recurring bills still due this month
     var upcomingBills = 0.0;
     for (final r in recurring) {
-      if (r.isExpense && r.nextDue.month == now.month && r.nextDue.day >= now.day) {
+      if (r.isExpense && r.nextDue.year == now.year && r.nextDue.month == now.month && r.nextDue.day >= now.day) {
         upcomingBills += r.amount;
       }
     }

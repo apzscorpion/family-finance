@@ -61,65 +61,65 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: Nocturne.surface,
+          backgroundColor: Nocturne.palette.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('Add Daily Delivery', style: TextStyle(color: Nocturne.text, fontSize: 17, fontWeight: FontWeight.w600)),
+          title: Text('Add Daily Delivery', style: TextStyle(color: Nocturne.palette.text, fontSize: 17, fontWeight: FontWeight.w600)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
                   initialValue: itemType,
-                  dropdownColor: Nocturne.surface,
-                  decoration: const InputDecoration(
+                  dropdownColor: Nocturne.palette.surface,
+                  decoration: InputDecoration(
                     labelText: 'Delivery Type',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'milk', child: Text('Milk (Packet/Litre)', style: TextStyle(color: Nocturne.text))),
-                    DropdownMenuItem(value: 'newspaper', child: Text('Newspaper', style: TextStyle(color: Nocturne.text))),
-                    DropdownMenuItem(value: 'water', child: Text('Water Can (20L)', style: TextStyle(color: Nocturne.text))),
-                    DropdownMenuItem(value: 'other', child: Text('Other Daily Item', style: TextStyle(color: Nocturne.text))),
+                  items: [
+                    DropdownMenuItem(value: 'milk', child: Text('Milk (Packet/Litre)', style: TextStyle(color: Nocturne.palette.text))),
+                    DropdownMenuItem(value: 'newspaper', child: Text('Newspaper', style: TextStyle(color: Nocturne.palette.text))),
+                    DropdownMenuItem(value: 'water', child: Text('Water Can (20L)', style: TextStyle(color: Nocturne.palette.text))),
+                    DropdownMenuItem(value: 'other', child: Text('Other Daily Item', style: TextStyle(color: Nocturne.palette.text))),
                   ],
                   onChanged: (v) => setDialogState(() => itemType = v ?? 'milk'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: nameCtrl,
-                  style: const TextStyle(color: Nocturne.text),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text),
+                  decoration: InputDecoration(
                     labelText: 'Item Name (e.g. Nandini Blue 500ml)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: priceCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: Nocturne.text),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text),
+                  decoration: InputDecoration(
                     labelText: 'Unit Price (₹ per day / delivery)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                     prefixText: '₹ ',
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: vendorNameCtrl,
-                  style: const TextStyle(color: Nocturne.text),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text),
+                  decoration: InputDecoration(
                     labelText: 'Vendor / Delivery Person (Optional)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: vendorPhoneCtrl,
                   keyboardType: TextInputType.phone,
-                  style: const TextStyle(color: Nocturne.text),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text),
+                  decoration: InputDecoration(
                     labelText: 'Vendor Phone / UPI (Optional)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                   ),
                 ),
               ],
@@ -128,12 +128,12 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400)),
+              child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Nocturne.accent,
-                foregroundColor: Nocturne.bg,
+                backgroundColor: Nocturne.palette.accent,
+                foregroundColor: Nocturne.palette.bg,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () async {
@@ -170,47 +170,47 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: Nocturne.surface,
+          backgroundColor: Nocturne.palette.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('Add Helper / Staff', style: TextStyle(color: Nocturne.text, fontSize: 17, fontWeight: FontWeight.w600)),
+          title: Text('Add Helper / Staff', style: TextStyle(color: Nocturne.palette.text, fontSize: 17, fontWeight: FontWeight.w600)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
                   initialValue: role,
-                  dropdownColor: Nocturne.surface,
-                  decoration: const InputDecoration(
+                  dropdownColor: Nocturne.palette.surface,
+                  decoration: InputDecoration(
                     labelText: 'Role',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'Maid', child: Text('Maid / House Help', style: TextStyle(color: Nocturne.text))),
-                    DropdownMenuItem(value: 'Cook', child: Text('Cook / Chef', style: TextStyle(color: Nocturne.text))),
-                    DropdownMenuItem(value: 'Driver', child: Text('Driver', style: TextStyle(color: Nocturne.text))),
-                    DropdownMenuItem(value: 'Nanny', child: Text('Nanny / Babysitter', style: TextStyle(color: Nocturne.text))),
-                    DropdownMenuItem(value: 'Gardener', child: Text('Gardener', style: TextStyle(color: Nocturne.text))),
-                    DropdownMenuItem(value: 'Other', child: Text('Other Staff', style: TextStyle(color: Nocturne.text))),
+                  items: [
+                    DropdownMenuItem(value: 'Maid', child: Text('Maid / House Help', style: TextStyle(color: Nocturne.palette.text))),
+                    DropdownMenuItem(value: 'Cook', child: Text('Cook / Chef', style: TextStyle(color: Nocturne.palette.text))),
+                    DropdownMenuItem(value: 'Driver', child: Text('Driver', style: TextStyle(color: Nocturne.palette.text))),
+                    DropdownMenuItem(value: 'Nanny', child: Text('Nanny / Babysitter', style: TextStyle(color: Nocturne.palette.text))),
+                    DropdownMenuItem(value: 'Gardener', child: Text('Gardener', style: TextStyle(color: Nocturne.palette.text))),
+                    DropdownMenuItem(value: 'Other', child: Text('Other Staff', style: TextStyle(color: Nocturne.palette.text))),
                   ],
                   onChanged: (v) => setDialogState(() => role = v ?? 'Maid'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: nameCtrl,
-                  style: const TextStyle(color: Nocturne.text),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text),
+                  decoration: InputDecoration(
                     labelText: 'Full Name',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: salaryCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: Nocturne.text),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text),
+                  decoration: InputDecoration(
                     labelText: 'Monthly Salary (₹)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                     prefixText: '₹ ',
                   ),
                 ),
@@ -218,20 +218,20 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
                 TextField(
                   controller: dayCtrl,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Nocturne.text),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text),
+                  decoration: InputDecoration(
                     labelText: 'Salary Due Day of Month (e.g. 1st, 5th)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  style: const TextStyle(color: Nocturne.text),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text),
+                  decoration: InputDecoration(
                     labelText: 'Phone / UPI ID (Optional)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
                   ),
                 ),
               ],
@@ -240,12 +240,12 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400)),
+              child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Nocturne.accent,
-                foregroundColor: Nocturne.bg,
+                backgroundColor: Nocturne.palette.accent,
+                foregroundColor: Nocturne.palette.bg,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () async {
@@ -282,57 +282,57 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Track Pending Refund', style: TextStyle(color: Nocturne.text, fontSize: 17, fontWeight: FontWeight.w600)),
+        title: Text('Track Pending Refund', style: TextStyle(color: Nocturne.palette.text, fontSize: 17, fontWeight: FontWeight.w600)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: merchantCtrl,
-                style: const TextStyle(color: Nocturne.text),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Nocturne.palette.text),
+                decoration: InputDecoration(
                   labelText: 'Merchant / Platform (e.g. Swiggy, Amazon, IRCTC)',
-                  labelStyle: TextStyle(color: Nocturne.neutral400),
+                  labelStyle: TextStyle(color: Nocturne.palette.subtle),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: amountCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(color: Nocturne.text),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Nocturne.palette.text),
+                decoration: InputDecoration(
                   labelText: 'Refund Amount (₹)',
-                  labelStyle: TextStyle(color: Nocturne.neutral400),
+                  labelStyle: TextStyle(color: Nocturne.palette.subtle),
                   prefixText: '₹ ',
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: utrCtrl,
-                style: const TextStyle(color: Nocturne.text),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Nocturne.palette.text),
+                decoration: InputDecoration(
                   labelText: 'UTR / Transaction Ref # (12 digits)',
-                  labelStyle: TextStyle(color: Nocturne.neutral400),
+                  labelStyle: TextStyle(color: Nocturne.palette.subtle),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: appCtrl,
-                style: const TextStyle(color: Nocturne.text),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Nocturne.palette.text),
+                decoration: InputDecoration(
                   labelText: 'Source App (GPay, PhonePe, Paytm, HDFC)',
-                  labelStyle: TextStyle(color: Nocturne.neutral400),
+                  labelStyle: TextStyle(color: Nocturne.palette.subtle),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: notesCtrl,
-                style: const TextStyle(color: Nocturne.text),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Nocturne.palette.text),
+                decoration: InputDecoration(
                   labelText: 'Order ID or Note (Optional)',
-                  labelStyle: TextStyle(color: Nocturne.neutral400),
+                  labelStyle: TextStyle(color: Nocturne.palette.subtle),
                 ),
               ),
             ],
@@ -341,12 +341,12 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400)),
+            child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Nocturne.accent,
-              foregroundColor: Nocturne.bg,
+              backgroundColor: Nocturne.palette.accent,
+              foregroundColor: Nocturne.palette.bg,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () async {
@@ -377,16 +377,16 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
-        title: const Text('Log Bill as Expense', style: TextStyle(color: Nocturne.text)),
+        backgroundColor: Nocturne.palette.surface,
+        title: Text('Log Bill as Expense', style: TextStyle(color: Nocturne.palette.text)),
         content: Text(
           'Log ${V3Design.inr(billAmount)} for "${sub.name}" ($monthStr) into your family expenses?',
-          style: const TextStyle(color: Nocturne.neutral300),
+          style: TextStyle(color: Nocturne.palette.neutral300),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+            style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Log Expense'),
           ),
@@ -419,37 +419,37 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Log Advance for ${staff.name}', style: const TextStyle(color: Nocturne.text, fontSize: 16, fontWeight: FontWeight.w600)),
+        title: Text('Log Advance for ${staff.name}', style: TextStyle(color: Nocturne.palette.text, fontSize: 16, fontWeight: FontWeight.w600)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: amountCtrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Nocturne.text),
-              decoration: const InputDecoration(
+              style: TextStyle(color: Nocturne.palette.text),
+              decoration: InputDecoration(
                 labelText: 'Advance Given (₹)',
-                labelStyle: TextStyle(color: Nocturne.neutral400),
+                labelStyle: TextStyle(color: Nocturne.palette.subtle),
                 prefixText: '₹ ',
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: noteCtrl,
-              style: const TextStyle(color: Nocturne.text),
-              decoration: const InputDecoration(
+              style: TextStyle(color: Nocturne.palette.text),
+              decoration: InputDecoration(
                 labelText: 'Reason / Note (e.g. Festival, Medical)',
-                labelStyle: TextStyle(color: Nocturne.neutral400),
+                labelStyle: TextStyle(color: Nocturne.palette.subtle),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+            style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
             onPressed: () async {
               final amt = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
               if (amt <= 0) return;
@@ -478,16 +478,16 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: Nocturne.surface,
+          backgroundColor: Nocturne.palette.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: Text('Mark Leave for ${staff.name}', style: const TextStyle(color: Nocturne.text, fontSize: 16, fontWeight: FontWeight.w600)),
+          title: Text('Mark Leave for ${staff.name}', style: TextStyle(color: Nocturne.palette.text, fontSize: 16, fontWeight: FontWeight.w600)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('Date: ${DateFormat('d MMMM yyyy').format(leaveDate)}', style: const TextStyle(color: Nocturne.text, fontSize: 14)),
-                trailing: const Icon(PhRegular.calendar, color: Nocturne.accent300, size: 20),
+                title: Text('Date: ${DateFormat('d MMMM yyyy').format(leaveDate)}', style: TextStyle(color: Nocturne.palette.text, fontSize: 14)),
+                trailing: Icon(PhRegular.calendar, color: Nocturne.palette.accentMuted, size: 20),
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -502,18 +502,18 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
               ),
               TextField(
                 controller: noteCtrl,
-                style: const TextStyle(color: Nocturne.text),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Nocturne.palette.text),
+                decoration: InputDecoration(
                   labelText: 'Note (Optional)',
-                  labelStyle: TextStyle(color: Nocturne.neutral400),
+                  labelStyle: TextStyle(color: Nocturne.palette.subtle),
                 ),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+              style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
               onPressed: () async {
                 await s.addStaffLedgerEntry(
                   staffId: staff.id,
@@ -540,32 +540,32 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Pay Salary: ${staff.name}', style: const TextStyle(color: Nocturne.text, fontSize: 17, fontWeight: FontWeight.w600)),
+        title: Text('Pay Salary: ${staff.name}', style: TextStyle(color: Nocturne.palette.text, fontSize: 17, fontWeight: FontWeight.w600)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSalaryRow('Monthly Base Salary', V3Design.inr(staff.monthlySalary)),
             if (staff.advancesBalance > 0)
-              _buildSalaryRow('Less Advances Recovered', '- ${V3Design.inr(staff.advancesBalance)}', color: NocturneSemantic.expense),
-            const Divider(color: Nocturne.neutral700, height: 20),
+              _buildSalaryRow('Less Advances Recovered', '- ${V3Design.inr(staff.advancesBalance)}', color: Nocturne.palette.expense),
+            Divider(color: Nocturne.palette.faint, height: 20),
             _buildSalaryRow('Net Amount to Pay', V3Design.inr(netPayable), isTotal: true),
             const SizedBox(height: 12),
             Text(
               'Leaves this month: ${staff.leavesThisMonth} day(s)',
-              style: const TextStyle(color: Nocturne.neutral400, fontSize: 12),
+              style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle))),
           if (staff.phone != null && staff.phone!.isNotEmpty)
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: Nocturne.accent200,
-                side: const BorderSide(color: Nocturne.accent700),
+                foregroundColor: Nocturne.palette.accentLight,
+                side: BorderSide(color: Nocturne.palette.switchOn),
               ),
               onPressed: () {
                 UpiService.openUpiPayment(
@@ -579,7 +579,7 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
               label: const Text('UPI Pay'),
             ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+            style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
             onPressed: () async {
               // Log salary entry in staff ledger
               await s.addStaffLedgerEntry(
@@ -620,8 +620,8 @@ class _HouseholdSuiteSheetState extends State<HouseholdSuiteSheet> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: isTotal ? Nocturne.text : Nocturne.neutral400, fontSize: isTotal ? 14 : 13, fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400)),
-          Text(value, style: TextStyle(color: color ?? (isTotal ? Nocturne.accent200 : Nocturne.text), fontSize: isTotal ? 16 : 13, fontWeight: isTotal ? FontWeight.bold : FontWeight.w600)),
+          Text(label, style: TextStyle(color: isTotal ? Nocturne.palette.text : Nocturne.palette.subtle, fontSize: isTotal ? 14 : 13, fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400)),
+          Text(value, style: TextStyle(color: color ?? (isTotal ? Nocturne.palette.accentLight : Nocturne.palette.text), fontSize: isTotal ? 16 : 13, fontWeight: isTotal ? FontWeight.bold : FontWeight.w600)),
         ],
       ),
     );
@@ -657,13 +657,13 @@ Account Holder''';
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Row(
           children: [
-            const Icon(PhRegular.warning, color: NocturneSemantic.warning, size: 20),
+            Icon(PhRegular.warning, color: Nocturne.palette.warning, size: 20),
             const SizedBox(width: 8),
-            const Text('Automated Complaint Draft', style: TextStyle(color: Nocturne.text, fontSize: 16, fontWeight: FontWeight.w600)),
+            Text('Automated Complaint Draft', style: TextStyle(color: Nocturne.palette.text, fontSize: 16, fontWeight: FontWeight.w600)),
           ],
         ),
         content: Container(
@@ -671,16 +671,16 @@ Account Holder''';
           child: SingleChildScrollView(
             child: SelectableText(
               complaint,
-              style: const TextStyle(color: Nocturne.neutral300, fontSize: 12, height: 1.4),
+              style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 12, height: 1.4),
             ),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close', style: TextStyle(color: Nocturne.neutral400))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: TextStyle(color: Nocturne.palette.subtle))),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: Nocturne.accent200,
-              side: const BorderSide(color: Nocturne.accent700),
+              foregroundColor: Nocturne.palette.accentLight,
+              side: BorderSide(color: Nocturne.palette.switchOn),
             ),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: complaint));
@@ -692,7 +692,7 @@ Account Holder''';
             label: const Text('Copy'),
           ),
           ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+            style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
             onPressed: () {
               Share.share(complaint, subject: 'Escalation: Uncredited Refund for ₹${refund.amount.toStringAsFixed(0)}');
             },
@@ -721,10 +721,10 @@ Account Holder''';
         top: 14,
         bottom: MediaQuery.of(context).padding.bottom + 16,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral800, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.edge, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -736,7 +736,7 @@ Account Holder''';
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -746,19 +746,19 @@ Account Holder''';
           // Header
           Row(
             children: [
-              const Icon(PhFill.houseLine, size: 22, color: Nocturne.accent300),
+              Icon(PhFill.houseLine, size: 22, color: Nocturne.palette.accentMuted),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Household & Deliveries',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Nocturne.text,
+                  color: Nocturne.palette.text,
                 ),
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(PhRegular.x, size: 20, color: Nocturne.neutral400),
+                icon: Icon(PhRegular.x, size: 20, color: Nocturne.palette.subtle),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -823,26 +823,26 @@ Account Holder''';
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
-              icon: const Icon(PhRegular.caretLeft, size: 18, color: Nocturne.neutral400),
+              icon: Icon(PhRegular.caretLeft, size: 18, color: Nocturne.palette.subtle),
               onPressed: () => setState(() {
                 _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1, 1);
               }),
             ),
             Text(
               monthName,
-              style: const TextStyle(color: Nocturne.text, fontSize: 14, fontWeight: FontWeight.w600),
+              style: TextStyle(color: Nocturne.palette.text, fontSize: 14, fontWeight: FontWeight.w600),
             ),
             IconButton(
-              icon: const Icon(PhRegular.caretRight, size: 18, color: Nocturne.neutral400),
+              icon: Icon(PhRegular.caretRight, size: 18, color: Nocturne.palette.subtle),
               onPressed: () => setState(() {
                 _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 1);
               }),
             ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Nocturne.accent900,
-                foregroundColor: Nocturne.accent200,
-                side: const BorderSide(color: Nocturne.accent700, width: 0.8),
+                backgroundColor: Nocturne.palette.tint,
+                foregroundColor: Nocturne.palette.accentLight,
+                side: BorderSide(color: Nocturne.palette.switchOn, width: 0.8),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
@@ -860,18 +860,18 @@ Account Holder''';
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(PhRegular.basket, size: 42, color: Nocturne.neutral600),
+                  Icon(PhRegular.basket, size: 42, color: Nocturne.palette.faint),
                   const SizedBox(height: 12),
-                  const Text('No daily deliveries added', style: TextStyle(color: Nocturne.text, fontWeight: FontWeight.w600)),
+                  Text('No daily deliveries added', style: TextStyle(color: Nocturne.palette.text, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Track milk packets, newspaper and water cans.\nTap any day a delivery was skipped for auto-billing.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+                    style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
                     onPressed: _showAddSubscriptionDialog,
                     child: const Text('+ Add Milk or Newspaper'),
                   ),
@@ -894,9 +894,9 @@ Account Holder''';
                 return Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Nocturne.bg,
+                    color: Nocturne.palette.bg,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Nocturne.neutral800, width: 1),
+                    border: Border.all(color: Nocturne.palette.edge, width: 1),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -908,19 +908,19 @@ Account Holder''';
                             sub.itemType == 'milk'
                                 ? PhRegular.basket
                                 : (sub.itemType == 'newspaper' ? PhRegular.quotes : PhRegular.tray),
-                            color: Nocturne.accent300,
+                            color: Nocturne.palette.accentMuted,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               sub.name,
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Nocturne.text),
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
                             ),
                           ),
                           Text(
                             '₹${sub.unitPrice.toStringAsFixed(0)}/day',
-                            style: const TextStyle(fontSize: 13, color: Nocturne.neutral400, fontWeight: FontWeight.w500),
+                            style: TextStyle(fontSize: 13, color: Nocturne.palette.subtle, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -928,15 +928,15 @@ Account Holder''';
                         const SizedBox(height: 4),
                         Text(
                           'Vendor: ${sub.vendorName ?? 'Local'} ${sub.vendorPhone != null ? '(${sub.vendorPhone})' : ''}',
-                          style: const TextStyle(fontSize: 11, color: Nocturne.neutral500),
+                          style: TextStyle(fontSize: 11, color: Nocturne.palette.muted),
                         ),
                       ],
                       const SizedBox(height: 12),
 
                       // Day skip picker grid (1 .. daysInMonth)
-                      const Text(
+                      Text(
                         'Tap date to mark delivery as skipped:',
-                        style: TextStyle(fontSize: 11, color: Nocturne.neutral400),
+                        style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -956,10 +956,10 @@ Account Holder''';
                                     height: 32,
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
-                                      color: isSkipped ? NocturneSemantic.expense.withValues(alpha: 0.18) : Nocturne.surface,
+                                      color: isSkipped ? Nocturne.palette.expense.withValues(alpha: 0.18) : Nocturne.palette.surface,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: isSkipped ? NocturneSemantic.expense : Nocturne.neutral700,
+                                        color: isSkipped ? Nocturne.palette.expense : Nocturne.palette.faint,
                                         width: 1,
                                       ),
                                     ),
@@ -968,7 +968,7 @@ Account Holder''';
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: isSkipped ? FontWeight.bold : FontWeight.w500,
-                                        color: isSkipped ? NocturneSemantic.expense : Nocturne.text,
+                                        color: isSkipped ? Nocturne.palette.expense : Nocturne.palette.text,
                                         decoration: isSkipped ? TextDecoration.lineThrough : null,
                                       ),
                                     ),
@@ -985,9 +985,9 @@ Account Holder''';
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Nocturne.surface,
+                          color: Nocturne.palette.surface,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Nocturne.neutral700, width: 0.8),
+                          border: Border.all(color: Nocturne.palette.faint, width: 0.8),
                         ),
                         child: Row(
                           children: [
@@ -996,20 +996,20 @@ Account Holder''';
                               children: [
                                 Text(
                                   '$activeDays days delivered · ${skipsThisMonth.length} skipped',
-                                  style: const TextStyle(fontSize: 11, color: Nocturne.neutral400),
+                                  style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   'Bill: ${V3Design.inr(bill)}',
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Nocturne.accent200),
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Nocturne.palette.accentLight),
                                 ),
                               ],
                             ),
                             const Spacer(),
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Nocturne.accent,
-                                foregroundColor: Nocturne.bg,
+                                backgroundColor: Nocturne.palette.accent,
+                                foregroundColor: Nocturne.palette.bg,
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
@@ -1044,13 +1044,13 @@ Account Holder''';
           children: [
             Text(
               '${staffList.length} Helper(s) on Ledger',
-              style: const TextStyle(color: Nocturne.neutral400, fontSize: 13),
+              style: TextStyle(color: Nocturne.palette.subtle, fontSize: 13),
             ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Nocturne.accent900,
-                foregroundColor: Nocturne.accent200,
-                side: const BorderSide(color: Nocturne.accent700, width: 0.8),
+                backgroundColor: Nocturne.palette.tint,
+                foregroundColor: Nocturne.palette.accentLight,
+                side: BorderSide(color: Nocturne.palette.switchOn, width: 0.8),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
@@ -1068,18 +1068,18 @@ Account Holder''';
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(PhRegular.users, size: 42, color: Nocturne.neutral600),
+                  Icon(PhRegular.users, size: 42, color: Nocturne.palette.faint),
                   const SizedBox(height: 12),
-                  const Text('No domestic staff added yet', style: TextStyle(color: Nocturne.text, fontWeight: FontWeight.w600)),
+                  Text('No domestic staff added yet', style: TextStyle(color: Nocturne.palette.text, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Track monthly salaries, advances given and leave days\nfor your maid, cook, driver or nanny.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+                    style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
                     onPressed: _showAddStaffDialog,
                     child: const Text('+ Add Maid / Cook / Driver'),
                   ),
@@ -1097,9 +1097,9 @@ Account Holder''';
                 return Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Nocturne.bg,
+                    color: Nocturne.palette.bg,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Nocturne.neutral800, width: 1),
+                    border: Border.all(color: Nocturne.palette.edge, width: 1),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1110,24 +1110,24 @@ Account Holder''';
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: Nocturne.accent.withValues(alpha: 0.16),
+                              color: Nocturne.palette.accent.withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               staff.role,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Nocturne.accent300),
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Nocturne.palette.accentMuted),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               staff.name,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Nocturne.text),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
                             ),
                           ),
                           Text(
                             '${V3Design.inr(staff.monthlySalary)}/mo',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Nocturne.text),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Nocturne.palette.text),
                           ),
                         ],
                       ),
@@ -1141,7 +1141,7 @@ Account Holder''';
                           _MetricChip(
                             label: 'Advance Balance',
                             value: staff.advancesBalance > 0 ? V3Design.inr(staff.advancesBalance) : '₹0',
-                            valueColor: staff.advancesBalance > 0 ? NocturneSemantic.expense : Nocturne.text,
+                            valueColor: staff.advancesBalance > 0 ? Nocturne.palette.expense : Nocturne.palette.text,
                           ),
                           const SizedBox(width: 8),
                           _MetricChip(
@@ -1158,8 +1158,8 @@ Account Holder''';
                           Expanded(
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: Nocturne.neutral300,
-                                side: const BorderSide(color: Nocturne.neutral700),
+                                foregroundColor: Nocturne.palette.neutral300,
+                                side: BorderSide(color: Nocturne.palette.faint),
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
@@ -1172,8 +1172,8 @@ Account Holder''';
                           Expanded(
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: Nocturne.neutral300,
-                                side: const BorderSide(color: Nocturne.neutral700),
+                                foregroundColor: Nocturne.palette.neutral300,
+                                side: BorderSide(color: Nocturne.palette.faint),
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
@@ -1186,8 +1186,8 @@ Account Holder''';
                           Expanded(
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Nocturne.accent,
-                                foregroundColor: Nocturne.bg,
+                                backgroundColor: Nocturne.palette.accent,
+                                foregroundColor: Nocturne.palette.bg,
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
@@ -1223,13 +1223,13 @@ Account Holder''';
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: NocturneSemantic.expense.withValues(alpha: 0.12),
+              color: Nocturne.palette.expense.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: NocturneSemantic.expense.withValues(alpha: 0.6), width: 1),
+              border: Border.all(color: Nocturne.palette.expense.withValues(alpha: 0.6), width: 1),
             ),
             child: Row(
               children: [
-                const Icon(PhRegular.warning, color: NocturneSemantic.expense, size: 22),
+                Icon(PhRegular.warning, color: Nocturne.palette.expense, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -1237,12 +1237,12 @@ Account Holder''';
                     children: [
                       Text(
                         '${delayedRefunds.length} Refund(s) Exceeded RBI TAT SLA (48-72h)',
-                        style: const TextStyle(color: NocturneSemantic.expense, fontWeight: FontWeight.bold, fontSize: 12),
+                        style: TextStyle(color: Nocturne.palette.expense, fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                       const SizedBox(height: 2),
-                      const Text(
+                      Text(
                         'Tap "Draft Grievance" on any delayed refund to send an official dispute.',
-                        style: TextStyle(color: Nocturne.neutral300, fontSize: 11),
+                        style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 11),
                       ),
                     ],
                   ),
@@ -1258,13 +1258,13 @@ Account Holder''';
           children: [
             Text(
               '${allRefunds.where((r) => r.isPending).length} Watching · ${allRefunds.where((r) => r.status == 'received').length} Settled',
-              style: const TextStyle(color: Nocturne.neutral400, fontSize: 13),
+              style: TextStyle(color: Nocturne.palette.subtle, fontSize: 13),
             ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Nocturne.accent900,
-                foregroundColor: Nocturne.accent200,
-                side: const BorderSide(color: Nocturne.accent700, width: 0.8),
+                backgroundColor: Nocturne.palette.tint,
+                foregroundColor: Nocturne.palette.accentLight,
+                side: BorderSide(color: Nocturne.palette.switchOn, width: 0.8),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
@@ -1282,18 +1282,18 @@ Account Holder''';
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(PhRegular.arrowCounterClockwise, size: 42, color: Nocturne.neutral600),
+                  Icon(PhRegular.arrowCounterClockwise, size: 42, color: Nocturne.palette.faint),
                   const SizedBox(height: 12),
-                  const Text('Never lose a refund again', style: TextStyle(color: Nocturne.text, fontWeight: FontWeight.w600)),
+                  Text('Never lose a refund again', style: TextStyle(color: Nocturne.palette.text, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'When a UPI debit fails or a merchant initiates a refund,\nKinPurse keeps watch until the money actually hits your bank.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+                    style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
                     onPressed: _showAddRefundDialog,
                     child: const Text('+ Track a Pending Refund'),
                   ),
@@ -1315,10 +1315,10 @@ Account Holder''';
                 return Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Nocturne.bg,
+                    color: Nocturne.palette.bg,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDelayed ? NocturneSemantic.expense : (isReceived ? NocturneSemantic.income : Nocturne.neutral800),
+                      color: isDelayed ? Nocturne.palette.expense : (isReceived ? Nocturne.palette.income : Nocturne.palette.edge),
                       width: isDelayed ? 1.4 : 1,
                     ),
                   ),
@@ -1331,8 +1331,8 @@ Account Holder''';
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: isReceived
-                                  ? NocturneSemantic.income.withValues(alpha: 0.18)
-                                  : (isDelayed ? NocturneSemantic.expense.withValues(alpha: 0.18) : Nocturne.neutral800),
+                                  ? Nocturne.palette.income.withValues(alpha: 0.18)
+                                  : (isDelayed ? Nocturne.palette.expense.withValues(alpha: 0.18) : Nocturne.palette.edge),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -1341,8 +1341,8 @@ Account Holder''';
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: isReceived
-                                    ? NocturneSemantic.income
-                                    : (isDelayed ? NocturneSemantic.expense : Nocturne.neutral400),
+                                    ? Nocturne.palette.income
+                                    : (isDelayed ? Nocturne.palette.expense : Nocturne.palette.subtle),
                               ),
                             ),
                           ),
@@ -1350,7 +1350,7 @@ Account Holder''';
                           Expanded(
                             child: Text(
                               r.merchant,
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Nocturne.text),
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
                             ),
                           ),
                           Text(
@@ -1358,7 +1358,7 @@ Account Holder''';
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: isReceived ? NocturneSemantic.income : Nocturne.text,
+                              color: isReceived ? Nocturne.palette.income : Nocturne.palette.text,
                             ),
                           ),
                         ],
@@ -1367,11 +1367,11 @@ Account Holder''';
                       Text(
                         'Via ${r.sourceApp ?? 'UPI'} · Initiated $daysAgo days ago (${DateFormat('d MMM').format(r.initiatedAt)})'
                         '${r.utrRef != null ? ' · Ref: ${r.utrRef}' : ''}',
-                        style: const TextStyle(fontSize: 11, color: Nocturne.neutral400),
+                        style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle),
                       ),
                       if (r.notes != null && r.notes!.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(r.notes!, style: const TextStyle(fontSize: 11, color: Nocturne.neutral500)),
+                        Text(r.notes!, style: TextStyle(fontSize: 11, color: Nocturne.palette.muted)),
                       ],
                       const SizedBox(height: 10),
 
@@ -1381,8 +1381,8 @@ Account Holder''';
                           if (!isReceived) ...[
                             OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: NocturneSemantic.warning,
-                                side: const BorderSide(color: NocturneSemantic.warning),
+                                foregroundColor: Nocturne.palette.warning,
+                                side: BorderSide(color: Nocturne.palette.warning),
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
@@ -1393,7 +1393,7 @@ Account Holder''';
                             const Spacer(),
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: NocturneSemantic.income,
+                                backgroundColor: Nocturne.palette.income,
                                 foregroundColor: Colors.black,
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -1403,13 +1403,13 @@ Account Holder''';
                               label: const Text('Mark Received', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
                           ] else ...[
-                            const Icon(PhBold.checkCircle, size: 16, color: NocturneSemantic.income),
+                            Icon(PhBold.checkCircle, size: 16, color: Nocturne.palette.income),
                             const SizedBox(width: 6),
-                            const Text('Refund credited to your account', style: TextStyle(fontSize: 12, color: NocturneSemantic.income)),
+                            Text('Refund credited to your account', style: TextStyle(fontSize: 12, color: Nocturne.palette.income)),
                             const Spacer(),
                             TextButton(
                               onPressed: () => s.updateRefundStatus(r.id, 'pending'),
-                              child: const Text('Undo', style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                              child: Text('Undo', style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle)),
                             ),
                           ],
                         ],
@@ -1446,10 +1446,10 @@ class _TabPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? Nocturne.accent : Nocturne.bg,
+          color: selected ? Nocturne.palette.accent : Nocturne.palette.bg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: badgeAlert ? NocturneSemantic.expense : (selected ? Nocturne.accent : Nocturne.neutral800),
+            color: badgeAlert ? Nocturne.palette.expense : (selected ? Nocturne.palette.accent : Nocturne.palette.edge),
             width: badgeAlert ? 1.4 : 1,
           ),
         ),
@@ -1461,12 +1461,12 @@ class _TabPill extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? Nocturne.bg : Nocturne.text,
+                color: selected ? Nocturne.palette.bg : Nocturne.palette.text,
               ),
             ),
             if (badgeAlert) ...[
               const SizedBox(width: 4),
-              const Icon(PhFill.warning, size: 12, color: NocturneSemantic.expense),
+              Icon(PhFill.warning, size: 12, color: Nocturne.palette.expense),
             ],
           ],
         ),
@@ -1488,20 +1488,20 @@ class _MetricChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Nocturne.neutral700, width: 0.8),
+          border: Border.all(color: Nocturne.palette.faint, width: 0.8),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontSize: 10, color: Nocturne.neutral400)),
+            Text(label, style: TextStyle(fontSize: 10, color: Nocturne.palette.subtle)),
             const SizedBox(height: 2),
             Text(
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: valueColor ?? Nocturne.text),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: valueColor ?? Nocturne.palette.text),
             ),
           ],
         ),

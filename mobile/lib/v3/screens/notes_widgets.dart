@@ -21,7 +21,7 @@ class LiveBanner extends StatelessWidget {
     if (who == null) return const SizedBox.shrink();
 
     final s = context.read<V3State>();
-    final colour = s.memberById(who.userId)?.color ?? Nocturne.accent600;
+    final colour = s.memberById(who.userId)?.color ?? Nocturne.palette.tintEdge;
 
     return GestureDetector(
       onTap: onTap == null ? null : () => onTap!(who),
@@ -31,12 +31,12 @@ class LiveBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Nocturne.accent800, width: 1),
+          border: Border.all(color: Nocturne.palette.accent800, width: 1),
           gradient: LinearGradient(
             colors: [
               Color.alphaBlend(
-                  Nocturne.mix(Nocturne.accent, 14), Nocturne.surface),
-              Nocturne.surface,
+                  Nocturne.mix(Nocturne.palette.accent, 14), Nocturne.palette.surface),
+              Nocturne.palette.surface,
             ],
           ),
         ),
@@ -53,9 +53,9 @@ class LiveBanner extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     text: TextSpan(
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13,
-                          color: Nocturne.text,
+                          color: Nocturne.palette.text,
                           fontFamily: Nocturne.fontFamily),
                       children: [
                         TextSpan(
@@ -70,26 +70,26 @@ class LiveBanner extends StatelessWidget {
                   Text(who.noteTitle ?? 'a note',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 11.5, color: Nocturne.neutral400)),
+                      style: TextStyle(
+                          fontSize: 11.5, color: Nocturne.palette.subtle)),
                 ],
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Nocturne.accent900,
+                color: Nocturne.palette.tint,
                 borderRadius: BorderRadius.circular(7),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('Follow',
                       style:
-                          TextStyle(fontSize: 11, color: Nocturne.accent200)),
+                          TextStyle(fontSize: 11, color: Nocturne.palette.accentLight)),
                   SizedBox(width: 4),
                   Icon(PhRegular.caretRight,
-                      size: 11, color: Nocturne.accent200),
+                      size: 11, color: Nocturne.palette.accentLight),
                 ],
               ),
             ),
@@ -147,7 +147,7 @@ class _PulsingAvatarState extends State<PulsingAvatar>
                   style: TextStyle(
                       fontSize: widget.size * 0.4,
                       fontWeight: FontWeight.w600,
-                      color: Nocturne.text)),
+                      color: Nocturne.palette.text)),
             ),
             Positioned(
               right: 1,
@@ -161,12 +161,12 @@ class _PulsingAvatarState extends State<PulsingAvatar>
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: NocturneSemantic.income,
+                      color: Nocturne.palette.income,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Nocturne.surface, width: 2),
+                      border: Border.all(color: Nocturne.palette.surface, width: 2),
                       boxShadow: [
                         BoxShadow(
-                          color: NocturneSemantic.income
+                          color: Nocturne.palette.income
                               .withValues(alpha: (1 - t) * 0.6),
                           spreadRadius: 6 * t,
                         ),
@@ -212,11 +212,11 @@ class _LiveDotState extends State<LiveDot>
         width: 7,
         height: 7,
         decoration: BoxDecoration(
-          color: NocturneSemantic.income,
+          color: Nocturne.palette.income,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: NocturneSemantic.income
+              color: Nocturne.palette.income
                   .withValues(alpha: (1 - _c.value) * 0.6),
               spreadRadius: 5 * _c.value,
             ),
@@ -267,16 +267,16 @@ class FolderGrid extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Nocturne.neutral800, width: 1.5),
+                border: Border.all(color: Nocturne.palette.edge, width: 1.5),
               ),
-              child: const Column(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(PhRegular.plus, size: 26, color: Nocturne.neutral400),
+                  Icon(PhRegular.plus, size: 26, color: Nocturne.palette.subtle),
                   SizedBox(height: 8),
                   Text('New folder',
                       style:
-                          TextStyle(fontSize: 13, color: Nocturne.neutral400)),
+                          TextStyle(fontSize: 13, color: Nocturne.palette.subtle)),
                 ],
               ),
             ),
@@ -291,20 +291,20 @@ class FolderGrid extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
-        title: const Text('New folder',
-            style: TextStyle(fontSize: 17, color: Nocturne.text)),
+        backgroundColor: Nocturne.palette.surface,
+        title: Text('New folder',
+            style: TextStyle(fontSize: 17, color: Nocturne.palette.text)),
         content: TextField(
           controller: name,
           autofocus: true,
-          style: const TextStyle(fontSize: 14, color: Nocturne.text),
-          cursorColor: Nocturne.accent,
+          style: TextStyle(fontSize: 14, color: Nocturne.palette.text),
+          cursorColor: Nocturne.palette.accent,
           decoration: InputDecoration(
             hintText: 'e.g. Wedding, Groceries',
             hintStyle:
-                const TextStyle(fontSize: 14, color: Nocturne.neutral600),
+                TextStyle(fontSize: 14, color: Nocturne.palette.faint),
             filled: true,
-            fillColor: Nocturne.bg,
+            fillColor: Nocturne.palette.bg,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -314,12 +314,12 @@ class FolderGrid extends StatelessWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Nocturne.neutral400))),
+              child: Text('Cancel',
+                  style: TextStyle(color: Nocturne.palette.subtle))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Create',
-                  style: TextStyle(color: Nocturne.accent300))),
+              child: Text('Create',
+                  style: TextStyle(color: Nocturne.palette.accentMuted))),
         ],
       ),
     );
@@ -342,7 +342,7 @@ class _FolderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colour = V3Design.parseHex(folder.color) ?? Nocturne.accent500;
+    final colour = V3Design.parseHex(folder.color) ?? Nocturne.palette.accent500;
 
     return GestureDetector(
       onTap: onTap,
@@ -350,9 +350,9 @@ class _FolderCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Nocturne.neutral900, width: 1),
+          border: Border.all(color: Nocturne.palette.line, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,8 +399,8 @@ class _FolderCard extends StatelessWidget {
                               offset: const Offset(0, 8)),
                         ],
                       ),
-                      child: const Icon(PhFill.pushPin,
-                          size: 16, color: Nocturne.bg),
+                      child: Icon(PhFill.pushPin,
+                          size: 16, color: Nocturne.palette.bg),
                     ),
                   ),
                 ],
@@ -410,14 +410,14 @@ class _FolderCard extends StatelessWidget {
             Text(folder.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Nocturne.text)),
+                    color: Nocturne.palette.text)),
             const SizedBox(height: 2),
             Text('$count note${count == 1 ? '' : 's'}',
                 style:
-                    const TextStyle(fontSize: 11.5, color: Nocturne.neutral500)),
+                    TextStyle(fontSize: 11.5, color: Nocturne.palette.muted)),
           ],
         ),
       ),
@@ -434,7 +434,7 @@ class FolderChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colour = V3Design.parseHex(folder.color) ?? Nocturne.accent300;
+    final colour = V3Design.parseHex(folder.color) ?? Nocturne.palette.accentMuted;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Align(
@@ -446,9 +446,9 @@ class FolderChip extends StatelessWidget {
             height: 30,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: Nocturne.accent900,
+              color: Nocturne.palette.tint,
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: Nocturne.accent600, width: 1),
+              border: Border.all(color: Nocturne.palette.tintEdge, width: 1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -456,10 +456,10 @@ class FolderChip extends StatelessWidget {
                 Icon(PhFill.pushPin, size: 12, color: colour),
                 const SizedBox(width: 6),
                 Text(folder.name,
-                    style: const TextStyle(
-                        fontSize: 12, color: Nocturne.accent100)),
+                    style: TextStyle(
+                        fontSize: 12, color: Nocturne.palette.accentLight)),
                 const SizedBox(width: 6),
-                const Icon(PhRegular.x, size: 11, color: Nocturne.accent200),
+                Icon(PhRegular.x, size: 11, color: Nocturne.palette.accentLight),
               ],
             ),
           ),

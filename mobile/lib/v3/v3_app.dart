@@ -51,6 +51,18 @@ class V3App extends StatelessWidget {
 
   static final navigatorKey = GlobalKey<NavigatorState>();
   static bool _prayerAlertsWired = false;
+  static KpThemeId? _builtTheme;
+
+  /// Widgets read [Nocturne.palette] statically, so const subtrees would keep
+  /// the old colours; force every element to rebuild once after a switch.
+  static void _repaintAll(Element root) {
+    void visit(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(visit);
+    }
+
+    root.visitChildren(visit);
+  }
 
   static void _showPrayerAlert(String slot) =>
       navigatorKey.currentState?.push(PrayerAlertV3.route(slot));
@@ -82,13 +94,22 @@ class V3App extends StatelessWidget {
         ChangeNotifierProvider.value(value: ThemeController.instance..load()),
       ],
       child: Consumer<ThemeController>(
-        builder: (context, themeCtrl, _) => MaterialApp(
+        builder: (context, themeCtrl, _) {
+          final id = themeCtrl.themeId;
+          if (_builtTheme != null && _builtTheme != id) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) _repaintAll(context as Element);
+            });
+          }
+          _builtTheme = id;
+          return MaterialApp(
           title: 'KinPurse',
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           theme: getV3Theme(themeCtrl.palette),
           home: const V3Root(),
-        ),
+        );
+        },
       ),
     );
   }
@@ -140,33 +161,33 @@ class V3Root extends StatelessWidget {
     }
 
     if (s.loading && s.family == null) {
-      return const Scaffold(
-        backgroundColor: Nocturne.bg,
-        body: Center(child: CircularProgressIndicator(color: Nocturne.accent300)),
+      return Scaffold(
+        backgroundColor: Nocturne.palette.bg,
+        body: Center(child: CircularProgressIndicator(color: Nocturne.palette.accentMuted)),
       );
     }
 
     if (s.loadError != null && s.family == null) {
       return Scaffold(
-        backgroundColor: Nocturne.bg,
+        backgroundColor: Nocturne.palette.bg,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(PhRegular.warning,
-                    size: 36, color: Nocturne.neutral500),
+                Icon(PhRegular.warning,
+                    size: 36, color: Nocturne.palette.muted),
                 const SizedBox(height: 12),
                 Text(s.loadError!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 14, color: Nocturne.neutral300)),
+                    style: TextStyle(
+                        fontSize: 14, color: Nocturne.palette.neutral300)),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: s.bootstrap,
-                  child: const Text('Try again',
-                      style: TextStyle(color: Nocturne.accent300)),
+                  child: Text('Try again',
+                      style: TextStyle(color: Nocturne.palette.accentMuted)),
                 ),
               ],
             ),
@@ -348,9 +369,10 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
     WidgetsBinding.instance
         .addPostFrameCallback((_) => UpdateSheetV3.checkOnLaunch(context));
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness:
+          palette.isDark ? Brightness.light : Brightness.dark,
     ));
 
     return _SharedBillListener(
@@ -721,19 +743,19 @@ class _OfflineBanner extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Nocturne.surface,
+                        color: Nocturne.palette.surface,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Nocturne.neutral700),
+                        border: Border.all(color: Nocturne.palette.faint),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(PhRegular.wifiHigh,
-                              size: 14, color: Nocturne.neutral400),
+                              size: 14, color: Nocturne.palette.subtle),
                           SizedBox(width: 6),
                           Text("You're offline — changes can't be saved right now",
                               style: TextStyle(
-                                  fontSize: 12, color: Nocturne.neutral300)),
+                                  fontSize: 12, color: Nocturne.palette.neutral300)),
                         ],
                       ),
                     ),

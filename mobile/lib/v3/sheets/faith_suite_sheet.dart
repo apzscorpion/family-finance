@@ -50,18 +50,18 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: Nocturne.surface,
+          backgroundColor: Nocturne.palette.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('Add Precious Metal', style: TextStyle(color: Nocturne.text)),
+          title: Text('Add Precious Metal', style: TextStyle(color: Nocturne.palette.text)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameCtrl,
-                style: const TextStyle(color: Nocturne.text),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Nocturne.palette.text),
+                decoration: InputDecoration(
                   labelText: 'Item Name (e.g. Bangles, Coin, Bar)',
-                  labelStyle: TextStyle(color: Nocturne.neutral400),
+                  labelStyle: TextStyle(color: Nocturne.palette.subtle),
                 ),
               ),
               const SizedBox(height: 12),
@@ -70,7 +70,7 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                   Expanded(
                     child: DropdownButton<String>(
                       value: metal,
-                      dropdownColor: Nocturne.surface,
+                      dropdownColor: Nocturne.palette.surface,
                       items: const [
                         DropdownMenuItem(value: 'gold', child: Text('Gold')),
                         DropdownMenuItem(value: 'silver', child: Text('Silver')),
@@ -83,7 +83,7 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                     Expanded(
                       child: DropdownButton<int>(
                         value: purity,
-                        dropdownColor: Nocturne.surface,
+                        dropdownColor: Nocturne.palette.surface,
                         items: const [
                           DropdownMenuItem(value: 24, child: Text('24K (99.9%)')),
                           DropdownMenuItem(value: 22, child: Text('22K (91.6%)')),
@@ -99,10 +99,10 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
               TextField(
                 controller: weightCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(color: Nocturne.text),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Nocturne.palette.text),
+                decoration: InputDecoration(
                   labelText: 'Weight in Grams',
-                  labelStyle: TextStyle(color: Nocturne.neutral400),
+                  labelStyle: TextStyle(color: Nocturne.palette.subtle),
                 ),
               ),
             ],
@@ -110,7 +110,7 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400)),
+              child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle)),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -126,7 +126,7 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                   if (ctx.mounted) Navigator.pop(ctx);
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent),
+              style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent),
               child: const Text('Save'),
             ),
           ],
@@ -161,10 +161,10 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
         top: 16,
         bottom: MediaQuery.of(context).padding.bottom + 16,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral800, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.edge, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,7 +176,7 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -188,17 +188,17 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
             children: [
               const Icon(PhFill.starAndCrescent, size: 22, color: Color(0xFFEAB308)),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Zakat & Faith Suite',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Nocturne.text,
+                  color: Nocturne.palette.text,
                 ),
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(PhRegular.x, size: 20, color: Nocturne.neutral400),
+                icon: Icon(PhRegular.x, size: 20, color: Nocturne.palette.subtle),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -322,16 +322,16 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
               const SizedBox(height: 4),
               Text(
                 'Calculated on ${V3Design.inr(totalZakatable)} net wealth (Silver Nisab benchmark: ${V3Design.inr(silverNisabValue)})',
-                style: const TextStyle(fontSize: 11, color: Nocturne.neutral400),
+                style: TextStyle(fontSize: 11, color: Nocturne.neutral400),
               ),
             ],
           ),
         ),
 
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Wealth Breakdown',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.text),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
         ),
         const SizedBox(height: 8),
 
@@ -355,16 +355,16 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Gold Rate per Gram (₹):',
-              style: TextStyle(fontSize: 12.5, color: Nocturne.neutral400),
+              style: TextStyle(fontSize: 12.5, color: Nocturne.palette.subtle),
             ),
             SizedBox(
               width: 100,
               height: 36,
               child: TextField(
                 keyboardType: TextInputType.number,
-                style: const TextStyle(fontSize: 13, color: Nocturne.text),
+                style: TextStyle(fontSize: 13, color: Nocturne.palette.text),
                 decoration: InputDecoration(
                   hintText: '$_goldPerGram',
                   isDense: true,
@@ -392,7 +392,7 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
           children: [
             Text(
               'Family Precious Metals (${s.goldHoldings.length})',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.text),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
             ),
             ElevatedButton.icon(
               onPressed: _showAddGoldDialog,
@@ -415,11 +415,11 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(PhRegular.coins, size: 40, color: Nocturne.neutral600),
+                      Icon(PhRegular.coins, size: 40, color: Nocturne.palette.faint),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'No gold or silver items added yet',
-                        style: TextStyle(fontSize: 13, color: Nocturne.neutral400),
+                        style: TextStyle(fontSize: 13, color: Nocturne.palette.subtle),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton(
@@ -442,9 +442,9 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                     return Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Nocturne.bg,
+                        color: Nocturne.palette.bg,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Nocturne.neutral800),
+                        border: Border.all(color: Nocturne.palette.edge),
                       ),
                       child: Row(
                         children: [
@@ -470,17 +470,17 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                               children: [
                                 Text(
                                   item.itemName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: Nocturne.text,
+                                    color: Nocturne.palette.text,
                                   ),
                                 ),
                                 Text(
                                   isGold
                                       ? '${item.weightGrams}g (${item.purityKarat}K) · Pure: ${item.pure24kGrams.toStringAsFixed(1)}g'
                                       : '${item.weightGrams}g Silver',
-                                  style: const TextStyle(fontSize: 11.5, color: Nocturne.neutral400),
+                                  style: TextStyle(fontSize: 11.5, color: Nocturne.palette.subtle),
                                 ),
                               ],
                             ),
@@ -490,14 +490,14 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                             children: [
                               Text(
                                 V3Design.inr(estValue),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Nocturne.text,
+                                  color: Nocturne.palette.text,
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(PhRegular.trash, size: 14, color: NocturneSemantic.expense),
+                                icon: Icon(PhRegular.trash, size: 14, color: Nocturne.palette.expense),
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                                 onPressed: () => s.deleteGoldHolding(item.id),
@@ -528,7 +528,7 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Nocturne.bg,
+            color: Nocturne.palette.bg,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
           ),
@@ -551,7 +551,7 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                   const SizedBox(height: 2),
                   Text(
                     V3Design.inr(s.totalCharityGiven),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Nocturne.text),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Nocturne.palette.text),
                   ),
                 ],
               ),
@@ -559,17 +559,17 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Donation Log',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.text),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
         ),
         const SizedBox(height: 8),
         Expanded(
           child: charityTxns.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
                     'No donations recorded under Charity / Sadaqah yet',
-                    style: TextStyle(fontSize: 12.5, color: Nocturne.neutral500),
+                    style: TextStyle(fontSize: 12.5, color: Nocturne.palette.muted),
                   ),
                 )
               : ListView.separated(
@@ -580,9 +580,9 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Nocturne.bg,
+                        color: Nocturne.palette.bg,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Nocturne.neutral800),
+                        border: Border.all(color: Nocturne.palette.edge),
                       ),
                       child: Row(
                         children: [
@@ -594,22 +594,22 @@ class _FaithSuiteSheetState extends State<FaithSuiteSheet> {
                               children: [
                                 Text(
                                   txn.title,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w500,
-                                    color: Nocturne.text,
+                                    color: Nocturne.palette.text,
                                   ),
                                 ),
                                 Text(
                                   '${txn.occurredAt.day}/${txn.occurredAt.month}/${txn.occurredAt.year}',
-                                  style: const TextStyle(fontSize: 11, color: Nocturne.neutral400),
+                                  style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle),
                                 ),
                               ],
                             ),
                           ),
                           Text(
                             V3Design.inr(txn.amount),
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.text),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
                           ),
                         ],
                       ),
@@ -641,10 +641,10 @@ class _TabPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? Nocturne.accent : Nocturne.bg,
+          color: selected ? Nocturne.palette.accent : Nocturne.palette.bg,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? Nocturne.accent : Nocturne.neutral800,
+            color: selected ? Nocturne.palette.accent : Nocturne.palette.edge,
             width: 1,
           ),
         ),
@@ -653,7 +653,7 @@ class _TabPill extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            color: selected ? Colors.white : Nocturne.neutral300,
+            color: selected ? Colors.white : Nocturne.palette.neutral300,
           ),
         ),
       ),
@@ -678,9 +678,9 @@ class _BreakdownRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Nocturne.bg,
+        color: Nocturne.palette.bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Nocturne.neutral800),
+        border: Border.all(color: Nocturne.palette.edge),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -688,11 +688,11 @@ class _BreakdownRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Nocturne.text)),
-              Text(subtitle, style: const TextStyle(fontSize: 11, color: Nocturne.neutral500)),
+              Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Nocturne.palette.text)),
+              Text(subtitle, style: TextStyle(fontSize: 11, color: Nocturne.palette.muted)),
             ],
           ),
-          Text(amount, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.text)),
+          Text(amount, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Nocturne.palette.text)),
         ],
       ),
     );

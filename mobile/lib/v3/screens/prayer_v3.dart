@@ -38,9 +38,9 @@ class PrayerV3 extends StatelessWidget {
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Nocturne.surface,
+            color: Nocturne.palette.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Nocturne.neutral900),
+            border: Border.all(color: Nocturne.palette.line),
           ),
           child: Column(
             children: [
@@ -62,7 +62,7 @@ class PrayerV3 extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 16),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Nocturne.surface,
+            color: Nocturne.palette.surface,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -95,7 +95,7 @@ class PrayerV3 extends StatelessWidget {
             ],
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
           child: Text(
             'Times are calculated on this device from your location and the '
@@ -103,7 +103,7 @@ class PrayerV3 extends StatelessWidget {
             'minute or two from your local mosque — use the per-prayer '
             'adjustments in settings to match it.',
             style: TextStyle(
-                fontSize: 11.5, height: 1.5, color: Nocturne.neutral600),
+                fontSize: 11.5, height: 1.5, color: Nocturne.palette.faint),
           ),
         ),
       ],
@@ -127,13 +127,13 @@ class _Hero extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Nocturne.neutral900),
+        border: Border.all(color: Nocturne.palette.line),
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color.lerp(Nocturne.surface, colour, 0.22)!,
-            Nocturne.surface,
+            Color.lerp(Nocturne.palette.surface, colour, 0.22)!,
+            Nocturne.palette.surface,
           ],
         ),
       ),
@@ -146,10 +146,10 @@ class _Hero extends StatelessWidget {
                 ? 'It is time for ${slot.label}'
                 : '${slot.label} in '
                     '${PrayerVisuals.countdown(next.remaining)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.w600,
-              color: Nocturne.text,
+              color: Nocturne.palette.text,
             ),
           ),
           const SizedBox(height: 3),
@@ -192,8 +192,8 @@ class _SlotRow extends StatelessWidget {
         color: isNext ? Nocturne.mix(colour, 10) : null,
         border: last
             ? null
-            : const Border(
-                bottom: BorderSide(color: Nocturne.neutral900)),
+            : Border(
+                bottom: BorderSide(color: Nocturne.palette.line)),
       ),
       child: Row(
         children: [
@@ -216,7 +216,7 @@ class _SlotRow extends StatelessWidget {
                         fontSize: 14.5,
                         fontWeight:
                             isNext ? FontWeight.w600 : FontWeight.w400,
-                        color: passed ? Nocturne.neutral500 : Nocturne.text,
+                        color: passed ? Nocturne.palette.muted : Nocturne.palette.text,
                       ),
                     ),
                     if (isNext) ...[
@@ -242,8 +242,8 @@ class _SlotRow extends StatelessWidget {
                 if (offset != 0)
                   Text(
                     '${offset > 0 ? '+' : ''}$offset min adjustment',
-                    style: const TextStyle(
-                        fontSize: 11, color: Nocturne.neutral600),
+                    style: TextStyle(
+                        fontSize: 11, color: Nocturne.palette.faint),
                   ),
               ],
             ),
@@ -251,7 +251,7 @@ class _SlotRow extends StatelessWidget {
           Icon(
             notifies ? PhRegular.bellRinging : PhRegular.bell,
             size: 14,
-            color: notifies ? colour : Nocturne.neutral700,
+            color: notifies ? colour : Nocturne.palette.faint,
           ),
           const SizedBox(width: 10),
           V3Num(
@@ -259,7 +259,7 @@ class _SlotRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 14.5,
               fontWeight: isNext ? FontWeight.w600 : FontWeight.w500,
-              color: passed ? Nocturne.neutral500 : Nocturne.text,
+              color: passed ? Nocturne.palette.muted : Nocturne.palette.text,
             ),
           ),
         ],
@@ -291,17 +291,17 @@ class _InfoRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: last
               ? null
-              : const BoxDecoration(
+              : BoxDecoration(
                   border: Border(
-                      bottom: BorderSide(color: Nocturne.neutral900))),
+                      bottom: BorderSide(color: Nocturne.palette.line))),
           child: Row(
             children: [
-              Icon(icon, size: 17, color: Nocturne.neutral500),
+              Icon(icon, size: 17, color: Nocturne.palette.muted),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(label,
-                    style: const TextStyle(
-                        fontSize: 14, color: Nocturne.text)),
+                    style: TextStyle(
+                        fontSize: 14, color: Nocturne.palette.text)),
               ),
               if (value.isNotEmpty)
                 Flexible(
@@ -310,14 +310,14 @@ class _InfoRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.right,
-                    style: const TextStyle(
-                        fontSize: 13, color: Nocturne.neutral500),
+                    style: TextStyle(
+                        fontSize: 13, color: Nocturne.palette.muted),
                   ),
                 ),
               if (onTap != null) ...[
                 const SizedBox(width: 6),
-                const Icon(PhRegular.caretRight,
-                    size: 14, color: Nocturne.neutral600),
+                Icon(PhRegular.caretRight,
+                    size: 14, color: Nocturne.palette.faint),
               ],
             ],
           ),
@@ -336,22 +336,22 @@ class _PrayerOff extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(PhRegular.mosque, size: 40, color: Nocturne.neutral700),
+              Icon(PhRegular.mosque, size: 40, color: Nocturne.palette.faint),
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 'Prayer times are off',
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Nocturne.text),
+                    color: Nocturne.palette.text),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Turn them on to see today’s times and get an alert at '
                 'each prayer.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 12.5, height: 1.5, color: Nocturne.neutral500),
+                    fontSize: 12.5, height: 1.5, color: Nocturne.palette.muted),
               ),
               const SizedBox(height: 18),
               GestureDetector(
@@ -361,15 +361,15 @@ class _PrayerOff extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 18, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Nocturne.accent600,
+                    color: Nocturne.palette.tintEdge,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Set up prayer times',
                     style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text),
+                        color: Nocturne.palette.text),
                   ),
                 ),
               ),

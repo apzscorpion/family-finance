@@ -209,7 +209,7 @@ class V3ProgressBar extends StatelessWidget {
   final double fraction;
   final Color fill;
   final double height;
-  final Color track;
+  final Color? track;
 
   /// 0..1 position of the dashed alert marker, or null for none.
   final double? threshold;
@@ -219,7 +219,7 @@ class V3ProgressBar extends StatelessWidget {
     required this.fraction,
     required this.fill,
     this.height = 6,
-    this.track = Nocturne.neutral900,
+    this.track,
     this.threshold,
   });
 
@@ -237,7 +237,7 @@ class V3ProgressBar extends StatelessWidget {
             Container(
               height: height,
               decoration: BoxDecoration(
-                color: track,
+                color: track ?? Nocturne.palette.line,
                 borderRadius: BorderRadius.circular(height / 2),
               ),
             ),
@@ -258,7 +258,7 @@ class V3ProgressBar extends StatelessWidget {
                   width: 2,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: Nocturne.neutral400,
+                    color: Nocturne.palette.subtle,
                     borderRadius: BorderRadius.circular(1),
                   ),
                 ),

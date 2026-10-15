@@ -622,28 +622,28 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
-        title: const Text(
+        backgroundColor: Nocturne.palette.surface,
+        title: Text(
           'Delete note?',
-          style: TextStyle(fontSize: 17, color: Nocturne.text),
+          style: TextStyle(fontSize: 17, color: Nocturne.palette.text),
         ),
-        content: const Text(
+        content: Text(
           'This cannot be undone.',
-          style: TextStyle(fontSize: 14, color: Nocturne.neutral400),
+          style: TextStyle(fontSize: 14, color: Nocturne.palette.subtle),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Nocturne.neutral400),
+              style: TextStyle(color: Nocturne.palette.subtle),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Delete',
-              style: TextStyle(color: NocturneSemantic.expense),
+              style: TextStyle(color: Nocturne.palette.expense),
             ),
           ),
         ],
@@ -729,7 +729,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
             Expanded(
               child: Text(
                 'Structured into $itemCount ${itemCount == 1 ? 'item' : 'items'}',
-                style: const TextStyle(fontSize: 13, color: Nocturne.text),
+                style: TextStyle(fontSize: 13, color: Nocturne.palette.text),
               ),
             ),
             if (_aiConfig.isConfigured)
@@ -749,17 +749,17 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Nocturne.accent900,
+                      color: Nocturne.palette.tint,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Nocturne.accent600, width: 1),
+                      border: Border.all(color: Nocturne.palette.tintEdge, width: 1),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           PhRegular.sparkle,
                           size: 12,
-                          color: Nocturne.accent200,
+                          color: Nocturne.palette.accentLight,
                         ),
                         SizedBox(width: 4),
                         Text(
@@ -767,7 +767,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w500,
-                            color: Nocturne.accent200,
+                            color: Nocturne.palette.accentLight,
                           ),
                         ),
                       ],
@@ -779,7 +779,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
         ),
         action: SnackBarAction(
           label: 'Undo',
-          textColor: Nocturne.accent200,
+          textColor: Nocturne.palette.accentLight,
           onPressed: () {
             _mutateStructural(() {
               // Restore the previous blocks, placing the raw text as a single
@@ -864,7 +864,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
         ),
         action: SnackBarAction(
           label: 'Undo',
-          textColor: Nocturne.accent200,
+          textColor: Nocturne.palette.accentLight,
           onPressed: _undo,
         ),
       ),
@@ -1041,7 +1041,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
 
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Nocturne.surface,
+      backgroundColor: Nocturne.palette.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1057,18 +1057,18 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Nocturne.neutral800,
+                    color: Nocturne.palette.edge,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 'BLOCK ACTIONS',
                 style: TextStyle(
                   fontSize: 10.5,
                   letterSpacing: 0.7,
-                  color: Nocturne.neutral500,
+                  color: Nocturne.palette.muted,
                 ),
               ),
               const SizedBox(height: 8),
@@ -1115,13 +1115,13 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                 _MenuTile(
                   icon: PhRegular.sparkle,
                   label: 'Restructure block with AI',
-                  color: Nocturne.accent200,
+                  color: Nocturne.palette.accentLight,
                   onTap: () {
                     Navigator.pop(ctx);
                     _restructureRawWithAi(block.plain, replaceIds: {block.id});
                   },
                 ),
-              const Divider(color: Nocturne.neutral900, height: 16),
+              Divider(color: Nocturne.palette.line, height: 16),
               if (index > 0)
                 _MenuTile(
                   icon: PhRegular.caretUp,
@@ -1151,7 +1151,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
               _MenuTile(
                 icon: PhRegular.trash,
                 label: 'Delete block',
-                color: NocturneSemantic.expense,
+                color: Nocturne.palette.expense,
                 onTap: () {
                   Navigator.pop(ctx);
                   _deleteBlock(block.id);
@@ -1178,7 +1178,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
         Navigator.of(context).pop();
       },
       child: Scaffold(
-        backgroundColor: Nocturne.bg,
+        backgroundColor: Nocturne.palette.bg,
         resizeToAvoidBottomInset: false,
         body: SafeArea(
           child: Stack(
@@ -1200,9 +1200,9 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                           children: [
                             Text(
                               _dateLine(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Nocturne.neutral500,
+                                color: Nocturne.palette.muted,
                               ),
                             ),
                             const Spacer(),
@@ -1214,11 +1214,11 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                                   ? 'Private'
                                   : (s.family?.name ?? 'Family'),
                               background: _private
-                                  ? Nocturne.neutral900
-                                  : Nocturne.accent900,
+                                  ? Nocturne.palette.line
+                                  : Nocturne.palette.tint,
                               color: _private
-                                  ? Nocturne.neutral300
-                                  : Nocturne.accent200,
+                                  ? Nocturne.palette.neutral300
+                                  : Nocturne.palette.accentLight,
                               onTap: () {
                                 setState(() {
                                   _private = !_private;
@@ -1233,10 +1233,10 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                                   ? PhFill.pushPin
                                   : PhRegular.pushPin,
                               label: _pinned ? 'Pinned' : 'Pin',
-                              background: Nocturne.neutral900,
+                              background: Nocturne.palette.line,
                               color: _pinned
-                                  ? Nocturne.accent200
-                                  : Nocturne.neutral400,
+                                  ? Nocturne.palette.accentLight
+                                  : Nocturne.palette.subtle,
                               onTap: () {
                                 setState(() {
                                   _pinned = !_pinned;
@@ -1261,15 +1261,15 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                           },
                           maxLines: null,
                           textInputAction: TextInputAction.next,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.w700,
                             height: 1.2,
                             letterSpacing: -0.6,
-                            color: Nocturne.text,
+                            color: Nocturne.palette.text,
                           ),
-                          cursorColor: Nocturne.accent,
-                          decoration: const InputDecoration(
+                          cursorColor: Nocturne.palette.accent,
+                          decoration: InputDecoration(
                             isDense: true,
                             contentPadding: EdgeInsets.zero,
                             border: InputBorder.none,
@@ -1279,7 +1279,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                               fontWeight: FontWeight.w700,
                               height: 1.2,
                               letterSpacing: -0.6,
-                              color: Nocturne.neutral700,
+                              color: Nocturne.palette.faint,
                             ),
                           ),
                         ),
@@ -1388,7 +1388,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                         GestureDetector(
                           onTap: () => _add(NoteBlock.paragraph()),
                           behavior: HitTestBehavior.opaque,
-                          child: const SizedBox(
+                          child: SizedBox(
                             height: 52,
                             child: Align(
                               alignment: Alignment.centerLeft,
@@ -1396,7 +1396,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                                 'Tap to keep writing, or type / for blocks…',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Nocturne.neutral600,
+                                  color: Nocturne.palette.faint,
                                 ),
                               ),
                             ),
@@ -1454,10 +1454,10 @@ class _NoteEditorV3State extends State<NoteEditorV3>
             if (mounted) Navigator.pop(context);
           },
           behavior: HitTestBehavior.opaque,
-          child: const SizedBox(
+          child: SizedBox(
             width: 42,
             height: 42,
-            child: Icon(PhRegular.arrowLeft, size: 22, color: Nocturne.text),
+            child: Icon(PhRegular.arrowLeft, size: 22, color: Nocturne.palette.text),
           ),
         ),
         const Spacer(),
@@ -1501,16 +1501,16 @@ class _NoteEditorV3State extends State<NoteEditorV3>
             padding: const EdgeInsets.symmetric(horizontal: 12),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _dirty ? Nocturne.accent900 : Colors.transparent,
+              color: _dirty ? Nocturne.palette.tint : Colors.transparent,
               borderRadius: BorderRadius.circular(18),
             ),
             child: _saving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 15,
                     height: 15,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Nocturne.accent200,
+                      color: Nocturne.palette.accentLight,
                     ),
                   )
                 : Text(
@@ -1518,7 +1518,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: _dirty ? Nocturne.accent200 : Nocturne.neutral600,
+                      color: _dirty ? Nocturne.palette.accentLight : Nocturne.palette.faint,
                     ),
                   ),
           ),
@@ -1538,7 +1538,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
               ? PhRegular.arrowsClockwise
               : (synced ? PhFill.checkCircle : PhRegular.clock),
           size: 12,
-          color: synced ? NocturneSemantic.income : Nocturne.neutral500,
+          color: synced ? Nocturne.palette.income : Nocturne.palette.muted,
         ),
         const SizedBox(width: 5),
         Text(
@@ -1549,22 +1549,22 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                     : 'Autosaving…'),
           style: TextStyle(
             fontSize: 11.5,
-            color: synced ? NocturneSemantic.income : Nocturne.neutral400,
+            color: synced ? Nocturne.palette.income : Nocturne.palette.subtle,
           ),
         ),
         if (who != null) ...[
-          const Text(
+          Text(
             '  ·  ',
-            style: TextStyle(fontSize: 11.5, color: Nocturne.neutral600),
+            style: TextStyle(fontSize: 11.5, color: Nocturne.palette.faint),
           ),
           Flexible(
             child: Text(
               'Edited by $who',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
-                color: Nocturne.neutral500,
+                color: Nocturne.palette.muted,
               ),
             ),
           ),
@@ -1577,9 +1577,9 @@ class _NoteEditorV3State extends State<NoteEditorV3>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: Nocturne.mix(Nocturne.surface, 95),
+        color: Nocturne.mix(Nocturne.palette.surface, 95),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Nocturne.neutral800, width: 1),
+        border: Border.all(color: Nocturne.palette.edge, width: 1),
         boxShadow: Nocturne.shadowMd,
       ),
       child: Row(
@@ -1614,7 +1614,7 @@ class _NoteEditorV3State extends State<NoteEditorV3>
             width: 1,
             height: 20,
             margin: const EdgeInsets.symmetric(horizontal: 4),
-            color: Nocturne.neutral800,
+            color: Nocturne.palette.edge,
           ),
           Tooltip(
             message: 'Ask AI to edit this note',
@@ -1628,17 +1628,17 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: _aiConfig.isConfigured
-                      ? Nocturne.accent900
+                      ? Nocturne.palette.tint
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: _aiBusy
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Nocturne.accent200,
+                          color: Nocturne.palette.accentLight,
                         ),
                       )
                     : Row(
@@ -1648,8 +1648,8 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                             PhRegular.sparkle,
                             size: 16,
                             color: _aiConfig.isConfigured
-                                ? Nocturne.accent200
-                                : Nocturne.neutral400,
+                                ? Nocturne.palette.accentLight
+                                : Nocturne.palette.subtle,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -1658,8 +1658,8 @@ class _NoteEditorV3State extends State<NoteEditorV3>
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: _aiConfig.isConfigured
-                                  ? Nocturne.accent200
-                                  : Nocturne.neutral400,
+                                  ? Nocturne.palette.accentLight
+                                  : Nocturne.palette.subtle,
                             ),
                           ),
                         ],
@@ -1726,7 +1726,7 @@ class _ToolbarBtn extends StatelessWidget {
           width: 38,
           height: 36,
           alignment: Alignment.center,
-          child: Icon(icon, size: 19, color: Nocturne.neutral200),
+          child: Icon(icon, size: 19, color: Nocturne.palette.text),
         ),
       ),
     ),
@@ -1755,11 +1755,11 @@ class _MenuTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: color ?? Nocturne.neutral300),
+          Icon(icon, size: 18, color: color ?? Nocturne.palette.neutral300),
           const SizedBox(width: 12),
           Text(
             label,
-            style: TextStyle(fontSize: 14, color: color ?? Nocturne.text),
+            style: TextStyle(fontSize: 14, color: color ?? Nocturne.palette.text),
           ),
         ],
       ),
@@ -1787,7 +1787,7 @@ class _IconBtn extends StatelessWidget {
       child: SizedBox(
         width: 38,
         height: 38,
-        child: Icon(icon, size: 19, color: Nocturne.neutral300),
+        child: Icon(icon, size: 19, color: Nocturne.palette.neutral300),
       ),
     ),
   );
@@ -1885,10 +1885,10 @@ class _BlockRow extends StatelessWidget {
             : EdgeInsets.zero,
         decoration: isContested
             ? BoxDecoration(
-                color: Nocturne.mix(NocturneSemantic.warning, 10),
+                color: Nocturne.mix(Nocturne.palette.warning, 10),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: Nocturne.mix(NocturneSemantic.warning, 50),
+                  color: Nocturne.mix(Nocturne.palette.warning, 50),
                   width: 1,
                 ),
               )
@@ -1901,18 +1901,18 @@ class _BlockRow extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       PhRegular.warning,
                       size: 12,
-                      color: NocturneSemantic.warning,
+                      color: Nocturne.palette.warning,
                     ),
                     const SizedBox(width: 5),
                     Text(
                       '$contestedBy is editing this line',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
-                        color: NocturneSemantic.warning,
+                        color: Nocturne.palette.warning,
                       ),
                     ),
                   ],
@@ -1954,12 +1954,12 @@ class _BlockRow extends StatelessWidget {
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 140),
                     opacity: focused ? 0.9 : 0.25,
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.only(top: 4, left: 4, bottom: 4),
                       child: Icon(
                         PhRegular.dotsThreeVertical,
                         size: 16,
-                        color: Nocturne.neutral400,
+                        color: Nocturne.palette.subtle,
                       ),
                     ),
                   ),
@@ -2085,13 +2085,13 @@ class _DragHandle extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: const SizedBox(
+        child: SizedBox(
           width: 22,
           height: 38,
           child: Icon(
             PhRegular.dotsSixVertical,
             size: 15,
-            color: Nocturne.neutral600,
+            color: Nocturne.palette.faint,
           ),
         ),
       ),
@@ -2101,7 +2101,7 @@ class _DragHandle extends StatelessWidget {
 
 Widget _liftedProxy(Widget child, int index, Animation<double> animation) =>
     Material(
-      color: Nocturne.surface,
+      color: Nocturne.palette.surface,
       elevation: 6,
       borderRadius: BorderRadius.circular(10),
       child: child,
@@ -2126,18 +2126,18 @@ class _QuickPill extends StatelessWidget {
       height: 26,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Nocturne.surface,
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: Nocturne.neutral800, width: 1),
+        border: Border.all(color: Nocturne.palette.edge, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 11, color: Nocturne.neutral400),
+          Icon(icon, size: 11, color: Nocturne.palette.subtle),
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: Nocturne.neutral300),
+            style: TextStyle(fontSize: 11, color: Nocturne.palette.neutral300),
           ),
         ],
       ),
@@ -2205,22 +2205,22 @@ class _SlashCommandMenu extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Nocturne.surface,
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Nocturne.neutral800, width: 1),
+        border: Border.all(color: Nocturne.palette.edge, width: 1),
         boxShadow: Nocturne.shadowMd,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(12, 8, 12, 4),
             child: Text(
               'INSERT BLOCK',
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 0.7,
-                color: Nocturne.neutral500,
+                color: Nocturne.palette.muted,
               ),
             ),
           ),
@@ -2240,13 +2240,13 @@ class _SlashCommandMenu extends StatelessWidget {
                       height: 30,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Nocturne.neutral900,
+                        color: Nocturne.palette.line,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         item.icon,
                         size: 15,
-                        color: Nocturne.accent200,
+                        color: Nocturne.palette.accentLight,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -2256,17 +2256,17 @@ class _SlashCommandMenu extends StatelessWidget {
                         children: [
                           Text(
                             item.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: Nocturne.text,
+                              color: Nocturne.palette.text,
                             ),
                           ),
                           Text(
                             item.subtitle,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: Nocturne.neutral500,
+                              color: Nocturne.palette.muted,
                             ),
                           ),
                         ],
@@ -2332,14 +2332,14 @@ class _HeadingBlockState extends State<_HeadingBlock> {
       widget.onChanged(widget.block.copyWith(text: v));
     },
     contextMenuBuilder: formatContextMenu,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 19,
       fontWeight: FontWeight.w700,
       letterSpacing: -0.2,
-      color: Nocturne.text,
+      color: Nocturne.palette.text,
     ),
-    cursorColor: Nocturne.accent,
-    decoration: const InputDecoration(
+    cursorColor: Nocturne.palette.accent,
+    decoration: InputDecoration(
       isDense: true,
       contentPadding: EdgeInsets.symmetric(vertical: 4),
       border: InputBorder.none,
@@ -2347,7 +2347,7 @@ class _HeadingBlockState extends State<_HeadingBlock> {
       hintStyle: TextStyle(
         fontSize: 19,
         fontWeight: FontWeight.w700,
-        color: Nocturne.neutral700,
+        color: Nocturne.palette.faint,
       ),
     ),
   );
@@ -2469,18 +2469,18 @@ class _ParagraphBlockState extends State<_ParagraphBlock> {
           );
         },
         maxLines: null,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
           height: 1.6,
-          color: Nocturne.neutral200,
+          color: Nocturne.palette.text,
         ),
-        cursorColor: Nocturne.accent,
-        decoration: const InputDecoration(
+        cursorColor: Nocturne.palette.accent,
+        decoration: InputDecoration(
           isDense: true,
           contentPadding: EdgeInsets.symmetric(vertical: 3),
           border: InputBorder.none,
           hintText: 'Write something, type / for blocks, or paste a list…',
-          hintStyle: TextStyle(fontSize: 15, color: Nocturne.neutral600),
+          hintStyle: TextStyle(fontSize: 15, color: Nocturne.palette.faint),
         ),
       ),
     );
@@ -2510,7 +2510,7 @@ class _TodoBlock extends StatelessWidget {
     int i,
   ) => showModalBottomSheet<void>(
     context: context,
-    backgroundColor: Nocturne.surface,
+    backgroundColor: Nocturne.palette.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -2534,10 +2534,10 @@ class _TodoBlock extends StatelessWidget {
                     : items[i].text.trim().toUpperCase(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10.5,
                   letterSpacing: 0.7,
-                  color: Nocturne.neutral500,
+                  color: Nocturne.palette.muted,
                 ),
               ),
               const SizedBox(height: 8),
@@ -2587,7 +2587,7 @@ class _TodoBlock extends StatelessWidget {
               _MenuTile(
                 icon: PhRegular.trash,
                 label: 'Delete line',
-                color: NocturneSemantic.expense,
+                color: Nocturne.palette.expense,
                 onTap: () => run(() {
                   final next = [...items]..removeAt(i);
                   onChanged(
@@ -2667,7 +2667,7 @@ class _TodoBlock extends StatelessWidget {
             ),
           ),
           behavior: HitTestBehavior.opaque,
-          child: const SizedBox(
+          child: SizedBox(
             height: 34,
             child: Row(
               children: [
@@ -2677,13 +2677,13 @@ class _TodoBlock extends StatelessWidget {
                   child: Icon(
                     PhRegular.plus,
                     size: 14,
-                    color: Nocturne.neutral500,
+                    color: Nocturne.palette.muted,
                   ),
                 ),
                 SizedBox(width: 10),
                 Text(
                   'Add item',
-                  style: TextStyle(fontSize: 13.5, color: Nocturne.neutral500),
+                  style: TextStyle(fontSize: 13.5, color: Nocturne.palette.muted),
                 ),
               ],
             ),
@@ -2754,14 +2754,14 @@ class _TodoRowState extends State<_TodoRow> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(6),
-                color: done ? Nocturne.accent600 : Colors.transparent,
+                color: done ? Nocturne.palette.tintEdge : Colors.transparent,
                 border: Border.all(
-                  color: done ? Nocturne.accent600 : Nocturne.neutral600,
+                  color: done ? Nocturne.palette.tintEdge : Nocturne.palette.faint,
                   width: 1.5,
                 ),
               ),
               child: done
-                  ? const Icon(PhBold.check, size: 12, color: Nocturne.text)
+                  ? Icon(PhBold.check, size: 12, color: Nocturne.palette.text)
                   : null,
             ),
           ),
@@ -2776,17 +2776,17 @@ class _TodoRowState extends State<_TodoRow> {
               textInputAction: TextInputAction.next,
               style: TextStyle(
                 fontSize: 15,
-                color: done ? Nocturne.neutral500 : Nocturne.text,
+                color: done ? Nocturne.palette.muted : Nocturne.palette.text,
                 decoration: done ? TextDecoration.lineThrough : null,
-                decorationColor: Nocturne.neutral600,
+                decorationColor: Nocturne.palette.faint,
               ),
-              cursorColor: Nocturne.accent,
-              decoration: const InputDecoration(
+              cursorColor: Nocturne.palette.accent,
+              decoration: InputDecoration(
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
                 border: InputBorder.none,
                 hintText: 'To-do',
-                hintStyle: TextStyle(fontSize: 15, color: Nocturne.neutral700),
+                hintStyle: TextStyle(fontSize: 15, color: Nocturne.palette.faint),
               ),
             ),
           ),
@@ -2835,14 +2835,14 @@ class _TableBlock extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Nocturne.neutral800, width: 1),
+                border: Border.all(color: Nocturne.palette.edge, width: 1),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Column(
                   children: [
                     Container(
-                      color: Nocturne.neutral900,
+                      color: Nocturne.palette.line,
                       child: Row(
                         children: [
                           for (var c = 0; c < cols; c++)
@@ -2862,10 +2862,10 @@ class _TableBlock extends StatelessWidget {
                     ),
                     for (var r = 0; r < block.rows.length; r++)
                       Container(
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           border: Border(
                             top: BorderSide(
-                              color: Nocturne.neutral900,
+                              color: Nocturne.palette.line,
                               width: 1,
                             ),
                           ),
@@ -2952,10 +2952,10 @@ class _CellState extends State<_Cell> {
         fontSize: widget.header ? 11.5 : 13.5,
         fontWeight: widget.header ? FontWeight.w600 : FontWeight.w400,
         letterSpacing: widget.header ? 0.3 : 0,
-        color: widget.header ? Nocturne.neutral300 : Nocturne.text,
+        color: widget.header ? Nocturne.palette.neutral300 : Nocturne.palette.text,
         fontFeatures: const [FontFeature.tabularFigures()],
       ),
-      cursorColor: Nocturne.accent,
+      cursorColor: Nocturne.palette.accent,
       textCapitalization: widget.header
           ? TextCapitalization.words
           : TextCapitalization.sentences,
@@ -2964,7 +2964,7 @@ class _CellState extends State<_Cell> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         border: InputBorder.none,
         hintText: widget.header ? 'Header' : '',
-        hintStyle: const TextStyle(fontSize: 11.5, color: Nocturne.neutral700),
+        hintStyle: TextStyle(fontSize: 11.5, color: Nocturne.palette.faint),
       ),
     ),
   );
@@ -3005,12 +3005,12 @@ class _PresenceStrip extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: followingUserId == p.userId
-                        ? Border.all(color: Nocturne.accent, width: 1.5)
+                        ? Border.all(color: Nocturne.palette.accent, width: 1.5)
                         : null,
                   ),
                   child: PulsingAvatar(
                     initial: p.initial,
-                    color: s.memberById(p.userId)?.color ?? Nocturne.accent600,
+                    color: s.memberById(p.userId)?.color ?? Nocturne.palette.tintEdge,
                     size: 26,
                   ),
                 ),

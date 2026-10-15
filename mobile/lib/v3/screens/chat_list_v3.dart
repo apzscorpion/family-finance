@@ -90,8 +90,8 @@ class _ChatListV3State extends State<ChatListV3> {
 
     return RefreshIndicator(
       onRefresh: () => chat.refresh(notifyNew: true),
-      color: Nocturne.accent300,
-      backgroundColor: Nocturne.surface,
+      color: Nocturne.palette.accentMuted,
+      backgroundColor: Nocturne.palette.surface,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
@@ -131,17 +131,17 @@ class _ChatListV3State extends State<ChatListV3> {
               margin: const EdgeInsets.only(top: 36),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Nocturne.surface,
+                color: Nocturne.palette.surface,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Nocturne.neutral800, width: 1),
+                border: Border.all(color: Nocturne.palette.edge, width: 1),
               ),
-              child: const Column(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     PhRegular.chatCircleDots,
                     size: 32,
-                    color: Nocturne.neutral500,
+                    color: Nocturne.palette.muted,
                   ),
                   SizedBox(height: 10),
                   Text(
@@ -149,7 +149,7 @@ class _ChatListV3State extends State<ChatListV3> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: Nocturne.text,
+                      color: Nocturne.palette.text,
                     ),
                   ),
                   SizedBox(height: 4),
@@ -158,7 +158,7 @@ class _ChatListV3State extends State<ChatListV3> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12.5,
-                      color: Nocturne.neutral500,
+                      color: Nocturne.palette.muted,
                     ),
                   ),
                 ],
@@ -167,9 +167,9 @@ class _ChatListV3State extends State<ChatListV3> {
           else
             Container(
               decoration: BoxDecoration(
-                color: Nocturne.surface,
+                color: Nocturne.palette.surface,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Nocturne.neutral800, width: 1),
+                border: Border.all(color: Nocturne.palette.edge, width: 1),
               ),
               child: Column(
                 children: [
@@ -220,7 +220,7 @@ class _LiveStatusHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dotColor =
-        wsLive ? NocturneSemantic.income : NocturneSemantic.warning;
+        wsLive ? Nocturne.palette.income : Nocturne.palette.warning;
     final statusLabel = wsLive ? 'Live WebSocket' : 'Syncing…';
     final onlineLabel =
         onlineCount > 0 ? '$onlineCount online now' : 'Real-time active';
@@ -228,9 +228,9 @@ class _LiveStatusHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: Nocturne.surface,
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Nocturne.neutral800, width: 1),
+        border: Border.all(color: Nocturne.palette.edge, width: 1),
       ),
       child: Row(
         children: [
@@ -255,10 +255,10 @@ class _LiveStatusHeader extends StatelessWidget {
               '$statusLabel · $onlineLabel',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Nocturne.neutral300,
+                color: Nocturne.palette.neutral300,
               ),
             ),
           ),
@@ -270,17 +270,17 @@ class _LiveStatusHeader extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Nocturne.accent900,
+                  color: Nocturne.palette.tint,
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: Nocturne.accent600, width: 1),
+                  border: Border.all(color: Nocturne.palette.tintEdge, width: 1),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       PhRegular.bellRinging,
                       size: 13,
-                      color: Nocturne.accent200,
+                      color: Nocturne.palette.accentLight,
                     ),
                     SizedBox(width: 5),
                     Text(
@@ -288,7 +288,7 @@ class _LiveStatusHeader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.accent100,
+                        color: Nocturne.palette.accentLight,
                       ),
                     ),
                   ],
@@ -300,12 +300,12 @@ class _LiveStatusHeader extends StatelessWidget {
           GestureDetector(
             onTap: onRefresh,
             behavior: HitTestBehavior.opaque,
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.all(4),
               child: Icon(
                 PhRegular.arrowsClockwise,
                 size: 15,
-                color: Nocturne.neutral400,
+                color: Nocturne.palette.subtle,
               ),
             ),
           ),
@@ -361,7 +361,7 @@ class _OnlineMembersStrip extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: online ? FontWeight.w600 : FontWeight.w400,
-                        color: online ? Nocturne.text : Nocturne.neutral400,
+                        color: online ? Nocturne.palette.text : Nocturne.palette.subtle,
                       ),
                     ),
                   ],
@@ -417,13 +417,13 @@ class AvatarWithOnlineDot extends StatelessWidget {
               width: dotSize,
               height: dotSize,
               decoration: BoxDecoration(
-                color: isOnline ? NocturneSemantic.income : Nocturne.neutral600,
+                color: isOnline ? Nocturne.palette.income : Nocturne.palette.faint,
                 shape: BoxShape.circle,
-                border: Border.all(color: Nocturne.surface, width: 2),
+                border: Border.all(color: Nocturne.palette.surface, width: 2),
                 boxShadow: isOnline
                     ? [
                         BoxShadow(
-                          color: Nocturne.mix(NocturneSemantic.income, 55),
+                          color: Nocturne.mix(Nocturne.palette.income, 55),
                           blurRadius: 6,
                         ),
                       ]
@@ -505,7 +505,7 @@ class _ThreadTile extends StatelessWidget {
                             fontWeight: unread > 0
                                 ? FontWeight.w600
                                 : FontWeight.w500,
-                            color: Nocturne.text,
+                            color: Nocturne.palette.text,
                           ),
                         ),
                       ),
@@ -517,15 +517,15 @@ class _ThreadTile extends StatelessWidget {
                             vertical: 1.5,
                           ),
                           decoration: BoxDecoration(
-                            color: Nocturne.mix(NocturneSemantic.income, 18),
+                            color: Nocturne.mix(Nocturne.palette.income, 18),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Online',
                             style: TextStyle(
                               fontSize: 9.5,
                               fontWeight: FontWeight.w600,
-                              color: NocturneSemantic.income,
+                              color: Nocturne.palette.income,
                             ),
                           ),
                         ),
@@ -537,8 +537,8 @@ class _ThreadTile extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             color: unread > 0
-                                ? Nocturne.accent300
-                                : Nocturne.neutral500,
+                                ? Nocturne.palette.accentMuted
+                                : Nocturne.palette.muted,
                           ),
                         ),
                     ],
@@ -551,8 +551,8 @@ class _ThreadTile extends StatelessWidget {
                           last.isRead ? PhBold.checks : PhRegular.check,
                           size: 13,
                           color: last.isRead
-                              ? NocturneSemantic.income
-                              : Nocturne.neutral500,
+                              ? Nocturne.palette.income
+                              : Nocturne.palette.muted,
                         ),
                         const SizedBox(width: 4),
                       ],
@@ -569,10 +569,10 @@ class _ThreadTile extends StatelessWidget {
                                 ? FontWeight.w600
                                 : FontWeight.w400,
                             color: typing
-                                ? Nocturne.accent300
+                                ? Nocturne.palette.accentMuted
                                 : (unread > 0
-                                    ? Nocturne.neutral200
-                                    : Nocturne.neutral500),
+                                    ? Nocturne.palette.text
+                                    : Nocturne.palette.muted),
                           ),
                         ),
                       ),
@@ -584,15 +584,15 @@ class _ThreadTile extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Nocturne.accent600,
+                            color: Nocturne.palette.tintEdge,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '$unread',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w600,
-                              color: Nocturne.accent100,
+                              color: Nocturne.palette.accentLight,
                             ),
                           ),
                         ),
@@ -611,14 +611,14 @@ class _ThreadTile extends StatelessWidget {
                 height: 34,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Nocturne.bg,
+                  color: Nocturne.palette.bg,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Nocturne.neutral800, width: 1),
+                  border: Border.all(color: Nocturne.palette.edge, width: 1),
                 ),
-                child: const Icon(
+                child: Icon(
                   PhRegular.bellRinging,
                   size: 16,
-                  color: NocturneSemantic.warning,
+                  color: Nocturne.palette.warning,
                 ),
               ),
             ),

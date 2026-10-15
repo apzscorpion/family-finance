@@ -24,7 +24,7 @@ class NotificationsV3 extends StatelessWidget {
       for (final a in s.approvals)
         _Notif(
           icon: PhRegular.pencilSimple,
-          color: NocturneSemantic.warning,
+          color: Nocturne.palette.warning,
           title: '${_t(a.kind)} request from ${s.memberName(a.requestedBy)}',
           body: a.reason ?? 'Waiting for your decision',
           time: _ago(a.createdAt),
@@ -33,7 +33,7 @@ class NotificationsV3 extends StatelessWidget {
       for (final d in s.myDebts)
         _Notif(
           icon: PhRegular.handCoins,
-          color: Nocturne.accent300,
+          color: Nocturne.palette.accentMuted,
           title: d.amount > 0
               ? '${s.memberName(d.userId)} owes you ${s.money(d.amount)}'
               : 'You owe ${s.memberName(d.userId)} ${s.money(-d.amount)}',
@@ -55,8 +55,8 @@ class NotificationsV3 extends StatelessWidget {
         _Notif(
           icon: PhRegular.warning,
           color: b.spent > b.limit
-              ? NocturneSemantic.expense
-              : NocturneSemantic.warning,
+              ? Nocturne.palette.expense
+              : Nocturne.palette.warning,
           title: b.spent > b.limit
               ? '${b.cat.name} is over budget'
               : '${b.cat.name} is at ${(b.spent * 100 / b.limit).round()}% '
@@ -68,20 +68,20 @@ class NotificationsV3 extends StatelessWidget {
     ];
 
     if (items.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(PhRegular.bell, size: 38, color: Nocturne.neutral600),
+              Icon(PhRegular.bell, size: 38, color: Nocturne.palette.faint),
               SizedBox(height: 10),
               Text('Nothing needs you',
-                  style: TextStyle(fontSize: 15, color: Nocturne.neutral300)),
+                  style: TextStyle(fontSize: 15, color: Nocturne.palette.neutral300)),
               SizedBox(height: 4),
               Text('Approvals, settlements and budget alerts show up here.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12.5, color: Nocturne.neutral500)),
+                  style: TextStyle(fontSize: 12.5, color: Nocturne.palette.muted)),
             ],
           ),
         ),
@@ -99,9 +99,9 @@ class NotificationsV3 extends StatelessWidget {
               margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Nocturne.surface,
+                color: Nocturne.palette.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Nocturne.neutral900, width: 1),
+                border: Border.all(color: Nocturne.palette.line, width: 1),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,17 +120,17 @@ class NotificationsV3 extends StatelessWidget {
                               child: Text(n.title,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w500,
-                                      color: Nocturne.text)),
+                                      color: Nocturne.palette.text)),
                             ),
                             if (n.time.isNotEmpty) ...[
                               const SizedBox(width: 8),
                               Text(n.time,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 11,
-                                      color: Nocturne.neutral500)),
+                                      color: Nocturne.palette.muted)),
                             ],
                           ],
                         ),
@@ -138,8 +138,8 @@ class NotificationsV3 extends StatelessWidget {
                         Text(n.body,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 12.5, color: Nocturne.neutral400)),
+                            style: TextStyle(
+                                fontSize: 12.5, color: Nocturne.palette.subtle)),
                       ],
                     ),
                   ),
@@ -152,14 +152,14 @@ class NotificationsV3 extends StatelessWidget {
           child: GestureDetector(
             onTap: () => nav.goPage(V3Page.settings),
             behavior: HitTestBehavior.opaque,
-            child: const Row(
+            child: Row(
               children: [
                 Icon(PhRegular.slidersHorizontal,
-                    size: 16, color: Nocturne.accent300),
+                    size: 16, color: Nocturne.palette.accentMuted),
                 SizedBox(width: 6),
                 Text('Notification settings',
                     style:
-                        TextStyle(fontSize: 13, color: Nocturne.accent300)),
+                        TextStyle(fontSize: 13, color: Nocturne.palette.accentMuted)),
               ],
             ),
           ),

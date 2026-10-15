@@ -216,7 +216,7 @@ class _MonthlyRecapScreenState extends State<MonthlyRecapScreen> {
         '${diff < 0 ? '📉 Saved ${diff.abs().toStringAsFixed(1)}% compared to $prevMonthName!' : ''}';
 
     return Scaffold(
-      backgroundColor: Nocturne.bg,
+      backgroundColor: Nocturne.palette.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -231,7 +231,7 @@ class _MonthlyRecapScreenState extends State<MonthlyRecapScreen> {
                         height: 3.5,
                         margin: const EdgeInsets.symmetric(horizontal: 2.5),
                         decoration: BoxDecoration(
-                          color: i <= _currentPage ? Nocturne.accent : Nocturne.neutral800,
+                          color: i <= _currentPage ? Nocturne.palette.accent : Nocturne.palette.edge,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -250,7 +250,7 @@ class _MonthlyRecapScreenState extends State<MonthlyRecapScreen> {
                   // Card 1: Total & Month Overview
                   _StoryCard(
                     badge: '$thisMonthName Overview',
-                    badgeColor: Nocturne.accent300,
+                    badgeColor: Nocturne.palette.accentMuted,
                     icon: PhRegular.sparkle,
                     title: 'Your Family Spend',
                     headline: V3Design.inr(curSpent),
@@ -261,13 +261,13 @@ class _MonthlyRecapScreenState extends State<MonthlyRecapScreen> {
                         (diff < 0
                             ? 'Down ${diff.abs().toStringAsFixed(1)}% vs $prevMonthName! Amazing saving! 📉'
                             : 'Tracking steadily with previous months.'),
-                    cardColor: Nocturne.surface,
+                    cardColor: Nocturne.palette.surface,
                   ),
 
                   // Card 2: Top Category
                   _StoryCard(
                     badge: 'Category Breakdown',
-                    badgeColor: NocturneSemantic.income,
+                    badgeColor: Nocturne.palette.income,
                     icon: PhRegular.chartDonut,
                     title: 'Top Spending Category',
                     headline: topCatName,
@@ -275,13 +275,13 @@ class _MonthlyRecapScreenState extends State<MonthlyRecapScreen> {
                     highlight: sortedCats.length > 1
                         ? 'Runner-up: ${s.catStyle(sortedCats[1].key).name} (${V3Design.inr(sortedCats[1].value)})'
                         : 'All spending was grouped in this category.',
-                    cardColor: Nocturne.surface,
+                    cardColor: Nocturne.palette.surface,
                   ),
 
                   // Card 3: Biggest Purchase & MVP
                   _StoryCard(
                     badge: 'Highlights',
-                    badgeColor: Nocturne.accent200,
+                    badgeColor: Nocturne.palette.accentLight,
                     icon: PhRegular.star,
                     title: 'Biggest Single Expense',
                     headline: biggestTxn != null ? V3Design.inr(biggestTxn.amount) : '₹0',
@@ -289,22 +289,22 @@ class _MonthlyRecapScreenState extends State<MonthlyRecapScreen> {
                         ? '"${biggestTxn.title}" on ${biggestTxn.occurredAt.day} $thisMonthName'
                         : 'No expenses yet this month',
                     highlight: 'Top Spender: $mvpMember contributed ${V3Design.inr(mvpAmount)} toward family expenses.',
-                    cardColor: Nocturne.surface,
+                    cardColor: Nocturne.palette.surface,
                   ),
 
                   // Card 4: The Monthly Roast 🔥
                   _StoryCard(
                     badge: '🔥 The Monthly Roast',
-                    badgeColor: NocturneSemantic.expense,
+                    badgeColor: Nocturne.palette.expense,
                     icon: PhRegular.lightning,
                     title: 'AI Reality Check',
                     headline: 'Brace for Impact',
                     subtitle: 'A loving review of your financial choices this month',
                     highlight: _aiRoast ?? _defaultRoast(s, curTxns),
-                    cardColor: Nocturne.surface,
+                    cardColor: Nocturne.palette.surface,
                     action: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: NocturneSemantic.expense,
+                        backgroundColor: Nocturne.palette.expense,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -318,17 +318,17 @@ class _MonthlyRecapScreenState extends State<MonthlyRecapScreen> {
                   // Card 5: Wrap-Up & Share
                   _StoryCard(
                     badge: 'Family Scorecard',
-                    badgeColor: NocturneSemantic.income,
+                    badgeColor: Nocturne.palette.income,
                     icon: PhRegular.star,
                     title: 'Ready for Next Month',
                     headline: '${s.goals.where((g) => g.isCompleted).length}/${s.goals.length} Goals Met',
                     subtitle: 'Shared notes updated, budgets balanced, bills settled.',
                     highlight: 'Share this month’s recap image and achievements with your family on WhatsApp!',
-                    cardColor: Nocturne.surface,
+                    cardColor: Nocturne.palette.surface,
                     action: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Nocturne.accent,
-                        foregroundColor: Nocturne.bg,
+                        backgroundColor: Nocturne.palette.accent,
+                        foregroundColor: Nocturne.palette.bg,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
@@ -353,19 +353,19 @@ class _MonthlyRecapScreenState extends State<MonthlyRecapScreen> {
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       ),
-                      icon: const Icon(PhRegular.arrowLeft, size: 14, color: Nocturne.neutral400),
-                      label: const Text('Back', style: TextStyle(color: Nocturne.neutral400)),
+                      icon: Icon(PhRegular.arrowLeft, size: 14, color: Nocturne.palette.subtle),
+                      label: Text('Back', style: TextStyle(color: Nocturne.palette.subtle)),
                     )
                   else
                     const SizedBox.shrink(),
                   if (_currentPage < 4)
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Nocturne.surface,
-                        foregroundColor: Nocturne.accent300,
+                        backgroundColor: Nocturne.palette.surface,
+                        foregroundColor: Nocturne.palette.accentMuted,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(color: Nocturne.accent700),
+                          side: BorderSide(color: Nocturne.palette.switchOn),
                         ),
                       ),
                       onPressed: () => _pageController.nextPage(
@@ -378,7 +378,7 @@ class _MonthlyRecapScreenState extends State<MonthlyRecapScreen> {
                   else
                     IconButton(
                       onPressed: () => _shareRecap(summaryShareText),
-                      icon: const Icon(PhRegular.shareNetwork, color: Nocturne.accent300),
+                      icon: Icon(PhRegular.shareNetwork, color: Nocturne.palette.accentMuted),
                     ),
                 ],
               ),
@@ -429,7 +429,7 @@ class _StoryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Nocturne.neutral800),
+        border: Border.all(color: Nocturne.palette.edge),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,50 +464,50 @@ class _StoryCard extends StatelessWidget {
           const Spacer(),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               letterSpacing: 0.5,
               fontWeight: FontWeight.w500,
-              color: Nocturne.neutral400,
+              color: Nocturne.palette.subtle,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             headline,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Nocturne.text,
+              color: Nocturne.palette.text,
               letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(fontSize: 13, height: 1.4, color: Nocturne.neutral300),
+            style: TextStyle(fontSize: 13, height: 1.4, color: Nocturne.palette.neutral300),
           ),
           const Spacer(),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(PhRegular.quotes, size: 16, color: Nocturne.accent300),
+                Icon(PhRegular.quotes, size: 16, color: Nocturne.palette.accentMuted),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     highlight,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       height: 1.35,
                       fontWeight: FontWeight.w500,
-                      color: Nocturne.text,
+                      color: Nocturne.palette.text,
                     ),
                   ),
                 ),

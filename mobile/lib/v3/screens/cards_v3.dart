@@ -26,23 +26,23 @@ class CardsV3 extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: Nocturne.palette.surface,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Nocturne.neutral900, width: 1),
+              border: Border.all(color: Nocturne.palette.line, width: 1),
             ),
             child: Column(
               children: [
-                const Icon(PhRegular.creditCard,
-                    size: 32, color: Nocturne.neutral600),
+                Icon(PhRegular.creditCard,
+                    size: 32, color: Nocturne.palette.faint),
                 const SizedBox(height: 10),
-                const Text('No cards yet',
+                Text('No cards yet',
                     style:
-                        TextStyle(fontSize: 14, color: Nocturne.neutral300)),
+                        TextStyle(fontSize: 14, color: Nocturne.palette.neutral300)),
                 const SizedBox(height: 4),
-                const Text('Add a card to track its limit and dues',
+                Text('Add a card to track its limit and dues',
                     textAlign: TextAlign.center,
                     style:
-                        TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+                        TextStyle(fontSize: 12, color: Nocturne.palette.muted)),
                 const SizedBox(height: 14),
                 GestureDetector(
                   onTap: () => _addCard(context, s),
@@ -53,11 +53,11 @@ class CardsV3 extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Nocturne.accent, width: 1),
+                      border: Border.all(color: Nocturne.palette.accent, width: 1),
                     ),
-                    child: const Text('Add card',
+                    child: Text('Add card',
                         style: TextStyle(
-                            fontSize: 13, color: Nocturne.accent200)),
+                            fontSize: 13, color: Nocturne.palette.accentLight)),
                   ),
                 ),
               ],
@@ -102,16 +102,16 @@ class CardsV3 extends StatelessWidget {
                               Text(src.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 13.5, color: Nocturne.text)),
+                                  style: TextStyle(
+                                      fontSize: 13.5, color: Nocturne.palette.text)),
                               Text(
                                   'In ${s.moneyShort(t.inAmt)} · '
                                   'Spent ${s.moneyShort(t.outAmt)}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 11.5,
-                                      color: Nocturne.neutral500)),
+                                      color: Nocturne.palette.muted)),
                             ],
                           ),
                         ),
@@ -120,8 +120,8 @@ class CardsV3 extends StatelessWidget {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: bal >= 0
-                                    ? Nocturne.text
-                                    : NocturneSemantic.expense)),
+                                    ? Nocturne.palette.text
+                                    : Nocturne.palette.expense)),
                       ],
                     ),
                   );
@@ -131,13 +131,13 @@ class CardsV3 extends StatelessWidget {
             ],
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
           child: Text(
             'Balances are tracked from your entries and detected payments — '
             'not pulled live from your bank.',
             style: TextStyle(
-                fontSize: 11.5, height: 1.5, color: Nocturne.neutral500),
+                fontSize: 11.5, height: 1.5, color: Nocturne.palette.muted),
           ),
         ),
       ],
@@ -153,9 +153,9 @@ class CardsV3 extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
-        title: const Text('Add card',
-            style: TextStyle(fontSize: 17, color: Nocturne.text)),
+        backgroundColor: Nocturne.palette.surface,
+        title: Text('Add card',
+            style: TextStyle(fontSize: 17, color: Nocturne.palette.text)),
         content: StatefulBuilder(
           builder: (ctx, setInner) => Column(
           mainAxisSize: MainAxisSize.min,
@@ -179,15 +179,15 @@ class CardsV3 extends StatelessWidget {
               icon: const Icon(PhRegular.camera, size: 18),
               label: const Text('Scan card (front)'),
               style: OutlinedButton.styleFrom(
-                  foregroundColor: Nocturne.accent300,
-                  side: const BorderSide(color: Nocturne.neutral800)),
+                  foregroundColor: Nocturne.palette.accentMuted,
+                  side: BorderSide(color: Nocturne.palette.edge)),
             ),
             if (scanNote != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(scanNote!,
-                    style: const TextStyle(
-                        fontSize: 12, color: Nocturne.neutral400)),
+                    style: TextStyle(
+                        fontSize: 12, color: Nocturne.palette.subtle)),
               ),
             const SizedBox(height: 10),
             _Field(controller: label, hint: 'Card name (e.g. HDFC Regalia)'),
@@ -201,12 +201,12 @@ class CardsV3 extends StatelessWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Nocturne.neutral400))),
+              child: Text('Cancel',
+                  style: TextStyle(color: Nocturne.palette.subtle))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Add',
-                  style: TextStyle(color: Nocturne.accent300))),
+              child: Text('Add',
+                  style: TextStyle(color: Nocturne.palette.accentMuted))),
         ],
       ),
     );
@@ -234,14 +234,14 @@ class _Field extends StatelessWidget {
   Widget build(BuildContext context) => TextField(
         controller: controller,
         keyboardType: digits ? TextInputType.number : TextInputType.text,
-        style: const TextStyle(fontSize: 14, color: Nocturne.text),
-        cursorColor: Nocturne.accent,
+        style: TextStyle(fontSize: 14, color: Nocturne.palette.text),
+        cursorColor: Nocturne.palette.accent,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle:
-              const TextStyle(fontSize: 14, color: Nocturne.neutral600),
+              TextStyle(fontSize: 14, color: Nocturne.palette.faint),
           filled: true,
-          fillColor: Nocturne.bg,
+          fillColor: Nocturne.palette.bg,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,
@@ -258,10 +258,10 @@ class _Kicker extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
         child: Text(text.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 12,
                 letterSpacing: 0.72,
-                color: Nocturne.accent300)),
+                color: Nocturne.palette.accentMuted)),
       );
 }
 
@@ -295,7 +295,7 @@ class _CardTile extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Nocturne.mix(tint, 55), Nocturne.surface],
+                colors: [Nocturne.mix(tint, 55), Nocturne.palette.surface],
               ),
               border: Border.all(color: Nocturne.mix(tint, 45), width: 1),
               boxShadow: const [
@@ -315,21 +315,21 @@ class _CardTile extends StatelessWidget {
                       child: Text(c.label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: Nocturne.text)),
+                              color: Nocturne.palette.text)),
                     ),
-                    const Icon(PhRegular.contactlessPayment,
-                        size: 22, color: Nocturne.neutral300),
+                    Icon(PhRegular.contactlessPayment,
+                        size: 22, color: Nocturne.palette.neutral300),
                   ],
                 ),
                 const Spacer(),
                 Text('•••• •••• •••• ${c.last4 ?? '••••'}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       letterSpacing: 2.34,
-                      color: Nocturne.neutral300,
+                      color: Nocturne.palette.neutral300,
                       fontFeatures: [FontFeature.tabularFigures()],
                     )),
                 const SizedBox(height: 12),
@@ -340,16 +340,16 @@ class _CardTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('USED',
+                        Text('USED',
                             style: TextStyle(
                                 fontSize: 10,
                                 letterSpacing: 0.6,
-                                color: Nocturne.neutral400)),
+                                color: Nocturne.palette.subtle)),
                         V3Num(s.moneyShort(used),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w500,
-                                color: Nocturne.text)),
+                                color: Nocturne.palette.text)),
                       ],
                     ),
                     const Spacer(),
@@ -357,16 +357,16 @@ class _CardTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('AVAILABLE',
+                        Text('AVAILABLE',
                             style: TextStyle(
                                 fontSize: 10,
                                 letterSpacing: 0.6,
-                                color: Nocturne.neutral400)),
+                                color: Nocturne.palette.subtle)),
                         V3Num(
                             s.moneyShort(
                                 (c.creditLimit - used).clamp(0, double.infinity)),
-                            style: const TextStyle(
-                                fontSize: 13, color: Nocturne.text)),
+                            style: TextStyle(
+                                fontSize: 13, color: Nocturne.palette.text)),
                       ],
                     ),
                   ],
@@ -379,18 +379,18 @@ class _CardTile extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: Nocturne.palette.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Nocturne.neutral900, width: 1),
+              border: Border.all(color: Nocturne.palette.line, width: 1),
             ),
             child: Column(
               children: [
                 V3ProgressBar(
                   fraction: util,
                   fill: util > 0.8
-                      ? NocturneSemantic.expense
+                      ? Nocturne.palette.expense
                       : util > 0.5
-                          ? NocturneSemantic.warning
+                          ? Nocturne.palette.warning
                           : tint,
                   height: 5,
                 ),
@@ -399,11 +399,11 @@ class _CardTile extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('${(util * 100).round()}% used',
-                        style: const TextStyle(
-                            fontSize: 11, color: Nocturne.neutral500)),
+                        style: TextStyle(
+                            fontSize: 11, color: Nocturne.palette.muted)),
                     Text('Limit ${V3Design.inrShort(c.creditLimit)}',
-                        style: const TextStyle(
-                            fontSize: 11, color: Nocturne.neutral500)),
+                        style: TextStyle(
+                            fontSize: 11, color: Nocturne.palette.muted)),
                   ],
                 ),
                 if (due >= 0) ...[
@@ -416,8 +416,8 @@ class _CardTile extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             color: due <= 3
-                                ? NocturneSemantic.warning
-                                : Nocturne.neutral400,
+                                ? Nocturne.palette.warning
+                                : Nocturne.palette.subtle,
                           ),
                         ),
                       ),
@@ -436,14 +436,14 @@ class _CardTile extends StatelessWidget {
                               const EdgeInsets.symmetric(horizontal: 12),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: Nocturne.mix(Nocturne.accent, 12),
+                            color: Nocturne.mix(Nocturne.palette.accent, 12),
                             borderRadius: BorderRadius.circular(9),
                             border:
-                                Border.all(color: Nocturne.accent, width: 1),
+                                Border.all(color: Nocturne.palette.accent, width: 1),
                           ),
-                          child: const Text('Pay bill',
+                          child: Text('Pay bill',
                               style: TextStyle(
-                                  fontSize: 12, color: Nocturne.accent100)),
+                                  fontSize: 12, color: Nocturne.palette.accentLight)),
                         ),
                       ),
                     ],

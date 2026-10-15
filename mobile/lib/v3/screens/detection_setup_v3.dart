@@ -65,7 +65,7 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Nocturne.bg,
+      backgroundColor: Nocturne.palette.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -76,19 +76,19 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     behavior: HitTestBehavior.opaque,
-                    child: const SizedBox(
+                    child: SizedBox(
                       width: 42,
                       height: 42,
                       child: Icon(PhRegular.arrowLeft,
-                          size: 22, color: Nocturne.text),
+                          size: 22, color: Nocturne.palette.text),
                     ),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text('Detect payments',
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
-                            color: Nocturne.text)),
+                            color: Nocturne.palette.text)),
                   ),
                 ],
               ),
@@ -111,16 +111,16 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
+                  Text(
                     'Add expenses automatically',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w500,
-                        color: Nocturne.text),
+                        color: Nocturne.palette.text),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'With your permission, the app reads the payment alerts '
                     'your bank and UPI apps already show you, and offers them '
                     'for review.',
@@ -128,12 +128,12 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                     style: TextStyle(
                         fontSize: 13.5,
                         height: 1.55,
-                        color: Nocturne.neutral400),
+                        color: Nocturne.palette.subtle),
                   ),
                   const SizedBox(height: 22),
                   _Point(
                     icon: PhRegular.checkCircle,
-                    color: NocturneSemantic.income,
+                    color: Nocturne.palette.income,
                     title: 'Nothing is added without you',
                     body:
                         'Every detected payment waits in a review list. You '
@@ -141,7 +141,7 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                   ),
                   _Point(
                     icon: PhRegular.lockSimple,
-                    color: Nocturne.accent300,
+                    color: Nocturne.palette.accentMuted,
                     title: 'It stays on this phone',
                     body:
                         'Notification text is read and parsed on your device. '
@@ -150,7 +150,7 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                   ),
                   _Point(
                     icon: PhRegular.x,
-                    color: Nocturne.neutral400,
+                    color: Nocturne.palette.subtle,
                     title: 'Your SMS inbox is never accessed',
                     body:
                         'The app does not request SMS permissions and cannot '
@@ -166,7 +166,7 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                         'ignored.',
                   ),
                   const SizedBox(height: 10),
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(horizontal: 4),
                     child: Text(
                       'You can turn this off at any time in Android Settings → '
@@ -175,29 +175,29 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                       style: TextStyle(
                           fontSize: 12,
                           height: 1.5,
-                          color: Nocturne.neutral500),
+                          color: Nocturne.palette.muted),
                     ),
                   ),
                   const SizedBox(height: 22),
                   if (_checking)
-                    const Center(
+                    Center(
                       child: CircularProgressIndicator(
-                          color: Nocturne.accent300),
+                          color: Nocturne.palette.accentMuted),
                     )
                   else if (_granted)
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Nocturne.mix(NocturneSemantic.income, 10),
+                        color: Nocturne.mix(Nocturne.palette.income, 10),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: Nocturne.mix(NocturneSemantic.income, 45),
+                            color: Nocturne.mix(Nocturne.palette.income, 45),
                             width: 1),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
                           Icon(PhFill.checkCircle,
-                              size: 18, color: NocturneSemantic.income),
+                              size: 18, color: Nocturne.palette.income),
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -206,7 +206,7 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                               style: TextStyle(
                                   fontSize: 13,
                                   height: 1.45,
-                                  color: NocturneSemantic.income),
+                                  color: Nocturne.palette.income),
                             ),
                           ),
                         ],
@@ -217,16 +217,16 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Nocturne.surface,
+                        color: Nocturne.palette.surface,
                         borderRadius: BorderRadius.circular(14),
                         border:
-                            Border.all(color: Nocturne.neutral800, width: 1),
+                            Border.all(color: Nocturne.palette.edge, width: 1),
                       ),
-                      child: const Row(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(PhRegular.info,
-                              size: 18, color: Nocturne.neutral400),
+                              size: 18, color: Nocturne.palette.subtle),
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -239,7 +239,7 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                               style: TextStyle(
                                   fontSize: 13,
                                   height: 1.45,
-                                  color: Nocturne.neutral400),
+                                  color: Nocturne.palette.subtle),
                             ),
                           ),
                         ],
@@ -253,26 +253,26 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                         height: 50,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: Nocturne.mix(Nocturne.accent, 18),
+                          color: Nocturne.mix(Nocturne.palette.accent, 18),
                           borderRadius: BorderRadius.circular(14),
                           border:
-                              Border.all(color: Nocturne.accent, width: 1),
+                              Border.all(color: Nocturne.palette.accent, width: 1),
                         ),
-                        child: const Text('Turn on detection',
+                        child: Text('Turn on detection',
                             style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
-                                color: Nocturne.accent100)),
+                                color: Nocturne.palette.accentLight)),
                       ),
                     ),
                   if (!_checking && !_granted) ...[
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'This opens Android settings. Find “Family Spend '
                       'Tracker” in the list and switch it on.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 11.5, color: Nocturne.neutral500),
+                          fontSize: 11.5, color: Nocturne.palette.muted),
                     ),
                   ],
                   if (_granted) ...[
@@ -297,11 +297,11 @@ class _DetectionSetupV3State extends State<DetectionSetupV3>
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(13),
                           border: Border.all(
-                              color: Nocturne.neutral800, width: 1),
+                              color: Nocturne.palette.edge, width: 1),
                         ),
-                        child: const Text('Check for new payments now',
+                        child: Text('Check for new payments now',
                             style: TextStyle(
-                                fontSize: 14, color: Nocturne.neutral300)),
+                                fontSize: 14, color: Nocturne.palette.neutral300)),
                       ),
                     ),
                   ],
@@ -351,16 +351,16 @@ class _Point extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(title,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Nocturne.text)),
+                          color: Nocturne.palette.text)),
                   const SizedBox(height: 2),
                   Text(body,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 12.5,
                           height: 1.5,
-                          color: Nocturne.neutral500)),
+                          color: Nocturne.palette.muted)),
                 ],
               ),
             ),

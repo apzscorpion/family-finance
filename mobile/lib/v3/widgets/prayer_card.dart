@@ -36,15 +36,15 @@ class PrayerCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 13, 14, 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Nocturne.neutral900),
+            border: Border.all(color: Nocturne.palette.line),
             // A wash of the upcoming prayer's colour across the surface, so
             // the card shifts tone through the day without changing layout.
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color.lerp(Nocturne.surface, colour, 0.14)!,
-                Nocturne.surface,
+                Color.lerp(Nocturne.palette.surface, colour, 0.14)!,
+                Nocturne.palette.surface,
               ],
             ),
           ),
@@ -66,10 +66,10 @@ class PrayerCard extends StatelessWidget {
                           children: [
                             Text(
                               slot.label,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Nocturne.text,
+                                color: Nocturne.palette.text,
                               ),
                             ),
                             const SizedBox(width: 7),
@@ -87,9 +87,9 @@ class PrayerCard extends StatelessWidget {
                           next.remaining.inSeconds <= 0
                               ? 'It is time'
                               : 'in ${PrayerVisuals.countdown(next.remaining)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
-                            color: Nocturne.neutral500,
+                            color: Nocturne.palette.muted,
                           ),
                         ),
                       ],
@@ -101,10 +101,10 @@ class PrayerCard extends StatelessWidget {
                     children: [
                       Text(
                         PrayerVisuals.clock(next.next.time),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.text,
+                          color: Nocturne.palette.text,
                           fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),
@@ -112,8 +112,8 @@ class PrayerCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(PhRegular.mapPin,
-                              size: 11, color: Nocturne.neutral600),
+                          Icon(PhRegular.mapPin,
+                              size: 11, color: Nocturne.palette.faint),
                           const SizedBox(width: 3),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 96),
@@ -121,9 +121,9 @@ class PrayerCard extends StatelessWidget {
                               prayer.config.locationLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: Nocturne.neutral600,
+                                color: Nocturne.palette.faint,
                               ),
                             ),
                           ),
@@ -146,7 +146,7 @@ class PrayerCard extends StatelessWidget {
                         height: 1,
                         color: t.slot == slot
                             ? PrayerVisuals.color(t.slot)
-                            : Nocturne.neutral700,
+                            : Nocturne.palette.faint,
                         fontWeight: t.slot == slot
                             ? FontWeight.w600
                             : FontWeight.w400,

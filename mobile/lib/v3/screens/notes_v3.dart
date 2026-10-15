@@ -187,36 +187,36 @@ class _NotesV3State extends State<NotesV3> {
               margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Nocturne.surface,
+                color: Nocturne.palette.surface,
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Nocturne.neutral900, width: 1),
+                border: Border.all(color: Nocturne.palette.line, width: 1),
               ),
               child: Row(
                 children: [
-                  const Icon(PhRegular.magnifyingGlass,
-                      size: 17, color: Nocturne.neutral500),
+                  Icon(PhRegular.magnifyingGlass,
+                      size: 17, color: Nocturne.palette.muted),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       controller: _search,
                       onChanged: (_) => setState(() {}),
-                      style: const TextStyle(
-                          fontSize: 14, color: Nocturne.text),
-                      cursorColor: Nocturne.accent,
+                      style: TextStyle(
+                          fontSize: 14, color: Nocturne.palette.text),
+                      cursorColor: Nocturne.palette.accent,
                       decoration: InputDecoration(
                         isDense: true,
                         border: InputBorder.none,
                         hintText: 'Search ${s.notes.length} notes',
-                        hintStyle: const TextStyle(
-                            fontSize: 14, color: Nocturne.neutral600),
+                        hintStyle: TextStyle(
+                            fontSize: 14, color: Nocturne.palette.faint),
                       ),
                     ),
                   ),
                   if (_search.text.isNotEmpty)
                     GestureDetector(
                       onTap: () => setState(_search.clear),
-                      child: const Icon(PhFill.xCircle,
-                          size: 16, color: Nocturne.neutral500),
+                      child: Icon(PhFill.xCircle,
+                          size: 16, color: Nocturne.palette.muted),
                     ),
                 ],
               ),
@@ -229,7 +229,7 @@ class _NotesV3State extends State<NotesV3> {
                   Container(
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      color: Nocturne.surface,
+                      color: Nocturne.palette.surface,
                       borderRadius: BorderRadius.circular(11),
                     ),
                     child: Row(
@@ -251,12 +251,12 @@ class _NotesV3State extends State<NotesV3> {
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 color: _showFolders == o.$1
-                                    ? Nocturne.accent900
+                                    ? Nocturne.palette.tint
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: _showFolders == o.$1
-                                      ? Nocturne.accent600
+                                      ? Nocturne.palette.tintEdge
                                       : Colors.transparent,
                                   width: 1,
                                 ),
@@ -267,15 +267,15 @@ class _NotesV3State extends State<NotesV3> {
                                   Icon(o.$3,
                                       size: 12,
                                       color: _showFolders == o.$1
-                                          ? Nocturne.accent200
-                                          : Nocturne.neutral400),
+                                          ? Nocturne.palette.accentLight
+                                          : Nocturne.palette.subtle),
                                   const SizedBox(width: 6),
                                   Text(o.$2,
                                       style: TextStyle(
                                         fontSize: 12.5,
                                         color: _showFolders == o.$1
-                                            ? Nocturne.accent100
-                                            : Nocturne.neutral400,
+                                            ? Nocturne.palette.accentLight
+                                            : Nocturne.palette.subtle,
                                       )),
                                 ],
                               ),
@@ -312,22 +312,22 @@ class _NotesV3State extends State<NotesV3> {
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Nocturne.surface,
+                        color: Nocturne.palette.surface,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: Nocturne.neutral800, width: 1),
+                            color: Nocturne.palette.edge, width: 1),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(PhRegular.shareNetwork,
-                              size: 13, color: Nocturne.neutral300),
+                              size: 13, color: Nocturne.palette.neutral300),
                           SizedBox(width: 4),
                           Text('Export',
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
-                                  color: Nocturne.neutral300)),
+                                  color: Nocturne.palette.neutral300)),
                         ],
                       ),
                     ),
@@ -397,13 +397,13 @@ class _NotesV3State extends State<NotesV3> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(PhRegular.sortAscending,
-                              size: 14, color: Nocturne.neutral300),
+                          Icon(PhRegular.sortAscending,
+                              size: 14, color: Nocturne.palette.neutral300),
                           const SizedBox(width: 6),
                           Text(_sortLabel,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 12.5,
-                                  color: Nocturne.neutral300)),
+                                  color: Nocturne.palette.neutral300)),
                         ],
                       ),
                     ),
@@ -420,27 +420,27 @@ class _NotesV3State extends State<NotesV3> {
                               ? PhRegular.listBullets
                               : PhRegular.chartDonut,
                           size: 18,
-                          color: Nocturne.neutral300),
+                          color: Nocturne.palette.neutral300),
                     ),
                   ),
                 ],
               ),
             ),
             if (!_showFolders && notes.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 56, horizontal: 16),
                 child: Column(
                   children: [
                     Icon(PhRegular.noteBlank,
-                        size: 36, color: Nocturne.neutral600),
+                        size: 36, color: Nocturne.palette.faint),
                     SizedBox(height: 8),
                     Text('No notes here',
                         style: TextStyle(
-                            fontSize: 14, color: Nocturne.neutral300)),
+                            fontSize: 14, color: Nocturne.palette.neutral300)),
                     SizedBox(height: 4),
                     Text('Tap + to start one',
                         style: TextStyle(
-                            fontSize: 12, color: Nocturne.neutral500)),
+                            fontSize: 12, color: Nocturne.palette.muted)),
                   ],
                 ),
               ),
@@ -491,12 +491,12 @@ class _NotesV3State extends State<NotesV3> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Nocturne.neutral800,
+                              color: Nocturne.palette.edge,
                               borderRadius: BorderRadius.circular(9),
                             ),
                             child: Text(o.$1,
-                                style: const TextStyle(
-                                    fontSize: 13, color: Nocturne.text)),
+                                style: TextStyle(
+                                    fontSize: 13, color: Nocturne.palette.text)),
                           ),
                           const SizedBox(width: 10),
                           Container(
@@ -504,14 +504,14 @@ class _NotesV3State extends State<NotesV3> {
                             height: 44,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: Nocturne.surface,
+                              color: Nocturne.palette.surface,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                  color: Nocturne.neutral700, width: 1),
+                                  color: Nocturne.palette.faint, width: 1),
                               boxShadow: Nocturne.shadowMd,
                             ),
                             child: Icon(o.$2,
-                                size: 19, color: Nocturne.accent200),
+                                size: 19, color: Nocturne.palette.accentLight),
                           ),
                         ],
                       ),
@@ -536,21 +536,21 @@ class _NotesV3State extends State<NotesV3> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment(-0.34, -1),
                     end: Alignment(0.34, 1),
-                    colors: [Nocturne.accent600, Nocturne.accent800],
+                    colors: [Nocturne.palette.tintEdge, Nocturne.palette.accent800],
                   ),
-                  border: Border.all(color: Nocturne.accent400, width: 1),
+                  border: Border.all(color: Nocturne.palette.fabEdge, width: 1),
                   boxShadow: [
                     BoxShadow(
-                        color: Nocturne.mix(Nocturne.accent, 45),
+                        color: Nocturne.mix(Nocturne.palette.accent, 45),
                         blurRadius: 28,
                         offset: const Offset(0, 10)),
                   ],
                 ),
-                child: const Icon(PhBold.plus,
-                    size: 24, color: Nocturne.accent100),
+                child: Icon(PhBold.plus,
+                    size: 24, color: Nocturne.palette.accentLight),
               ),
             ),
           ),
@@ -581,10 +581,10 @@ class _FilterChip extends StatelessWidget {
           height: 30,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: selected ? Nocturne.accent900 : Nocturne.surface,
+            color: selected ? Nocturne.palette.tint : Nocturne.palette.surface,
             borderRadius: BorderRadius.circular(15),
             border: Border.all(
-                color: selected ? Nocturne.accent600 : Nocturne.neutral900,
+                color: selected ? Nocturne.palette.tintEdge : Nocturne.palette.line,
                 width: 1),
           ),
           child: Row(
@@ -593,14 +593,14 @@ class _FilterChip extends StatelessWidget {
               Icon(icon,
                   size: 13,
                   color:
-                      selected ? Nocturne.accent200 : Nocturne.neutral400),
+                      selected ? Nocturne.palette.accentLight : Nocturne.palette.subtle),
               const SizedBox(width: 6),
               Text(label,
                   style: TextStyle(
                       fontSize: 12,
                       color: selected
-                          ? Nocturne.accent100
-                          : Nocturne.neutral300)),
+                          ? Nocturne.palette.accentLight
+                          : Nocturne.palette.neutral300)),
             ],
           ),
         ),
@@ -617,13 +617,13 @@ class _SectionLabel extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
         child: Row(
           children: [
-            Icon(icon, size: 12, color: Nocturne.neutral500),
+            Icon(icon, size: 12, color: Nocturne.palette.muted),
             const SizedBox(width: 6),
             Text(label.toUpperCase(),
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 11.5,
                     letterSpacing: 0.69,
-                    color: Nocturne.neutral500)),
+                    color: Nocturne.palette.muted)),
           ],
         ),
       );
@@ -703,10 +703,10 @@ class _NoteCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-              color: note.pinned ? Nocturne.accent800 : Nocturne.neutral900,
+              color: note.pinned ? Nocturne.palette.accent800 : Nocturne.palette.line,
               width: 1),
         ),
         child: Column(
@@ -720,11 +720,11 @@ class _NoteCard extends StatelessWidget {
                     note.title.isEmpty ? 'Untitled' : note.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w500,
                         height: 1.3,
-                        color: Nocturne.text),
+                        color: Nocturne.palette.text),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -733,7 +733,7 @@ class _NoteCard extends StatelessWidget {
                   child: Icon(
                       note.isPrivate ? PhRegular.lockSimple : PhRegular.users,
                       size: 14,
-                      color: Nocturne.neutral500),
+                      color: Nocturne.palette.muted),
                 ),
               ],
             ),
@@ -750,8 +750,8 @@ class _NoteCard extends StatelessWidget {
                               : PhRegular.circle,
                           size: 15,
                           color: item.done
-                              ? NocturneSemantic.income
-                              : Nocturne.neutral600),
+                              ? Nocturne.palette.income
+                              : Nocturne.palette.faint),
                       const SizedBox(width: 7),
                       Expanded(
                         child: Text(
@@ -761,12 +761,12 @@ class _NoteCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             color: item.done
-                                ? Nocturne.neutral600
-                                : Nocturne.neutral300,
+                                ? Nocturne.palette.faint
+                                : Nocturne.palette.neutral300,
                             decoration: item.done
                                 ? TextDecoration.lineThrough
                                 : null,
-                            decorationColor: Nocturne.neutral600,
+                            decorationColor: Nocturne.palette.faint,
                           ),
                         ),
                       ),
@@ -783,10 +783,10 @@ class _NoteCard extends StatelessWidget {
               Text(preview,
                   maxLines: 4,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 12.5,
                       height: 1.5,
-                      color: Nocturne.neutral400)),
+                      color: Nocturne.palette.subtle)),
             ],
             const SizedBox(height: 12),
             Row(
@@ -796,8 +796,8 @@ class _NoteCard extends StatelessWidget {
                     _meta(s, note),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 11, color: Nocturne.neutral500),
+                    style: TextStyle(
+                        fontSize: 11, color: Nocturne.palette.muted),
                   ),
                 ),
                 if (context.watch<NotesPresenceService>().isLive(note.id)) ...[
@@ -828,17 +828,17 @@ class _NoteCard extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: s.memberById(note.updatedBy)?.color ??
-                          Nocturne.neutral700,
+                          Nocturne.palette.faint,
                       shape: BoxShape.circle,
                       border:
-                          Border.all(color: Nocturne.surface, width: 2),
+                          Border.all(color: Nocturne.palette.surface, width: 2),
                     ),
                     child: Text(
                       s.memberById(note.updatedBy)?.initial ?? '?',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.text),
+                          color: Nocturne.palette.text),
                     ),
                   ),
               ],
@@ -878,14 +878,14 @@ class _MiniTable extends StatelessWidget {
       borderRadius: BorderRadius.circular(9),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Nocturne.neutral900, width: 1),
+          border: Border.all(color: Nocturne.palette.line, width: 1),
           borderRadius: BorderRadius.circular(9),
         ),
         child: Column(
           children: [
             for (var r = -1; r < rows.length; r++)
               Container(
-                color: r == -1 ? Nocturne.neutral900 : Colors.transparent,
+                color: r == -1 ? Nocturne.palette.line : Colors.transparent,
                 child: Row(
                   children: [
                     for (var c = 0; c < cols; c++)
@@ -902,8 +902,8 @@ class _MiniTable extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 10.5,
                               color: r == -1
-                                  ? Nocturne.neutral400
-                                  : Nocturne.neutral300,
+                                  ? Nocturne.palette.subtle
+                                  : Nocturne.palette.neutral300,
                               fontFeatures: const [
                                 FontFeature.tabularFigures()
                               ],

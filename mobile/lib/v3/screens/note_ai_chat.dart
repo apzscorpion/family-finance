@@ -59,7 +59,7 @@ Future<void> showNoteAiChat(
 }) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
-  backgroundColor: Nocturne.surface,
+  backgroundColor: Nocturne.palette.surface,
   shape: const RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
   ),
@@ -147,19 +147,19 @@ class _NoteAiChatState extends State<_NoteAiChat> {
               padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     PhRegular.sparkle,
                     size: 18,
-                    color: Nocturne.accent200,
+                    color: Nocturne.palette.accentLight,
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Ask AI',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Nocturne.text,
+                        color: Nocturne.palette.text,
                       ),
                     ),
                   ),
@@ -181,9 +181,9 @@ class _NoteAiChatState extends State<_NoteAiChat> {
                     : 'On: “${widget.focusLabel}”. Say “this line” to mean it.',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Nocturne.neutral500,
+                  color: Nocturne.palette.muted,
                 ),
               ),
             ),
@@ -202,11 +202,11 @@ class _NoteAiChatState extends State<_NoteAiChat> {
                           ActionChip(
                             label: Text(s),
                             onPressed: () => _send(s),
-                            backgroundColor: Nocturne.bg,
-                            side: const BorderSide(color: Nocturne.neutral800),
-                            labelStyle: const TextStyle(
+                            backgroundColor: Nocturne.palette.bg,
+                            side: BorderSide(color: Nocturne.palette.edge),
+                            labelStyle: TextStyle(
                               fontSize: 12.5,
-                              color: Nocturne.neutral200,
+                              color: Nocturne.palette.text,
                             ),
                           ),
                       ],
@@ -228,7 +228,7 @@ class _NoteAiChatState extends State<_NoteAiChat> {
                   ],
                   if (_pending != null) ...[
                     _Bubble(text: _pending!, mine: true),
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.all(10),
                       child: Align(
                         alignment: Alignment.centerLeft,
@@ -237,7 +237,7 @@ class _NoteAiChatState extends State<_NoteAiChat> {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Nocturne.accent200,
+                            color: Nocturne.palette.accentLight,
                           ),
                         ),
                       ),
@@ -259,19 +259,19 @@ class _NoteAiChatState extends State<_NoteAiChat> {
                         maxLines: 4,
                         textInputAction: TextInputAction.send,
                         onSubmitted: _send,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Nocturne.text,
+                          color: Nocturne.palette.text,
                         ),
                         decoration: InputDecoration(
                           hintText:
                               'e.g. “add milk after eggs”, “make it shorter”',
-                          hintStyle: const TextStyle(
+                          hintStyle: TextStyle(
                             fontSize: 13.5,
-                            color: Nocturne.neutral600,
+                            color: Nocturne.palette.faint,
                           ),
                           filled: true,
-                          fillColor: Nocturne.bg,
+                          fillColor: Nocturne.palette.bg,
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -289,9 +289,9 @@ class _NoteAiChatState extends State<_NoteAiChat> {
                       onPressed: _pending == null
                           ? () => _send(_input.text)
                           : null,
-                      icon: const Icon(
+                      icon: Icon(
                         PhRegular.paperPlaneRight,
-                        color: Nocturne.accent200,
+                        color: Nocturne.palette.accentLight,
                       ),
                     ),
                   ],
@@ -329,10 +329,10 @@ class _Bubble extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: mine
-            ? Nocturne.accent900
+            ? Nocturne.palette.tint
             : error
-            ? Nocturne.mix(NocturneSemantic.expense, 14)
-            : Nocturne.bg,
+            ? Nocturne.mix(Nocturne.palette.expense, 14)
+            : Nocturne.palette.bg,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -341,23 +341,23 @@ class _Bubble extends StatelessWidget {
         children: [
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13.5,
               height: 1.4,
-              color: Nocturne.neutral200,
+              color: Nocturne.palette.text,
             ),
           ),
           if (onUndo != null)
             GestureDetector(
               onTap: onUndo,
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.only(top: 6),
                 child: Text(
                   'Undo this change',
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: Nocturne.accent200,
+                    color: Nocturne.palette.accentLight,
                   ),
                 ),
               ),

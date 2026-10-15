@@ -31,7 +31,7 @@ class MarkupController extends TextEditingController {
         withComposing: withComposing,
       );
     }
-    const marker = TextStyle(color: Nocturne.neutral600);
+    final marker = TextStyle(color: Nocturne.palette.faint);
     final spans = <TextSpan>[];
     var last = 0;
     for (final m in _pattern.allMatches(text)) {
@@ -44,9 +44,9 @@ class MarkupController extends TextEditingController {
           ? (
               '~~',
               m[2]!,
-              const TextStyle(
+              TextStyle(
                 decoration: TextDecoration.lineThrough,
-                decorationColor: Nocturne.neutral400,
+                decorationColor: Nocturne.palette.subtle,
               ),
             )
           : ('*', m[3]!, const TextStyle(fontStyle: FontStyle.italic));

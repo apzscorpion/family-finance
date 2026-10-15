@@ -132,15 +132,15 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          color: Nocturne.surface,
-          child: const Row(
+          color: Nocturne.palette.surface,
+          child: Row(
             children: [
-              Icon(PhRegular.lockSimple, size: 13, color: Nocturne.accent300),
+              Icon(PhRegular.lockSimple, size: 13, color: Nocturne.palette.accentMuted),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'On-device privacy: your actual spending amounts never leave this device. The AI only interprets the search query.',
-                  style: TextStyle(fontSize: 11, color: Nocturne.neutral400),
+                  style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle),
                 ),
               ),
             ],
@@ -157,12 +157,12 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                const SizedBox(
+                SizedBox(
                   width: 14,
                   height: 14,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Nocturne.accent300,
+                    color: Nocturne.palette.accentMuted,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -171,7 +171,7 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontStyle: FontStyle.italic,
-                    color: Nocturne.neutral400,
+                    color: Nocturne.palette.subtle,
                   ),
                 ),
               ],
@@ -195,40 +195,40 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: Nocturne.palette.surface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
-            child: const Icon(PhRegular.sparkle, size: 28, color: Nocturne.accent300),
+            child: Icon(PhRegular.sparkle, size: 28, color: Nocturne.palette.accentMuted),
           ),
         ),
         const SizedBox(height: 14),
-        const Center(
+        Center(
           child: Text(
             'Ask anything about your money',
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w600,
-              color: Nocturne.text,
+              color: Nocturne.palette.text,
             ),
           ),
         ),
         const SizedBox(height: 6),
-        const Center(
+        Center(
           child: Text(
             'Search, compare periods, find averages, or spot trends.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Nocturne.neutral500),
+            style: TextStyle(fontSize: 13, color: Nocturne.palette.muted),
           ),
         ),
         const SizedBox(height: 28),
-        const Text(
+        Text(
           'TRY ASKING',
           style: TextStyle(
             fontSize: 11,
             letterSpacing: 0.8,
             fontWeight: FontWeight.w600,
-            color: Nocturne.neutral500,
+            color: Nocturne.palette.muted,
           ),
         ),
         const SizedBox(height: 10),
@@ -240,21 +240,21 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: Nocturne.surface,
+                color: Nocturne.palette.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Nocturne.neutral800),
+                border: Border.all(color: Nocturne.palette.edge),
               ),
               child: Row(
                 children: [
-                  const Icon(PhRegular.chatCircleDots, size: 16, color: Nocturne.accent300),
+                  Icon(PhRegular.chatCircleDots, size: 16, color: Nocturne.palette.accentMuted),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       p,
-                      style: const TextStyle(fontSize: 13, color: Nocturne.text),
+                      style: TextStyle(fontSize: 13, color: Nocturne.palette.text),
                     ),
                   ),
-                  const Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+                  Icon(PhRegular.caretRight, size: 14, color: Nocturne.palette.faint),
                 ],
               ),
             ),
@@ -278,15 +278,15 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
               margin: const EdgeInsets.only(bottom: 12, left: 40),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: Nocturne.accent,
+                color: Nocturne.palette.accent,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
                 m.text,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Nocturne.bg,
+                  color: Nocturne.palette.bg,
                 ),
               ),
             ),
@@ -298,34 +298,34 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
           margin: const EdgeInsets.only(bottom: 16, right: 30),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Nocturne.surface,
+            color: Nocturne.palette.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Nocturne.neutral800),
+            border: Border.all(color: Nocturne.palette.edge),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(PhRegular.sparkle, size: 14, color: Nocturne.accent300),
+                  Icon(PhRegular.sparkle, size: 14, color: Nocturne.palette.accentMuted),
                   const SizedBox(width: 6),
-                  const Text(
+                  Text(
                     'KinPurse AI',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Nocturne.accent300,
+                      color: Nocturne.palette.accentMuted,
                     ),
                   ),
                   const Spacer(),
                   if (res?.error != null)
-                    const Icon(PhRegular.warning, size: 14, color: NocturneSemantic.expense),
+                    Icon(PhRegular.warning, size: 14, color: Nocturne.palette.expense),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 m.text,
-                style: const TextStyle(fontSize: 13.5, height: 1.4, color: Nocturne.text),
+                style: TextStyle(fontSize: 13.5, height: 1.4, color: Nocturne.palette.text),
               ),
               if (res != null && res.matchingTxns.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -335,10 +335,10 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
                   children: [
                     Text(
                       'Matching entries (${res.matchingTxns.length})',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         letterSpacing: 0.5,
-                        color: Nocturne.neutral500,
+                        color: Nocturne.palette.muted,
                       ),
                     ),
                   ],
@@ -357,15 +357,15 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
                               t.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12.5, color: Nocturne.text),
+                              style: TextStyle(fontSize: 12.5, color: Nocturne.palette.text),
                             ),
                           ),
                           Text(
                             V3Design.inr(t.amount),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
-                              color: Nocturne.text,
+                              color: Nocturne.palette.text,
                             ),
                           ),
                         ],
@@ -378,7 +378,7 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       '+${res.matchingTxns.length - 4} more transactions',
-                      style: const TextStyle(fontSize: 11, color: Nocturne.neutral500),
+                      style: TextStyle(fontSize: 11, color: Nocturne.palette.muted),
                     ),
                   ),
               ],
@@ -397,9 +397,9 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
         14,
         MediaQuery.of(context).viewInsets.bottom + 12,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
-        border: Border(top: BorderSide(color: Nocturne.neutral800)),
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
+        border: Border(top: BorderSide(color: Nocturne.palette.edge)),
       ),
       child: Row(
         children: [
@@ -408,12 +408,12 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
               controller: _inputController,
               textInputAction: TextInputAction.send,
               onSubmitted: _ask,
-              style: const TextStyle(fontSize: 14, color: Nocturne.text),
+              style: TextStyle(fontSize: 14, color: Nocturne.palette.text),
               decoration: InputDecoration(
                 hintText: 'Ask about spending, categories, or trends...',
-                hintStyle: const TextStyle(fontSize: 13, color: Nocturne.neutral500),
+                hintStyle: TextStyle(fontSize: 13, color: Nocturne.palette.muted),
                 filled: true,
-                fillColor: Nocturne.bg,
+                fillColor: Nocturne.palette.bg,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
@@ -430,13 +430,13 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _thinking ? Nocturne.neutral700 : Nocturne.accent,
+                color: _thinking ? Nocturne.palette.faint : Nocturne.palette.accent,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 PhRegular.paperPlaneRight,
                 size: 18,
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
               ),
             ),
           ),

@@ -86,14 +86,14 @@ class PrayerSettingsV3 extends StatelessWidget {
                               color: e.value == 0 ? null : Color(e.value),
                               border: Border.all(
                                 color: config.islandColor == e.key
-                                    ? Nocturne.text
-                                    : Nocturne.neutral700,
+                                    ? Nocturne.palette.text
+                                    : Nocturne.palette.faint,
                                 width: config.islandColor == e.key ? 2 : 1,
                               ),
                             ),
                             child: e.value == 0
-                                ? const Icon(PhRegular.x,
-                                    size: 12, color: Nocturne.neutral500)
+                                ? Icon(PhRegular.x,
+                                    size: 12, color: Nocturne.palette.muted)
                                 : null,
                           ),
                         ),
@@ -226,8 +226,8 @@ class PrayerSettingsV3 extends StatelessWidget {
             label: 'Test it now',
             sub: 'Shows a 3-minute reminder for the current prayer, the way '
                 'it will look on this phone',
-            trailing: const Icon(PhRegular.caretRight,
-                size: 16, color: Nocturne.neutral500),
+            trailing: Icon(PhRegular.caretRight,
+                size: 16, color: Nocturne.palette.muted),
             onTap: () async {
               await showTestReminder(config);
               if (!context.mounted) return;
@@ -252,8 +252,8 @@ class PrayerSettingsV3 extends StatelessWidget {
                   sub: config.fromDeviceLocation
                       ? 'From your device location'
                       : 'Chosen from the city list',
-                  trailing: const Icon(PhRegular.caretRight,
-                      size: 14, color: Nocturne.neutral600),
+                  trailing: Icon(PhRegular.caretRight,
+                      size: 14, color: Nocturne.palette.faint),
                   onTap: () => _pickCity(context),
                 ),
                 _Row(
@@ -261,14 +261,14 @@ class PrayerSettingsV3 extends StatelessWidget {
                   label: 'Use my location',
                   sub: 'Read once and stored — never tracked',
                   trailing: prayer.locating
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Nocturne.accent300),
+                              strokeWidth: 2, color: Nocturne.palette.accentMuted),
                         )
-                      : const Icon(PhRegular.caretRight,
-                          size: 14, color: Nocturne.neutral600),
+                      : Icon(PhRegular.caretRight,
+                          size: 14, color: Nocturne.palette.faint),
                   onTap:
                       prayer.locating ? null : () => _useLocation(context),
                   last: true,
@@ -285,8 +285,8 @@ class PrayerSettingsV3 extends StatelessWidget {
                   icon: PhRegular.compass,
                   label: 'Method',
                   sub: config.method.label,
-                  trailing: const Icon(PhRegular.caretRight,
-                      size: 14, color: Nocturne.neutral600),
+                  trailing: Icon(PhRegular.caretRight,
+                      size: 14, color: Nocturne.palette.faint),
                   onTap: () => _pickMethod(context),
                 ),
                 _Row(
@@ -356,16 +356,16 @@ class PrayerSettingsV3 extends StatelessWidget {
                     icon: PhRegular.listBullets,
                     label: 'Shows',
                     sub: config.bannerContent.description,
-                    trailing: const Icon(PhRegular.caretRight,
-                        size: 14, color: Nocturne.neutral600),
+                    trailing: Icon(PhRegular.caretRight,
+                        size: 14, color: Nocturne.palette.faint),
                     onTap: () => _pickBannerContent(context),
                   ),
                   _Row(
                     icon: PhRegular.image,
                     label: 'Background',
                     sub: config.bannerTheme.label,
-                    trailing: const Icon(PhRegular.caretRight,
-                        size: 14, color: Nocturne.neutral600),
+                    trailing: Icon(PhRegular.caretRight,
+                        size: 14, color: Nocturne.palette.faint),
                     onTap: () => _pickBannerTheme(context),
                   ),
                   _Row(
@@ -433,14 +433,14 @@ class PrayerSettingsV3 extends StatelessWidget {
             ),
           ),
 
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Text(
               'Nothing here is shared with your family — these settings '
               'stay on this device. Times are computed locally, so no '
               'location or prayer data ever leaves your phone.',
               style: TextStyle(
-                  fontSize: 11.5, height: 1.5, color: Nocturne.neutral600),
+                  fontSize: 11.5, height: 1.5, color: Nocturne.palette.faint),
             ),
           ),
         ],
@@ -597,9 +597,9 @@ class _SlotAlertRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: last
           ? null
-          : const BoxDecoration(
+          : BoxDecoration(
               border:
-                  Border(bottom: BorderSide(color: Nocturne.neutral900))),
+                  Border(bottom: BorderSide(color: Nocturne.palette.line))),
       child: Row(
         children: [
           Icon(PrayerVisuals.icon(slot), size: 18, color: colour),
@@ -611,13 +611,13 @@ class _SlotAlertRow extends StatelessWidget {
               children: [
                 Text(
                   slot.label,
-                  style: const TextStyle(fontSize: 14, color: Nocturne.text),
+                  style: TextStyle(fontSize: 14, color: Nocturne.palette.text),
                 ),
                 if (slot == PrayerSlot.sunrise)
-                  const Text(
+                  Text(
                     'End of the Fajr window',
                     style:
-                        TextStyle(fontSize: 11, color: Nocturne.neutral600),
+                        TextStyle(fontSize: 11, color: Nocturne.palette.faint),
                   ),
               ],
             ),
@@ -667,8 +667,8 @@ class _CityPickerState extends State<_CityPicker> {
           bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         height: MediaQuery.of(context).size.height * 0.78,
-        decoration: const BoxDecoration(
-          color: Nocturne.bg,
+        decoration: BoxDecoration(
+          color: Nocturne.palette.bg,
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
         child: Column(
@@ -678,11 +678,11 @@ class _CityPickerState extends State<_CityPicker> {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(18, 14, 18, 0),
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -690,7 +690,7 @@ class _CityPickerState extends State<_CityPicker> {
                     style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text)),
+                        color: Nocturne.palette.text)),
               ),
             ),
             Padding(
@@ -699,15 +699,15 @@ class _CityPickerState extends State<_CityPicker> {
                 controller: _controller,
                 onChanged: _search,
                 autofocus: true,
-                style: const TextStyle(fontSize: 14, color: Nocturne.text),
+                style: TextStyle(fontSize: 14, color: Nocturne.palette.text),
                 decoration: InputDecoration(
                   hintText: 'Search city or state',
-                  hintStyle: const TextStyle(
-                      fontSize: 14, color: Nocturne.neutral600),
-                  prefixIcon: const Icon(PhRegular.magnifyingGlass,
-                      size: 17, color: Nocturne.neutral500),
+                  hintStyle: TextStyle(
+                      fontSize: 14, color: Nocturne.palette.faint),
+                  prefixIcon: Icon(PhRegular.magnifyingGlass,
+                      size: 17, color: Nocturne.palette.muted),
                   filled: true,
-                  fillColor: Nocturne.surface,
+                  fillColor: Nocturne.palette.surface,
                   contentPadding:
                       const EdgeInsets.symmetric(vertical: 12),
                   border: OutlineInputBorder(
@@ -719,7 +719,7 @@ class _CityPickerState extends State<_CityPicker> {
             ),
             Expanded(
               child: _results.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Padding(
                         padding: EdgeInsets.all(24),
                         child: Text(
@@ -727,7 +727,7 @@ class _CityPickerState extends State<_CityPicker> {
                           'times barely change across a region.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              fontSize: 12.5, color: Nocturne.neutral500),
+                              fontSize: 12.5, color: Nocturne.palette.muted),
                         ),
                       ),
                     )
@@ -750,13 +750,13 @@ class _CityPickerState extends State<_CityPicker> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(c.name,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontSize: 14,
-                                              color: Nocturne.text)),
+                                              color: Nocturne.palette.text)),
                                       Text(c.region,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontSize: 11.5,
-                                              color: Nocturne.neutral600)),
+                                              color: Nocturne.palette.faint)),
                                     ],
                                   ),
                                 ),
@@ -783,8 +783,8 @@ class _MethodPicker extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.75),
-        decoration: const BoxDecoration(
-          color: Nocturne.bg,
+        decoration: BoxDecoration(
+          color: Nocturne.palette.bg,
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
         child: Column(
@@ -795,11 +795,11 @@ class _MethodPicker extends StatelessWidget {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(18, 14, 18, 2),
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -807,10 +807,10 @@ class _MethodPicker extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text)),
+                        color: Nocturne.palette.text)),
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(18, 0, 18, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -818,7 +818,7 @@ class _MethodPicker extends StatelessWidget {
                   'Pick whichever your local mosque follows. It mainly '
                   'changes Fajr and Isha.',
                   style: TextStyle(
-                      fontSize: 12, color: Nocturne.neutral600),
+                      fontSize: 12, color: Nocturne.palette.faint),
                 ),
               ),
             ),
@@ -840,14 +840,14 @@ class _MethodPicker extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: m == current
-                                      ? Nocturne.accent300
-                                      : Nocturne.text,
+                                      ? Nocturne.palette.accentMuted
+                                      : Nocturne.palette.text,
                                 ),
                               ),
                             ),
                             if (m == current)
-                              const Icon(PhRegular.check,
-                                  size: 16, color: Nocturne.accent300),
+                              Icon(PhRegular.check,
+                                  size: 16, color: Nocturne.palette.accentMuted),
                           ],
                         ),
                       ),
@@ -887,8 +887,8 @@ class _OptionPicker<T> extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.75),
-        decoration: const BoxDecoration(
-          color: Nocturne.bg,
+        decoration: BoxDecoration(
+          color: Nocturne.palette.bg,
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
         child: Column(
@@ -899,7 +899,7 @@ class _OptionPicker<T> extends StatelessWidget {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -908,10 +908,10 @@ class _OptionPicker<T> extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(title,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text)),
+                        color: Nocturne.palette.text)),
               ),
             ),
             if (blurb != null)
@@ -920,8 +920,8 @@ class _OptionPicker<T> extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(blurb!,
-                      style: const TextStyle(
-                          fontSize: 12, color: Nocturne.neutral600)),
+                      style: TextStyle(
+                          fontSize: 12, color: Nocturne.palette.faint)),
                 ),
               ),
             Flexible(
@@ -946,23 +946,23 @@ class _OptionPicker<T> extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: option == current
-                                          ? Nocturne.accent300
-                                          : Nocturne.text,
+                                          ? Nocturne.palette.accentMuted
+                                          : Nocturne.palette.text,
                                     ),
                                   ),
                                   if (subOf?.call(option) case final sub?) ...[
                                     const SizedBox(height: 2),
                                     Text(sub,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             fontSize: 11.5,
-                                            color: Nocturne.neutral600)),
+                                            color: Nocturne.palette.faint)),
                                   ],
                                 ],
                               ),
                             ),
                             if (option == current)
-                              const Icon(PhRegular.check,
-                                  size: 16, color: Nocturne.accent300),
+                              Icon(PhRegular.check,
+                                  size: 16, color: Nocturne.palette.accentMuted),
                           ],
                         ),
                       ),
@@ -1012,7 +1012,7 @@ class _Stepper extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontFeatures: const [FontFeature.tabularFigures()],
-                color: value == 0 ? Nocturne.neutral600 : Nocturne.text,
+                color: value == 0 ? Nocturne.palette.faint : Nocturne.palette.text,
               ),
             ),
           ),
@@ -1045,12 +1045,12 @@ class _StepButton extends StatelessWidget {
           height: 26,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: Nocturne.neutral900,
+            color: Nocturne.palette.line,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon,
               size: 12,
-              color: enabled ? Nocturne.neutral300 : Nocturne.neutral700),
+              color: enabled ? Nocturne.palette.neutral300 : Nocturne.palette.faint),
         ),
       );
 }
@@ -1070,7 +1070,7 @@ class _MiniSeg extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-          color: Nocturne.neutral900,
+          color: Nocturne.palette.line,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -1084,7 +1084,7 @@ class _MiniSeg extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 11, vertical: 5),
                   decoration: BoxDecoration(
-                    color: i == selected ? Nocturne.accent700 : null,
+                    color: i == selected ? Nocturne.palette.switchOn : null,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -1094,8 +1094,8 @@ class _MiniSeg extends StatelessWidget {
                       fontWeight:
                           i == selected ? FontWeight.w600 : FontWeight.w400,
                       color: i == selected
-                          ? Nocturne.accent100
-                          : Nocturne.neutral500,
+                          ? Nocturne.palette.accentLight
+                          : Nocturne.palette.muted,
                     ),
                   ),
                 ),
@@ -1114,7 +1114,7 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.circular(18),
         ),
         child: child,
@@ -1131,11 +1131,11 @@ class _Kicker extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 6),
         child: Text(
           text.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10.5,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.8,
-            color: Nocturne.neutral600,
+            color: Nocturne.palette.faint,
           ),
         ),
       );
@@ -1166,12 +1166,12 @@ class _Row extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: last
               ? null
-              : const BoxDecoration(
+              : BoxDecoration(
                   border: Border(
-                      bottom: BorderSide(color: Nocturne.neutral900))),
+                      bottom: BorderSide(color: Nocturne.palette.line))),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: Nocturne.neutral500),
+              Icon(icon, size: 18, color: Nocturne.palette.muted),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1179,13 +1179,13 @@ class _Row extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(label,
-                        style: const TextStyle(
-                            fontSize: 14, color: Nocturne.text)),
+                        style: TextStyle(
+                            fontSize: 14, color: Nocturne.palette.text)),
                     if (sub != null) ...[
                       const SizedBox(height: 2),
                       Text(sub!,
-                          style: const TextStyle(
-                              fontSize: 11.5, color: Nocturne.neutral600)),
+                          style: TextStyle(
+                              fontSize: 11.5, color: Nocturne.palette.faint)),
                     ],
                   ],
                 ),
@@ -1244,8 +1244,8 @@ class _PhoneCheckState extends State<_PhoneCheck> with WidgetsBindingObserver {
     // background unless "Auto launch" is on.
     final colorOs = ['realme', 'oppo', 'oneplus'].any(maker.contains);
     final samsung = maker.contains('samsung');
-    const caret =
-        Icon(PhRegular.caretRight, size: 16, color: Nocturne.neutral500);
+    final caret =
+        Icon(PhRegular.caretRight, size: 16, color: Nocturne.palette.muted);
 
     final problems = <({IconData icon, String label, String sub, VoidCallback? fix})>[
       if (sdk < 36)

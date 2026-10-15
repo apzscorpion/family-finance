@@ -172,11 +172,11 @@ class _CountBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
         decoration: BoxDecoration(
-          color: Nocturne.accent900,
+          color: Nocturne.palette.tint,
           borderRadius: BorderRadius.circular(9),
         ),
         child: Text('$count',
-            style: const TextStyle(fontSize: 11, color: Nocturne.accent200)),
+            style: TextStyle(fontSize: 11, color: Nocturne.palette.accentLight)),
       );
 }
 
@@ -881,7 +881,7 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final nav = context.read<V3Nav>();
     final actions = <(IconData, String, Color, VoidCallback)>[
-      (PhRegular.plus, 'Add', Nocturne.accent, () => V3Sheets.openAdd(context)),
+      (PhRegular.plus, 'Add', Nocturne.palette.accent, () => V3Sheets.openAdd(context)),
       (
         PhRegular.sparkle,
         'Voice',
@@ -946,8 +946,8 @@ class _QuickActions extends StatelessWidget {
                     ),
                     const SizedBox(height: 7),
                     Text(a.$2,
-                        style: const TextStyle(
-                            fontSize: 11.5, color: Nocturne.neutral300)),
+                        style: TextStyle(
+                            fontSize: 11.5, color: Nocturne.palette.neutral300)),
                   ],
                 ),
               ),
@@ -993,10 +993,10 @@ class _MoneySources extends StatelessWidget {
               width: 138,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: selected ? Nocturne.accent900 : Nocturne.surface,
+                color: selected ? Nocturne.palette.tint : Nocturne.palette.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: selected ? Nocturne.accent600 : Nocturne.neutral900,
+                  color: selected ? Nocturne.palette.tintEdge : Nocturne.palette.line,
                   width: 1,
                 ),
               ),
@@ -1013,16 +1013,16 @@ class _MoneySources extends StatelessWidget {
                           radius: 10,
                           iconSize: 16),
                       if (selected)
-                        const Icon(PhFill.checkCircle,
-                            size: 16, color: Nocturne.accent300),
+                        Icon(PhFill.checkCircle,
+                            size: 16, color: Nocturne.palette.accentMuted),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(src.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 12, color: Nocturne.neutral400)),
+                      style: TextStyle(
+                          fontSize: 12, color: Nocturne.palette.subtle)),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
@@ -1032,8 +1032,8 @@ class _MoneySources extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: left >= 0
-                            ? Nocturne.text
-                            : NocturneSemantic.expense,
+                            ? Nocturne.palette.text
+                            : Nocturne.palette.expense,
                       ),
                     ),
                   ),
@@ -1042,14 +1042,14 @@ class _MoneySources extends StatelessWidget {
                       fraction: frac,
                       fill: design.color,
                       height: 4,
-                      track: Nocturne.neutral900),
+                      track: Nocturne.palette.line),
                   const SizedBox(height: 6),
                   Text(
                     'Cash ${s.moneyShort(w.cash)} · Bank ${s.moneyShort(w.bank)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 10.5, color: Nocturne.neutral500),
+                    style: TextStyle(
+                        fontSize: 10.5, color: Nocturne.palette.muted),
                   ),
                 ],
               ),
@@ -1096,7 +1096,7 @@ class _NeedsYou extends StatelessWidget {
               : a.kind == 'delete'
                   ? PhRegular.trash
                   : PhRegular.plus,
-          color: NocturneSemantic.warning,
+          color: Nocturne.palette.warning,
           title: '${_titleCase(a.kind)} request from '
               '${s.memberName(a.requestedBy)}',
           sub: a.reason ?? 'Tap to review',
@@ -1106,7 +1106,7 @@ class _NeedsYou extends StatelessWidget {
       for (final d in s.myDebts)
         _AttentionRow(
           icon: PhRegular.handCoins,
-          color: Nocturne.accent300,
+          color: Nocturne.palette.accentMuted,
           title: d.amount > 0
               ? '${s.memberName(d.userId)} owes you ${s.money(d.amount)}'
               : 'You owe ${s.memberName(d.userId)} ${s.money(-d.amount)}',
@@ -1145,15 +1145,15 @@ class _NeedsYou extends StatelessWidget {
                           Text(rows[i].title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w500,
-                                  color: Nocturne.text)),
+                                  color: Nocturne.palette.text)),
                           Text(rows[i].sub,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 11.5, color: Nocturne.neutral500)),
+                              style: TextStyle(
+                                  fontSize: 11.5, color: Nocturne.palette.muted)),
                         ],
                       ),
                     ),
@@ -1197,12 +1197,12 @@ class _WhereItWent extends StatelessWidget {
     final total = s.totalSpent;
 
     if (cats.isEmpty) {
-      return const V3Panel(
+      return V3Panel(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 24),
           child: Center(
             child: Text('No expenses in selected period',
-                style: TextStyle(fontSize: 13, color: Nocturne.neutral500)),
+                style: TextStyle(fontSize: 13, color: Nocturne.palette.muted)),
           ),
         ),
       );
@@ -1266,14 +1266,14 @@ class _WhereItWent extends StatelessWidget {
                             s.catStyle(e.key).name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 12.5, color: Nocturne.neutral300),
+                            style: TextStyle(
+                                fontSize: 12.5, color: Nocturne.palette.neutral300),
                           ),
                         ),
                         V3Num(
                           '${total <= 0 ? 0 : (e.value / total * 100).round()}%',
-                          style: const TextStyle(
-                              fontSize: 12.5, color: Nocturne.neutral500),
+                          style: TextStyle(
+                              fontSize: 12.5, color: Nocturne.palette.muted),
                         ),
                       ],
                     ),
@@ -1311,15 +1311,15 @@ class _CatBar extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style:
-                        const TextStyle(fontSize: 13, color: Nocturne.text))),
+                        TextStyle(fontSize: 13, color: Nocturne.palette.text))),
             V3Num(s.money(entry.value),
-                style: const TextStyle(fontSize: 13, color: Nocturne.text)),
+                style: TextStyle(fontSize: 13, color: Nocturne.palette.text)),
             SizedBox(
               width: 34,
               child: V3Num('${(pct * 100).round()}%',
                   align: TextAlign.right,
-                  style: const TextStyle(
-                      fontSize: 11, color: Nocturne.neutral500)),
+                  style: TextStyle(
+                      fontSize: 11, color: Nocturne.palette.muted)),
             ),
           ],
         ),
@@ -1367,9 +1367,9 @@ class _BudgetRow extends StatelessWidget {
     final over = row.spent > row.limit;
     final warn = !over && frac * 100 >= row.threshold;
     final fill = over
-        ? NocturneSemantic.expense
+        ? Nocturne.palette.expense
         : warn
-            ? NocturneSemantic.warning
+            ? Nocturne.palette.warning
             : style.color;
 
     return Padding(
@@ -1386,12 +1386,12 @@ class _BudgetRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style:
-                          const TextStyle(fontSize: 13, color: Nocturne.text))),
+                          TextStyle(fontSize: 13, color: Nocturne.palette.text))),
               V3Num(s.money(row.spent),
-                  style: const TextStyle(fontSize: 13, color: Nocturne.text)),
+                  style: TextStyle(fontSize: 13, color: Nocturne.palette.text)),
               V3Num(' / ${V3Design.inrShort(row.limit)}',
-                  style: const TextStyle(
-                      fontSize: 13, color: Nocturne.neutral500)),
+                  style: TextStyle(
+                      fontSize: 13, color: Nocturne.palette.muted)),
             ],
           ),
           const SizedBox(height: 8),
@@ -1404,10 +1404,10 @@ class _BudgetRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               color: over
-                  ? NocturneSemantic.expense
+                  ? Nocturne.palette.expense
                   : warn
-                      ? NocturneSemantic.warning
-                      : Nocturne.neutral500,
+                      ? Nocturne.palette.warning
+                      : Nocturne.palette.muted,
             ),
           ),
         ],
@@ -1464,8 +1464,8 @@ class _HomeGoalRow extends StatelessWidget {
                   goal.isCompleted ? PhRegular.checkCircle : PhRegular.target,
                   size: 16,
                   color: goal.isCompleted
-                      ? NocturneSemantic.income
-                      : Nocturne.accent300,
+                      ? Nocturne.palette.income
+                      : Nocturne.palette.accentMuted,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1473,20 +1473,20 @@ class _HomeGoalRow extends StatelessWidget {
                     goal.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13, color: Nocturne.text),
+                    style: TextStyle(fontSize: 13, color: Nocturne.palette.text),
                   ),
                 ),
                 V3Num(V3Design.inr(goal.currentAmount),
-                    style: const TextStyle(fontSize: 13, color: Nocturne.text)),
+                    style: TextStyle(fontSize: 13, color: Nocturne.palette.text)),
                 V3Num(' / ${V3Design.inrShort(goal.targetAmount)}',
-                    style: const TextStyle(
-                        fontSize: 13, color: Nocturne.neutral500)),
+                    style: TextStyle(
+                        fontSize: 13, color: Nocturne.palette.muted)),
               ],
             ),
             const SizedBox(height: 8),
             V3ProgressBar(
               fraction: progress,
-              fill: goal.isCompleted ? NocturneSemantic.income : Nocturne.accent,
+              fill: goal.isCompleted ? Nocturne.palette.income : Nocturne.palette.accent,
               height: 5,
             ),
             const SizedBox(height: 6),
@@ -1502,8 +1502,8 @@ class _HomeGoalRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     color: goal.isCompleted
-                        ? NocturneSemantic.income
-                        : Nocturne.neutral500,
+                        ? Nocturne.palette.income
+                        : Nocturne.palette.muted,
                   ),
                 ),
                 Text(
@@ -1512,8 +1512,8 @@ class _HomeGoalRow extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: goal.isCompleted
-                        ? NocturneSemantic.income
-                        : Nocturne.accent300,
+                        ? Nocturne.palette.income
+                        : Nocturne.palette.accentMuted,
                   ),
                 ),
               ],
@@ -1664,16 +1664,16 @@ class _GuardianAlertBanner extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: NocturneSemantic.expense.withValues(alpha: 0.16),
+          color: Nocturne.palette.expense.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: NocturneSemantic.expense, width: 1.4),
+          border: Border.all(color: Nocturne.palette.expense, width: 1.4),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: NocturneSemantic.expense,
+                color: Nocturne.palette.expense,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(PhFill.warning, size: 20, color: Colors.white),
@@ -1686,10 +1686,10 @@ class _GuardianAlertBanner extends StatelessWidget {
                 children: [
                   Text(
                     '🚨 Guardian Alert: $targetName',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.bold,
-                      color: NocturneSemantic.expense,
+                      color: Nocturne.palette.expense,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1697,16 +1697,16 @@ class _GuardianAlertBanner extends StatelessWidget {
                     alert.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Nocturne.text),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
                   ),
                   Text(
                     'Potential scam detected. Tap to inspect & call $targetName.',
-                    style: const TextStyle(fontSize: 11, color: Nocturne.neutral300),
+                    style: TextStyle(fontSize: 11, color: Nocturne.palette.neutral300),
                   ),
                 ],
               ),
             ),
-            const Icon(PhRegular.caretRight, size: 16, color: NocturneSemantic.expense),
+            Icon(PhRegular.caretRight, size: 16, color: Nocturne.palette.expense),
           ],
         ),
       ),
@@ -1798,16 +1798,16 @@ class _RefundAlertBanner extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: NocturneSemantic.warning.withValues(alpha: 0.16),
+          color: Nocturne.palette.warning.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: NocturneSemantic.warning, width: 1.4),
+          border: Border.all(color: Nocturne.palette.warning, width: 1.4),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: NocturneSemantic.warning,
+                color: Nocturne.palette.warning,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(PhRegular.arrowCounterClockwise, size: 20, color: Colors.black),
@@ -1820,21 +1820,21 @@ class _RefundAlertBanner extends StatelessWidget {
                 children: [
                   Text(
                     '⚠️ ${delayed.length} Refund${delayed.length == 1 ? '' : 's'} Overdue (>5 Days)',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.bold,
-                      color: NocturneSemantic.warning,
+                      color: Nocturne.palette.warning,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${first.merchant} ${V3Design.inr(first.amount)} not credited. Tap to draft RBI complaint.',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Nocturne.text),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
                   ),
                 ],
               ),
             ),
-            const Icon(PhRegular.caretRight, size: 16, color: NocturneSemantic.warning),
+            Icon(PhRegular.caretRight, size: 16, color: Nocturne.palette.warning),
           ],
         ),
       ),
@@ -2045,31 +2045,31 @@ class _ComingUp extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                 decoration: BoxDecoration(
-                  color: Nocturne.mix(NocturneSemantic.warning, 12),
+                  color: Nocturne.mix(Nocturne.palette.warning, 12),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Nocturne.mix(NocturneSemantic.warning, 35),
+                    color: Nocturne.mix(Nocturne.palette.warning, 35),
                     width: 1,
                   ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(PhRegular.warning,
-                        size: 15, color: NocturneSemantic.warning),
+                    Icon(PhRegular.warning,
+                        size: 15, color: Nocturne.palette.warning),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         unownedCount == 1
                             ? '1 recurring rule has no owner — tap to assign'
                             : '$unownedCount recurring rules have no owner — tap to assign',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
-                          color: Nocturne.neutral200,
+                          color: Nocturne.palette.text,
                         ),
                       ),
                     ),
-                    const Icon(PhBold.caretRight,
-                        size: 12, color: NocturneSemantic.warning),
+                    Icon(PhBold.caretRight,
+                        size: 12, color: Nocturne.palette.warning),
                   ],
                 ),
               ),
@@ -2312,18 +2312,18 @@ class _WhoSpent extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 13,
-                              color: Nocturne.text,
+                              color: Nocturne.palette.text,
                               fontFamily: Nocturne.fontFamily),
                           children: [
                             TextSpan(text: e.key.name),
                             if (e.key.relationship.isNotEmpty)
                               TextSpan(
                                 text: ' · ${e.key.relationship}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 11.5,
-                                    color: Nocturne.neutral500),
+                                    color: Nocturne.palette.muted),
                               ),
                           ],
                         ),
@@ -2331,14 +2331,14 @@ class _WhoSpent extends StatelessWidget {
                     ),
                     V3Num(s.money(e.value),
                         style:
-                            const TextStyle(fontSize: 13, color: Nocturne.text)),
+                            TextStyle(fontSize: 13, color: Nocturne.palette.text)),
                     SizedBox(
                       width: 34,
                       child: V3Num(
                         '${total <= 0 ? 0 : (e.value / total * 100).round()}%',
                         align: TextAlign.right,
-                        style: const TextStyle(
-                            fontSize: 11, color: Nocturne.neutral500),
+                        style: TextStyle(
+                            fontSize: 11, color: Nocturne.palette.muted),
                       ),
                     ),
                   ],
@@ -2362,18 +2362,18 @@ class _Recent extends StatelessWidget {
     final items = s.recent;
 
     if (items.isEmpty) {
-      return const V3Panel(
+      return V3Panel(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 28),
           child: Column(
             children: [
-              Icon(PhRegular.receiptX, size: 32, color: Nocturne.neutral600),
+              Icon(PhRegular.receiptX, size: 32, color: Nocturne.palette.faint),
               SizedBox(height: 10),
               Text('Nothing here yet',
-                  style: TextStyle(fontSize: 14, color: Nocturne.neutral300)),
+                  style: TextStyle(fontSize: 14, color: Nocturne.palette.neutral300)),
               SizedBox(height: 4),
               Text('Add your first entry with the + button',
-                  style: TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+                  style: TextStyle(fontSize: 12, color: Nocturne.palette.muted)),
             ],
           ),
         ),
@@ -2440,7 +2440,7 @@ class V3TxnRow extends StatelessWidget {
         ),
         decoration: selectable && selected
             ? BoxDecoration(
-                color: Nocturne.mix(Nocturne.accent, 12),
+                color: Nocturne.mix(Nocturne.palette.accent, 12),
                 borderRadius: BorderRadius.circular(11),
               )
             : null,
@@ -2450,7 +2450,7 @@ class V3TxnRow extends StatelessWidget {
               Icon(
                 selected ? PhFill.checkCircle : PhRegular.circle,
                 size: 20,
-                color: selected ? Nocturne.accent : Nocturne.neutral500,
+                color: selected ? Nocturne.palette.accent : Nocturne.palette.muted,
               ),
               const SizedBox(width: 10),
             ],
@@ -2467,8 +2467,8 @@ class V3TxnRow extends StatelessWidget {
                         child: Text(txn.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 13.5, color: Nocturne.text)),
+                            style: TextStyle(
+                                fontSize: 13.5, color: Nocturne.palette.text)),
                       ),
                       if (isImported) ...[
                         const SizedBox(width: 6),
@@ -2476,15 +2476,15 @@ class V3TxnRow extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 5, vertical: 1.5),
                           decoration: BoxDecoration(
-                            color: Nocturne.accent900,
+                            color: Nocturne.palette.tint,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Imported',
                             style: TextStyle(
                               fontSize: 9.5,
                               fontWeight: FontWeight.w600,
-                              color: Nocturne.accent200,
+                              color: Nocturne.palette.accentLight,
                             ),
                           ),
                         ),
@@ -2497,8 +2497,8 @@ class V3TxnRow extends StatelessWidget {
                         originIcon,
                         size: 11,
                         color: txn.origin == 'manual'
-                            ? Nocturne.neutral600
-                            : Nocturne.accent300,
+                            ? Nocturne.palette.faint
+                            : Nocturne.palette.accentMuted,
                       ),
                       const SizedBox(width: 5),
                       Flexible(
@@ -2506,8 +2506,8 @@ class V3TxnRow extends StatelessWidget {
                           '${who?.name ?? ''} · ${txn.method} · ${txn.timeLabel}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 11.5, color: Nocturne.neutral500),
+                          style: TextStyle(
+                              fontSize: 11.5, color: Nocturne.palette.muted),
                         ),
                       ),
                     ],
@@ -2526,13 +2526,13 @@ class V3TxnRow extends StatelessWidget {
                     fontSize: 13.5,
                     fontWeight: FontWeight.w500,
                     color:
-                        txn.isExpense ? Nocturne.text : NocturneSemantic.income,
+                        txn.isExpense ? Nocturne.palette.text : Nocturne.palette.income,
                   ),
                 ),
                 if (txn.splitWith.isNotEmpty)
-                  const Text('Split',
+                  Text('Split',
                       style:
-                          TextStyle(fontSize: 10.5, color: Nocturne.accent300)),
+                          TextStyle(fontSize: 10.5, color: Nocturne.palette.accentMuted)),
               ],
             ),
           ],

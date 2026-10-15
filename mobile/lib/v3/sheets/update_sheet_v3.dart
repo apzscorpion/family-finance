@@ -97,11 +97,11 @@ class _UpdateSheet extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(
           20, 18, 20, 18 + MediaQuery.of(context).padding.bottom),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         border: Border(
-            top: BorderSide(color: Nocturne.neutral800, width: 1)),
+            top: BorderSide(color: Nocturne.palette.edge, width: 1)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -113,7 +113,7 @@ class _UpdateSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: 18),
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -125,11 +125,11 @@ class _UpdateSheet extends StatelessWidget {
                 height: 42,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Nocturne.accent900,
+                  color: Nocturne.palette.tint,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: const Icon(PhRegular.arrowCircleDown,
-                    size: 21, color: Nocturne.accent200),
+                child: Icon(PhRegular.arrowCircleDown,
+                    size: 21, color: Nocturne.palette.accentLight),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -137,14 +137,14 @@ class _UpdateSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Version $latest is available',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 15.5,
                             fontWeight: FontWeight.w600,
-                            color: Nocturne.text)),
+                            color: Nocturne.palette.text)),
                     const SizedBox(height: 2),
                     Text('You have v${UpdateService.currentVersion}',
-                        style: const TextStyle(
-                            fontSize: 12.5, color: Nocturne.neutral400)),
+                        style: TextStyle(
+                            fontSize: 12.5, color: Nocturne.palette.subtle)),
                   ],
                 ),
               ),
@@ -152,18 +152,18 @@ class _UpdateSheet extends StatelessWidget {
           ),
           if (notes.isNotEmpty) ...[
             const SizedBox(height: 16),
-            const Text("WHAT'S NEW",
+            Text("WHAT'S NEW",
                 style: TextStyle(
                     fontSize: 11,
                     letterSpacing: 0.8,
-                    color: Nocturne.neutral500)),
+                    color: Nocturne.palette.muted)),
             const SizedBox(height: 6),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 220),
               child: SingleChildScrollView(
                 child: Text(notes,
-                    style: const TextStyle(
-                        fontSize: 13, height: 1.5, color: Nocturne.text)),
+                    style: TextStyle(
+                        fontSize: 13, height: 1.5, color: Nocturne.palette.text)),
               ),
             ),
           ],
@@ -172,15 +172,15 @@ class _UpdateSheet extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(13),
             ),
-            child: const Text(
+            child: Text(
               'The download opens in your browser. Tap the file when it '
               'finishes to install over the current version — your data stays '
               'where it is, since it lives in your account.',
               style: TextStyle(
-                  fontSize: 12.5, height: 1.5, color: Nocturne.neutral300),
+                  fontSize: 12.5, height: 1.5, color: Nocturne.palette.neutral300),
             ),
           ),
           const SizedBox(height: 16),
@@ -195,11 +195,11 @@ class _UpdateSheet extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(13),
                       border:
-                          Border.all(color: Nocturne.neutral700, width: 1),
+                          Border.all(color: Nocturne.palette.faint, width: 1),
                     ),
-                    child: const Text('Later',
+                    child: Text('Later',
                         style: TextStyle(
-                            fontSize: 14.5, color: Nocturne.neutral300)),
+                            fontSize: 14.5, color: Nocturne.palette.neutral300)),
                   ),
                 ),
               ),
@@ -213,18 +213,18 @@ class _UpdateSheet extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(13),
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Nocturne.accent600, Nocturne.accent800],
+                        colors: [Nocturne.palette.tintEdge, Nocturne.palette.accent800],
                       ),
-                      border: Border.all(color: Nocturne.accent400, width: 1),
+                      border: Border.all(color: Nocturne.palette.fabEdge, width: 1),
                     ),
-                    child: const Text('Download update',
+                    child: Text('Download update',
                         style: TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w600,
-                            color: Nocturne.accent100)),
+                            color: Nocturne.palette.accentLight)),
                   ),
                 ),
               ),

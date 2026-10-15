@@ -40,8 +40,8 @@ class _GoalsSheetShell extends StatelessWidget {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.88,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.only(
@@ -60,7 +60,7 @@ class _GoalsSheetShell extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -70,7 +70,7 @@ class _GoalsSheetShell extends StatelessWidget {
           // Header
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -79,20 +79,20 @@ class _GoalsSheetShell extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Nocturne.text,
+                        color: Nocturne.palette.text,
                       ),
                     ),
                     Text(
                       'Save together for big milestones and shared aspirations',
-                      style: TextStyle(fontSize: 12, color: Nocturne.neutral500),
+                      style: TextStyle(fontSize: 12, color: Nocturne.palette.muted),
                     ),
                   ],
                 ),
               ),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Nocturne.accent,
-                  foregroundColor: Nocturne.bg,
+                  backgroundColor: Nocturne.palette.accent,
+                  foregroundColor: Nocturne.palette.bg,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -114,7 +114,7 @@ class _GoalsSheetShell extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -128,15 +128,15 @@ class _GoalsSheetShell extends StatelessWidget {
                         CircularProgressIndicator(
                           value: overallProgress,
                           strokeWidth: 4.5,
-                          backgroundColor: Nocturne.neutral800,
-                          valueColor: const AlwaysStoppedAnimation(NocturneSemantic.income),
+                          backgroundColor: Nocturne.palette.edge,
+                          valueColor: AlwaysStoppedAnimation(Nocturne.palette.income),
                         ),
                         Text(
                           '${(overallProgress * 100).toInt()}%',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: Nocturne.text,
+                            color: Nocturne.palette.text,
                           ),
                         ),
                       ],
@@ -149,15 +149,15 @@ class _GoalsSheetShell extends StatelessWidget {
                       children: [
                         Text(
                           '${V3Design.inr(totalSaved)} saved',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Nocturne.text,
+                            color: Nocturne.palette.text,
                           ),
                         ),
                         Text(
                           'of ${V3Design.inr(totalTarget)} target across ${goals.length} goal${goals.length == 1 ? '' : 's'}',
-                          style: const TextStyle(fontSize: 12, color: Nocturne.neutral400),
+                          style: TextStyle(fontSize: 12, color: Nocturne.palette.subtle),
                         ),
                       ],
                     ),
@@ -180,26 +180,26 @@ class _GoalsSheetShell extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Nocturne.bg,
+                              color: Nocturne.palette.bg,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(PhRegular.target,
-                                size: 32, color: Nocturne.accent300),
+                            child: Icon(PhRegular.target,
+                                size: 32, color: Nocturne.palette.accentMuted),
                           ),
                           const SizedBox(height: 14),
-                          const Text(
+                          Text(
                             'No savings goals yet',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
-                              color: Nocturne.text,
+                              color: Nocturne.palette.text,
                             ),
                           ),
                           const SizedBox(height: 6),
-                          const Text(
+                          Text(
                             'Plan an Umrah trip, holiday, car, or emergency buffer.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12.5, color: Nocturne.neutral500),
+                            style: TextStyle(fontSize: 12.5, color: Nocturne.palette.muted),
                           ),
                         ],
                       ),
@@ -226,12 +226,12 @@ class _GoalsSheetShell extends StatelessWidget {
       context: context,
       builder: (dlgCtx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          backgroundColor: Nocturne.surface,
+          backgroundColor: Nocturne.palette.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text(
+          title: Text(
             'Create Savings Goal',
             style: TextStyle(
-              color: Nocturne.text,
+              color: Nocturne.palette.text,
               fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
@@ -243,14 +243,14 @@ class _GoalsSheetShell extends StatelessWidget {
               children: [
                 TextField(
                   controller: nameCtrl,
-                  style: const TextStyle(color: Nocturne.text),
+                  style: TextStyle(color: Nocturne.palette.text),
                   decoration: InputDecoration(
                     labelText: 'Goal Name',
                     hintText: 'e.g. Umrah 2027, Emergency Fund',
-                    labelStyle: const TextStyle(color: Nocturne.neutral400),
-                    hintStyle: const TextStyle(color: Nocturne.neutral600),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
+                    hintStyle: TextStyle(color: Nocturne.palette.faint),
                     filled: true,
-                    fillColor: Nocturne.bg,
+                    fillColor: Nocturne.palette.bg,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -261,14 +261,14 @@ class _GoalsSheetShell extends StatelessWidget {
                 TextField(
                   controller: targetCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: Nocturne.text),
+                  style: TextStyle(color: Nocturne.palette.text),
                   decoration: InputDecoration(
                     labelText: 'Target Amount (₹)',
                     hintText: 'e.g. 300000',
-                    labelStyle: const TextStyle(color: Nocturne.neutral400),
-                    hintStyle: const TextStyle(color: Nocturne.neutral600),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
+                    hintStyle: TextStyle(color: Nocturne.palette.faint),
                     filled: true,
-                    fillColor: Nocturne.bg,
+                    fillColor: Nocturne.palette.bg,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -279,14 +279,14 @@ class _GoalsSheetShell extends StatelessWidget {
                 TextField(
                   controller: initialCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: Nocturne.text),
+                  style: TextStyle(color: Nocturne.palette.text),
                   decoration: InputDecoration(
                     labelText: 'Already Saved Amount (₹, optional)',
                     hintText: '0',
-                    labelStyle: const TextStyle(color: Nocturne.neutral400),
-                    hintStyle: const TextStyle(color: Nocturne.neutral600),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle),
+                    hintStyle: TextStyle(color: Nocturne.palette.faint),
                     filled: true,
-                    fillColor: Nocturne.bg,
+                    fillColor: Nocturne.palette.bg,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -303,9 +303,9 @@ class _GoalsSheetShell extends StatelessWidget {
                       lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
                       builder: (context, child) => Theme(
                         data: ThemeData.dark().copyWith(
-                          colorScheme: const ColorScheme.dark(
-                            primary: Nocturne.accent,
-                            surface: Nocturne.surface,
+                          colorScheme: ColorScheme.dark(
+                            primary: Nocturne.palette.accent,
+                            surface: Nocturne.palette.surface,
                           ),
                         ),
                         child: child!,
@@ -316,12 +316,12 @@ class _GoalsSheetShell extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Nocturne.bg,
+                      color: Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
-                        const Icon(PhRegular.calendar, size: 16, color: Nocturne.neutral400),
+                        Icon(PhRegular.calendar, size: 16, color: Nocturne.palette.subtle),
                         const SizedBox(width: 8),
                         Text(
                           selectedDate == null
@@ -330,8 +330,8 @@ class _GoalsSheetShell extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             color: selectedDate == null
-                                ? Nocturne.neutral500
-                                : Nocturne.text,
+                                ? Nocturne.palette.muted
+                                : Nocturne.palette.text,
                           ),
                         ),
                       ],
@@ -344,12 +344,12 @@ class _GoalsSheetShell extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dlgCtx),
-              child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400)),
+              child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Nocturne.accent,
-                foregroundColor: Nocturne.bg,
+                backgroundColor: Nocturne.palette.accent,
+                foregroundColor: Nocturne.palette.bg,
               ),
               onPressed: () async {
                 final name = nameCtrl.text.trim();
@@ -388,12 +388,12 @@ class _GoalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Nocturne.bg,
+        color: Nocturne.palette.bg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: goal.isCompleted
-              ? NocturneSemantic.income.withValues(alpha: 0.4)
-              : Nocturne.neutral800,
+              ? Nocturne.palette.income.withValues(alpha: 0.4)
+              : Nocturne.palette.edge,
         ),
       ),
       child: Column(
@@ -406,16 +406,16 @@ class _GoalCard extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: goal.isCompleted
-                      ? NocturneSemantic.income.withValues(alpha: 0.15)
-                      : Nocturne.accent900,
+                      ? Nocturne.palette.income.withValues(alpha: 0.15)
+                      : Nocturne.palette.tint,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   goal.isCompleted ? PhRegular.checkCircle : PhRegular.target,
                   size: 18,
                   color: goal.isCompleted
-                      ? NocturneSemantic.income
-                      : Nocturne.accent300,
+                      ? Nocturne.palette.income
+                      : Nocturne.palette.accentMuted,
                 ),
               ),
               const SizedBox(width: 10),
@@ -425,10 +425,10 @@ class _GoalCard extends StatelessWidget {
                   children: [
                     Text(
                       goal.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text,
+                        color: Nocturne.palette.text,
                       ),
                     ),
                     Text(
@@ -440,16 +440,16 @@ class _GoalCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11.5,
                         color: goal.isCompleted
-                            ? NocturneSemantic.income
-                            : Nocturne.neutral400,
+                            ? Nocturne.palette.income
+                            : Nocturne.palette.subtle,
                       ),
                     ),
                   ],
                 ),
               ),
               PopupMenuButton<String>(
-                icon: const Icon(PhRegular.dotsThreeVertical, size: 16, color: Nocturne.neutral500),
-                color: Nocturne.surface,
+                icon: Icon(PhRegular.dotsThreeVertical, size: 16, color: Nocturne.palette.muted),
+                color: Nocturne.palette.surface,
                 onSelected: (val) {
                   if (val == 'add') {
                     _openContributeDialog(context, s, goal);
@@ -458,13 +458,13 @@ class _GoalCard extends StatelessWidget {
                   }
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'add',
-                    child: Text('Add Savings', style: TextStyle(color: Nocturne.text)),
+                    child: Text('Add Savings', style: TextStyle(color: Nocturne.palette.text)),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'delete',
-                    child: Text('Delete Goal', style: TextStyle(color: NocturneSemantic.expense)),
+                    child: Text('Delete Goal', style: TextStyle(color: Nocturne.palette.expense)),
                   ),
                 ],
               ),
@@ -478,9 +478,9 @@ class _GoalCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: Nocturne.neutral800,
+              backgroundColor: Nocturne.palette.edge,
               valueColor: AlwaysStoppedAnimation(
-                goal.isCompleted ? NocturneSemantic.income : Nocturne.accent,
+                goal.isCompleted ? Nocturne.palette.income : Nocturne.palette.accent,
               ),
             ),
           ),
@@ -491,14 +491,14 @@ class _GoalCard extends StatelessWidget {
             children: [
               Text(
                 '${V3Design.inr(goal.currentAmount)} / ${V3Design.inr(goal.targetAmount)}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Nocturne.text),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Nocturne.palette.text),
               ),
               Text(
                 '${(progress * 100).toInt()}%',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: goal.isCompleted ? NocturneSemantic.income : Nocturne.accent300,
+                  color: goal.isCompleted ? Nocturne.palette.income : Nocturne.palette.accentMuted,
                 ),
               ),
             ],
@@ -515,21 +515,21 @@ class _GoalCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Nocturne.surface,
+                    color: Nocturne.palette.surface,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Nocturne.accent700, width: 1),
+                    border: Border.all(color: Nocturne.palette.switchOn, width: 1),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(PhRegular.plus, size: 12, color: Nocturne.accent300),
+                      Icon(PhRegular.plus, size: 12, color: Nocturne.palette.accentMuted),
                       SizedBox(width: 4),
                       Text(
                         'Add Money',
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.accent300,
+                          color: Nocturne.palette.accentMuted,
                         ),
                       ),
                     ],
@@ -547,12 +547,12 @@ class _GoalCard extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dlgCtx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Add to "${goal.name}"',
-          style: const TextStyle(
-            color: Nocturne.text,
+          style: TextStyle(
+            color: Nocturne.palette.text,
             fontSize: 17,
             fontWeight: FontWeight.bold,
           ),
@@ -561,14 +561,14 @@ class _GoalCard extends StatelessWidget {
           controller: amountCtrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           autofocus: true,
-          style: const TextStyle(color: Nocturne.text),
+          style: TextStyle(color: Nocturne.palette.text),
           decoration: InputDecoration(
             labelText: 'Deposit Amount (₹)',
             hintText: 'e.g. 5000',
-            labelStyle: const TextStyle(color: Nocturne.neutral400),
-            hintStyle: const TextStyle(color: Nocturne.neutral600),
+            labelStyle: TextStyle(color: Nocturne.palette.subtle),
+            hintStyle: TextStyle(color: Nocturne.palette.faint),
             filled: true,
-            fillColor: Nocturne.bg,
+            fillColor: Nocturne.palette.bg,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -578,12 +578,12 @@ class _GoalCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dlgCtx),
-            child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400)),
+            child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Nocturne.accent,
-              foregroundColor: Nocturne.bg,
+              backgroundColor: Nocturne.palette.accent,
+              foregroundColor: Nocturne.palette.bg,
             ),
             onPressed: () async {
               final amt = double.tryParse(amountCtrl.text.trim()) ?? 0;

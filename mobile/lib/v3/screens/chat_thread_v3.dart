@@ -166,29 +166,29 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
-        title: const Text(
+        backgroundColor: Nocturne.palette.surface,
+        title: Text(
           'Clear conversation?',
-          style: TextStyle(color: Nocturne.text, fontSize: 16),
+          style: TextStyle(color: Nocturne.palette.text, fontSize: 16),
         ),
         content: Text(
           'This removes all messages between you and ${widget.partner.name} for both of you.',
-          style: const TextStyle(color: Nocturne.neutral300, fontSize: 13),
+          style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Nocturne.neutral400),
+              style: TextStyle(color: Nocturne.palette.subtle),
             ),
           ),
           TextButton(
             key: const ValueKey('chat_confirm_clear_button'),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
+            child: Text(
               'Clear chat',
-              style: TextStyle(color: NocturneSemantic.expense),
+              style: TextStyle(color: Nocturne.palette.expense),
             ),
           ),
         ],
@@ -203,7 +203,7 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
     final chat = context.read<ChatController>();
     final shouldDelete = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: Nocturne.surface,
+      backgroundColor: Nocturne.palette.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -215,14 +215,14 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
             children: [
               ListTile(
                 key: const ValueKey('chat_delete_message_action'),
-                leading: const Icon(
+                leading: Icon(
                   PhRegular.trash,
-                  color: NocturneSemantic.expense,
+                  color: Nocturne.palette.expense,
                 ),
-                title: const Text(
+                title: Text(
                   'Delete message for everyone',
                   style: TextStyle(
-                    color: NocturneSemantic.expense,
+                    color: Nocturne.palette.expense,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -254,28 +254,28 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
     final Color statusColor;
     if (isTyping) {
       statusText = 'typing…';
-      statusColor = Nocturne.accent300;
+      statusColor = Nocturne.palette.accentMuted;
     } else if (isOnline) {
       statusText = 'Online now · Live';
-      statusColor = NocturneSemantic.income;
+      statusColor = Nocturne.palette.income;
     } else {
       statusText =
           chat.isRealtimeConnected ? '$roleLabel · Live sync' : roleLabel;
-      statusColor = Nocturne.neutral500;
+      statusColor = Nocturne.palette.muted;
     }
 
     return Scaffold(
-      backgroundColor: Nocturne.bg,
+      backgroundColor: Nocturne.palette.bg,
       body: SafeArea(
         child: Column(
           children: [
             // Thread header
             Container(
               padding: const EdgeInsets.fromLTRB(10, 8, 12, 10),
-              decoration: const BoxDecoration(
-                color: Nocturne.bg,
+              decoration: BoxDecoration(
+                color: Nocturne.palette.bg,
                 border: Border(
-                  bottom: BorderSide(color: Nocturne.neutral900, width: 1),
+                  bottom: BorderSide(color: Nocturne.palette.line, width: 1),
                 ),
               ),
               child: Row(
@@ -283,13 +283,13 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                   GestureDetector(
                     onTap: _handleBack,
                     behavior: HitTestBehavior.opaque,
-                    child: const SizedBox(
+                    child: SizedBox(
                       width: 40,
                       height: 40,
                       child: Icon(
                         PhRegular.arrowLeft,
                         size: 20,
-                        color: Nocturne.text,
+                        color: Nocturne.palette.text,
                       ),
                     ),
                   ),
@@ -317,10 +317,10 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                                 widget.partner.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: Nocturne.text,
+                                  color: Nocturne.palette.text,
                                 ),
                               ),
                             ),
@@ -351,14 +351,14 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                       height: 36,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Nocturne.surface,
+                        color: Nocturne.palette.surface,
                         borderRadius: BorderRadius.circular(11),
-                        border: Border.all(color: Nocturne.neutral800, width: 1),
+                        border: Border.all(color: Nocturne.palette.edge, width: 1),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         PhRegular.bellRinging,
                         size: 17,
-                        color: NocturneSemantic.warning,
+                        color: Nocturne.palette.warning,
                       ),
                     ),
                   ),
@@ -372,14 +372,14 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                       height: 36,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Nocturne.surface,
+                        color: Nocturne.palette.surface,
                         borderRadius: BorderRadius.circular(11),
-                        border: Border.all(color: Nocturne.neutral800, width: 1),
+                        border: Border.all(color: Nocturne.palette.edge, width: 1),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         PhRegular.trash,
                         size: 17,
-                        color: Nocturne.neutral400,
+                        color: Nocturne.palette.subtle,
                       ),
                     ),
                   ),
@@ -406,19 +406,19 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                             const SizedBox(height: 12),
                             Text(
                               'Message ${widget.partner.name}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
-                                color: Nocturne.text,
+                                color: Nocturne.palette.text,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'Direct messages sync instantly over WebSockets and notify across web and phone.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Nocturne.neutral500,
+                                color: Nocturne.palette.muted,
                               ),
                             ),
                           ],
@@ -449,10 +449,10 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
             // Composer
             Container(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-              decoration: const BoxDecoration(
-                color: Nocturne.surface,
+              decoration: BoxDecoration(
+                color: Nocturne.palette.surface,
                 border: Border(
-                  top: BorderSide(color: Nocturne.neutral800, width: 1),
+                  top: BorderSide(color: Nocturne.palette.edge, width: 1),
                 ),
               ),
               child: Row(
@@ -467,17 +467,17 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                       height: 40,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Nocturne.bg,
+                        color: Nocturne.palette.bg,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: Nocturne.neutral800,
+                          color: Nocturne.palette.edge,
                           width: 1,
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         PhRegular.image,
                         size: 18,
-                        color: Nocturne.neutral300,
+                        color: Nocturne.palette.neutral300,
                       ),
                     ),
                   ),
@@ -487,10 +487,10 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                       constraints: const BoxConstraints(maxHeight: 120),
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: Nocturne.bg,
+                        color: Nocturne.palette.bg,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: Nocturne.neutral800,
+                          color: Nocturne.palette.edge,
                           width: 1,
                         ),
                       ),
@@ -506,15 +506,15 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                           }
                         },
                         onSubmitted: (_) => _send(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Nocturne.text,
+                          color: Nocturne.palette.text,
                         ),
                         decoration: InputDecoration(
                           hintText: 'Message ${widget.partner.name}…',
-                          hintStyle: const TextStyle(
+                          hintStyle: TextStyle(
                             fontSize: 13.5,
-                            color: Nocturne.neutral500,
+                            color: Nocturne.palette.muted,
                           ),
                           border: InputBorder.none,
                           contentPadding:
@@ -533,26 +533,26 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                       height: 40,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Nocturne.accent700,
+                        color: Nocturne.palette.switchOn,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: Nocturne.accent400,
+                          color: Nocturne.palette.fabEdge,
                           width: 1,
                         ),
                       ),
                       child: _sending
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Nocturne.accent100,
+                                color: Nocturne.palette.accentLight,
                               ),
                             )
-                          : const Icon(
+                          : Icon(
                               PhBold.caretRight,
                               size: 18,
-                              color: Nocturne.accent100,
+                              color: Nocturne.palette.accentLight,
                             ),
                     ),
                   ),
@@ -606,8 +606,8 @@ class _MessageBubble extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: message.isPoke
-                ? Nocturne.mix(NocturneSemantic.warning, 18)
-                : (isMine ? Nocturne.accent800 : Nocturne.surface),
+                ? Nocturne.mix(Nocturne.palette.warning, 18)
+                : (isMine ? Nocturne.palette.accent800 : Nocturne.palette.surface),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
@@ -616,8 +616,8 @@ class _MessageBubble extends StatelessWidget {
             ),
             border: Border.all(
               color: message.isPoke
-                  ? NocturneSemantic.warning
-                  : (isMine ? Nocturne.accent600 : Nocturne.neutral800),
+                  ? Nocturne.palette.warning
+                  : (isMine ? Nocturne.palette.tintEdge : Nocturne.palette.edge),
               width: 1,
             ),
           ),
@@ -649,8 +649,8 @@ class _MessageBubble extends StatelessWidget {
                         message.isPoke ? FontWeight.w600 : FontWeight.w400,
                     height: 1.35,
                     color: message.isPoke
-                        ? NocturneSemantic.warning
-                        : (isMine ? Nocturne.accent100 : Nocturne.text),
+                        ? Nocturne.palette.warning
+                        : (isMine ? Nocturne.palette.accentLight : Nocturne.palette.text),
                   ),
                 ),
               const SizedBox(height: 3),
@@ -661,7 +661,7 @@ class _MessageBubble extends StatelessWidget {
                     timeStr,
                     style: TextStyle(
                       fontSize: 10,
-                      color: isMine ? Nocturne.accent300 : Nocturne.neutral500,
+                      color: isMine ? Nocturne.palette.accentMuted : Nocturne.palette.muted,
                     ),
                   ),
                   if (isMine) ...[
@@ -674,10 +674,10 @@ class _MessageBubble extends StatelessWidget {
                               : PhRegular.check),
                       size: 12,
                       color: isTemp
-                          ? Nocturne.neutral400
+                          ? Nocturne.palette.subtle
                           : (message.isRead
-                              ? NocturneSemantic.income
-                              : Nocturne.neutral400),
+                              ? Nocturne.palette.income
+                              : Nocturne.palette.subtle),
                     ),
                   ],
                   const SizedBox(width: 6),
@@ -688,7 +688,7 @@ class _MessageBubble extends StatelessWidget {
                     child: Icon(
                       PhRegular.dotsThree,
                       size: 13,
-                      color: isMine ? Nocturne.accent300 : Nocturne.neutral500,
+                      color: isMine ? Nocturne.palette.accentMuted : Nocturne.palette.muted,
                     ),
                   ),
                 ],

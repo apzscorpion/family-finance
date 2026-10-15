@@ -91,7 +91,7 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Added ${V3Design.inr(_parsed!.amount)} for ${_parsed!.title}'),
-          backgroundColor: Nocturne.surface,
+          backgroundColor: Nocturne.palette.surface,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -115,10 +115,10 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
         top: 20,
         bottom: MediaQuery.of(context).padding.bottom + 20,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral800, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.edge, width: 1)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -127,7 +127,7 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
             width: 38,
             height: 4,
             decoration: BoxDecoration(
-              color: Nocturne.neutral700,
+              color: Nocturne.palette.faint,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -135,19 +135,19 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
 
           Row(
             children: [
-              const Icon(PhFill.sparkle, size: 20, color: Nocturne.accent300),
+              Icon(PhFill.sparkle, size: 20, color: Nocturne.palette.accentMuted),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Voice Quick Add',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Nocturne.text,
+                  color: Nocturne.palette.text,
                 ),
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(PhRegular.x, size: 20, color: Nocturne.neutral400),
+                icon: Icon(PhRegular.x, size: 20, color: Nocturne.palette.subtle),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -166,13 +166,13 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: _isListening
-                      ? [Nocturne.accent, const Color(0xFF9333EA)]
-                      : [Nocturne.neutral800, Nocturne.neutral900],
+                      ? [Nocturne.palette.accent, const Color(0xFF9333EA)]
+                      : [Nocturne.palette.edge, Nocturne.palette.line],
                 ),
                 boxShadow: _isListening
                     ? [
                         BoxShadow(
-                          color: Nocturne.accent.withValues(alpha: 0.4),
+                          color: Nocturne.palette.accent.withValues(alpha: 0.4),
                           blurRadius: 20,
                           spreadRadius: 4,
                         ),
@@ -182,7 +182,7 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
               child: Icon(
                 PhBold.sparkle,
                 size: 32,
-                color: _isListening ? Colors.white : Nocturne.neutral300,
+                color: _isListening ? Colors.white : Nocturne.palette.neutral300,
               ),
             ),
           ),
@@ -192,10 +192,10 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
             _isListening
                 ? 'Listening… speak an amount & merchant'
                 : (_transcript.isEmpty ? 'Tap to speak' : 'You said:'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: Nocturne.neutral400,
+              color: Nocturne.palette.subtle,
             ),
           ),
 
@@ -204,17 +204,17 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Nocturne.neutral800, width: 1),
+                border: Border.all(color: Nocturne.palette.edge, width: 1),
               ),
               child: Text(
                 '"$_transcript"',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontStyle: FontStyle.italic,
-                  color: Nocturne.text,
+                  color: Nocturne.palette.text,
                 ),
               ),
             ),
@@ -225,9 +225,9 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Nocturne.accent600.withValues(alpha: 0.5), width: 1),
+                border: Border.all(color: Nocturne.palette.tintEdge.withValues(alpha: 0.5), width: 1),
               ),
               child: Row(
                 children: [
@@ -235,12 +235,12 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: cat?.color.withValues(alpha: 0.15) ?? Nocturne.neutral800,
+                      color: cat?.color.withValues(alpha: 0.15) ?? Nocturne.palette.edge,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       cat?.icon ?? PhRegular.shoppingBag,
-                      color: cat?.color ?? Nocturne.accent300,
+                      color: cat?.color ?? Nocturne.palette.accentMuted,
                       size: 22,
                     ),
                   ),
@@ -251,17 +251,17 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
                       children: [
                         Text(
                           parsed.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Nocturne.text,
+                            color: Nocturne.palette.text,
                           ),
                         ),
                         Text(
                           cat?.name ?? 'Groceries',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Nocturne.neutral400,
+                            color: Nocturne.palette.subtle,
                           ),
                         ),
                       ],
@@ -269,10 +269,10 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
                   ),
                   Text(
                     V3Design.inr(parsed.amount),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Nocturne.text,
+                      color: Nocturne.palette.text,
                     ),
                   ),
                 ],
@@ -288,8 +288,8 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
                       V3Sheets.openAdd(context);
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Nocturne.neutral300,
-                      side: const BorderSide(color: Nocturne.neutral800),
+                      foregroundColor: Nocturne.palette.neutral300,
+                      side: BorderSide(color: Nocturne.palette.edge),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -303,7 +303,7 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
                   child: ElevatedButton(
                     onPressed: _saveEntry,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Nocturne.accent,
+                      backgroundColor: Nocturne.palette.accent,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
@@ -320,19 +320,19 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
-                color: NocturneSemantic.warning,
+                color: Nocturne.palette.warning,
               ),
             ),
           ],
 
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Tip: Say something like "450 petrol HDFC" or "₹1200 groceries"',
             style: TextStyle(
               fontSize: 11,
-              color: Nocturne.neutral600,
+              color: Nocturne.palette.faint,
             ),
           ),
         ],

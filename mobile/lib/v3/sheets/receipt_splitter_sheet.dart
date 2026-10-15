@@ -256,10 +256,10 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
         top: 16,
         bottom: MediaQuery.of(context).padding.bottom + 16,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral800, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.edge, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,7 +271,7 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -296,21 +296,21 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
                       _merchantName ?? 'Receipt Item Splitter',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text,
+                        color: Nocturne.palette.text,
                       ),
                     ),
                     Text(
                       'Tap members on each item to split',
-                      style: const TextStyle(fontSize: 12, color: Nocturne.neutral400),
+                      style: TextStyle(fontSize: 12, color: Nocturne.palette.subtle),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(PhRegular.camera, size: 20, color: Nocturne.accent300),
+                icon: Icon(PhRegular.camera, size: 20, color: Nocturne.palette.accentMuted),
                 onPressed: _captureReceipt,
               ),
             ],
@@ -318,15 +318,15 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
           const SizedBox(height: 12),
 
           if (_scanning)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 30),
               child: Center(
                 child: Column(
                   children: [
-                    CircularProgressIndicator(color: Nocturne.accent300),
+                    CircularProgressIndicator(color: Nocturne.palette.accentMuted),
                     SizedBox(height: 12),
                     Text('Reading items from receipt with on-device OCR…',
-                        style: TextStyle(fontSize: 12.5, color: Nocturne.neutral400)),
+                        style: TextStyle(fontSize: 12.5, color: Nocturne.palette.subtle)),
                   ],
                 ),
               ),
@@ -335,14 +335,14 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
             // Payer selection row
             Row(
               children: [
-                const Text('Paid by:', style: TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+                Text('Paid by:', style: TextStyle(fontSize: 12, color: Nocturne.palette.muted)),
                 const SizedBox(width: 8),
                 DropdownButton<String>(
                   value: payer,
                   isDense: true,
-                  dropdownColor: Nocturne.surface,
+                  dropdownColor: Nocturne.palette.surface,
                   underline: const SizedBox.shrink(),
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Nocturne.accent200),
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Nocturne.palette.accentLight),
                   items: [
                     for (final m in members)
                       DropdownMenuItem(
@@ -355,11 +355,11 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
                 const Spacer(),
                 Text(
                   'Total: ${V3Design.inr(_grandTotal)}',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Nocturne.text),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Nocturne.palette.text),
                 ),
               ],
             ),
-            const Divider(color: Nocturne.neutral800, height: 16),
+            Divider(color: Nocturne.palette.edge, height: 16),
 
             // Item list with member tap chips
             Expanded(
@@ -372,12 +372,12 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Nocturne.bg,
+                      color: Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: item.assignedMemberIds.isEmpty
-                            ? Nocturne.neutral800
-                            : Nocturne.accent.withValues(alpha: 0.35),
+                            ? Nocturne.palette.edge
+                            : Nocturne.palette.accent.withValues(alpha: 0.35),
                       ),
                     ),
                     child: Column(
@@ -388,19 +388,19 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
                             Expanded(
                               child: Text(
                                 item.name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
-                                  color: Nocturne.text,
+                                  color: Nocturne.palette.text,
                                 ),
                               ),
                             ),
                             V3Num(
                               V3Design.inr(item.price),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Nocturne.text,
+                                color: Nocturne.palette.text,
                               ),
                             ),
                           ],
@@ -418,12 +418,12 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
                                     color: item.assignedMemberIds.contains(m.userId)
-                                        ? Nocturne.accent700
-                                        : Nocturne.neutral800,
+                                        ? Nocturne.palette.switchOn
+                                        : Nocturne.palette.edge,
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: item.assignedMemberIds.contains(m.userId)
-                                          ? Nocturne.accent300
+                                          ? Nocturne.palette.accentMuted
                                           : Colors.transparent,
                                     ),
                                   ),
@@ -434,7 +434,7 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
                                       fontWeight: FontWeight.w500,
                                       color: item.assignedMemberIds.contains(m.userId)
                                           ? Colors.white
-                                          : Nocturne.neutral400,
+                                          : Nocturne.palette.subtle,
                                     ),
                                   ),
                                 ),
@@ -444,12 +444,12 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: Nocturne.neutral900,
+                                  color: Nocturne.palette.line,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'All',
-                                  style: TextStyle(fontSize: 10, color: Nocturne.neutral500),
+                                  style: TextStyle(fontSize: 10, color: Nocturne.palette.muted),
                                 ),
                               ),
                             ),
@@ -468,20 +468,20 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Nocturne.neutral800),
+                border: Border.all(color: Nocturne.palette.edge),
               ),
               child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Who owes what:', style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500)),
+                      Text('Who owes what:', style: TextStyle(fontSize: 11.5, color: Nocturne.palette.muted)),
                       if (_taxAndTip > 0)
                         Text(
                           '+${V3Design.inrShort(_taxAndTip)} tax/tip apportioned',
-                          style: const TextStyle(fontSize: 11, color: Nocturne.accent300),
+                          style: TextStyle(fontSize: 11, color: Nocturne.palette.accentMuted),
                         ),
                     ],
                   ),
@@ -498,7 +498,7 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
                                   m.userId == s.myId ? 'Me' : m.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 10.5, color: Nocturne.neutral400),
+                                  style: TextStyle(fontSize: 10.5, color: Nocturne.palette.subtle),
                                 ),
                                 const SizedBox(height: 2),
                                 V3Num(
@@ -506,7 +506,7 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: (memberTotals[m.userId] ?? 0) > 0 ? Nocturne.text : Nocturne.neutral600,
+                                    color: (memberTotals[m.userId] ?? 0) > 0 ? Nocturne.palette.text : Nocturne.palette.faint,
                                   ),
                                 ),
                               ],
@@ -527,7 +527,7 @@ class _ReceiptSplitterSheetState extends State<ReceiptSplitterSheet> {
               child: ElevatedButton(
                 onPressed: _grandTotal > 0 ? () => _saveAndRecordExpense(s) : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Nocturne.accent,
+                  backgroundColor: Nocturne.palette.accent,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: Text(

@@ -275,10 +275,10 @@ class _InsightsV3State extends State<InsightsV3> {
                                                   (perDay[i] / maxDay)),
                                       decoration: BoxDecoration(
                                         color: _selectedDay == i
-                                            ? Nocturne.accent300
+                                            ? Nocturne.palette.accentMuted
                                             : perDay[i] > avg
-                                                ? Nocturne.accent500
-                                                : Nocturne.accent800,
+                                                ? Nocturne.palette.accent500
+                                                : Nocturne.palette.accent800,
                                         borderRadius:
                                             const BorderRadius.vertical(
                                           top: Radius.circular(3),
@@ -301,14 +301,14 @@ class _InsightsV3State extends State<InsightsV3> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(_dayLabel(days - 1),
-                        style: const TextStyle(
-                            fontSize: 10.5, color: Nocturne.neutral500)),
-                    Text('avg ${V3Design.inrShort(avg)}/day',
-                        style: const TextStyle(
-                            fontSize: 10.5, color: Nocturne.neutral500)),
-                    const Text('Today',
                         style: TextStyle(
-                            fontSize: 10.5, color: Nocturne.neutral500)),
+                            fontSize: 10.5, color: Nocturne.palette.muted)),
+                    Text('avg ${V3Design.inrShort(avg)}/day',
+                        style: TextStyle(
+                            fontSize: 10.5, color: Nocturne.palette.muted)),
+                    Text('Today',
+                        style: TextStyle(
+                            fontSize: 10.5, color: Nocturne.palette.muted)),
                   ],
                 ),
               ],
@@ -394,21 +394,21 @@ class _InsightsV3State extends State<InsightsV3> {
                                   Text(p.m.name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           fontSize: 13,
-                                          color: Nocturne.text)),
+                                          color: Nocturne.palette.text)),
                                   Text(
                                     'You paid for them ${s.money(p.forThem)}'
                                     ' · Together ${s.money(p.together)}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 11.5,
-                                        color: Nocturne.neutral400),
+                                        color: Nocturne.palette.subtle),
                                   ),
                                 ],
                               ),
                             ),
-                            const Icon(PhRegular.caretRight,
-                                size: 14, color: Nocturne.neutral500),
+                            Icon(PhRegular.caretRight,
+                                size: 14, color: Nocturne.palette.muted),
                           ],
                         ),
                       ),
@@ -439,19 +439,19 @@ class _InsightsV3State extends State<InsightsV3> {
                                   child: Text(c.name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           fontSize: 13,
-                                          color: Nocturne.text))),
+                                          color: Nocturne.palette.text))),
                               V3Num(s.money(cats[i].value),
-                                  style: const TextStyle(
-                                      fontSize: 13, color: Nocturne.text)),
+                                  style: TextStyle(
+                                      fontSize: 13, color: Nocturne.palette.text)),
                               SizedBox(
                                 width: 40,
                                 child: V3Num('${(pct * 100).round()}%',
                                     align: TextAlign.right,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 11,
-                                        color: Nocturne.neutral500)),
+                                        color: Nocturne.palette.muted)),
                               ),
                             ],
                           ),
@@ -466,21 +466,21 @@ class _InsightsV3State extends State<InsightsV3> {
               ),
             ),
           ] else
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 48, horizontal: 16),
               child: Column(
                 children: [
                   Icon(PhRegular.chartBar,
-                      size: 38, color: Nocturne.neutral600),
+                      size: 38, color: Nocturne.palette.faint),
                   SizedBox(height: 8),
                   Text('Nothing to chart yet',
                       style: TextStyle(
-                          fontSize: 14, color: Nocturne.neutral300)),
+                          fontSize: 14, color: Nocturne.palette.neutral300)),
                   SizedBox(height: 4),
                   Text('Add a few entries and insights will appear here.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 12.5, color: Nocturne.neutral500)),
+                          fontSize: 12.5, color: Nocturne.palette.muted)),
                 ],
               ),
             ),
@@ -517,7 +517,7 @@ class _DashedLine extends StatelessWidget {
                 width: dash,
                 height: 1,
                 margin: const EdgeInsets.only(right: gap),
-                color: Nocturne.neutral600,
+                color: Nocturne.palette.faint,
               ),
             ),
           );

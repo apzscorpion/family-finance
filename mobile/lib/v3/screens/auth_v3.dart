@@ -95,13 +95,13 @@ class _AuthV3State extends State<AuthV3> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Nocturne.bg,
+      backgroundColor: Nocturne.palette.bg,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: RadialGradient(
             center: Alignment(0, -1),
             radius: 1.1,
-            colors: [Color(0xFF1F2236), Nocturne.bg],
+            colors: [Nocturne.palette.tint, Nocturne.palette.bg],
           ),
         ),
         child: SafeArea(
@@ -122,12 +122,12 @@ class _AuthV3State extends State<AuthV3> {
                       children: [
                         Text(
                           'v${UpdateService.currentVersion}',
-                          style: const TextStyle(
-                              fontSize: 11.5, color: Nocturne.neutral500),
+                          style: TextStyle(
+                              fontSize: 11.5, color: Nocturne.palette.muted),
                         ),
                         const SizedBox(width: 6),
-                        const Icon(PhRegular.gear,
-                            size: 18, color: Nocturne.neutral400),
+                        Icon(PhRegular.gear,
+                            size: 18, color: Nocturne.palette.subtle),
                       ],
                     ),
                   ),
@@ -147,14 +147,14 @@ class _AuthV3State extends State<AuthV3> {
                   const SizedBox(height: 18),
                   const KinPurseWordmark(size: 28),
                   const SizedBox(height: 6),
-                  const Text('Family money, together',
+                  Text('Family money, together',
                       style: TextStyle(
-                          fontSize: 13, color: Nocturne.neutral500)),
+                          fontSize: 13, color: Nocturne.palette.muted)),
                   const SizedBox(height: 24),
                   Container(
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      color: Nocturne.surface,
+                      color: Nocturne.palette.surface,
                       borderRadius: BorderRadius.circular(11),
                     ),
                     child: Row(
@@ -175,12 +175,12 @@ class _AuthV3State extends State<AuthV3> {
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: _signUp == o.$1
-                                      ? Nocturne.accent900
+                                      ? Nocturne.palette.tint
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: _signUp == o.$1
-                                        ? Nocturne.accent600
+                                        ? Nocturne.palette.tintEdge
                                         : Colors.transparent,
                                     width: 1,
                                   ),
@@ -189,8 +189,8 @@ class _AuthV3State extends State<AuthV3> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: _signUp == o.$1
-                                          ? Nocturne.accent100
-                                          : Nocturne.neutral400,
+                                          ? Nocturne.palette.accentLight
+                                          : Nocturne.palette.subtle,
                                     )),
                               ),
                             ),
@@ -224,7 +224,7 @@ class _AuthV3State extends State<AuthV3> {
                       child: Icon(
                           _obscure ? PhRegular.eye : PhRegular.eyeSlash,
                           size: 18,
-                          color: Nocturne.neutral500),
+                          color: Nocturne.palette.muted),
                     ),
                   ),
                   if (_error != null) ...[
@@ -233,22 +233,22 @@ class _AuthV3State extends State<AuthV3> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Nocturne.mix(NocturneSemantic.expense, 12),
+                        color: Nocturne.mix(Nocturne.palette.expense, 12),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: Nocturne.mix(NocturneSemantic.expense, 50),
+                            color: Nocturne.mix(Nocturne.palette.expense, 50),
                             width: 1),
                       ),
                       child: Row(
                         children: [
-                          const Icon(PhRegular.warning,
-                              size: 16, color: NocturneSemantic.expense),
+                          Icon(PhRegular.warning,
+                              size: 16, color: Nocturne.palette.expense),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(_error!,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 12.5,
-                                    color: NocturneSemantic.expense)),
+                                    color: Nocturne.palette.expense)),
                           ),
                         ],
                       ),
@@ -262,22 +262,22 @@ class _AuthV3State extends State<AuthV3> {
                       height: 50,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Nocturne.mix(Nocturne.accent, 18),
+                        color: Nocturne.mix(Nocturne.palette.accent, 18),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Nocturne.accent, width: 1),
+                        border: Border.all(color: Nocturne.palette.accent, width: 1),
                       ),
                       child: _busy
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Nocturne.accent100),
+                                  strokeWidth: 2, color: Nocturne.palette.accentLight),
                             )
                           : Text(_signUp ? 'Create account' : 'Sign in',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
-                                  color: Nocturne.accent100)),
+                                  color: Nocturne.palette.accentLight)),
                     ),
                   ),
                 ],
@@ -314,13 +314,13 @@ class _Input extends StatelessWidget {
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: Nocturne.neutral800, width: 1),
+          border: Border.all(color: Nocturne.palette.edge, width: 1),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: Nocturne.neutral500),
+            Icon(icon, size: 18, color: Nocturne.palette.muted),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
@@ -328,14 +328,14 @@ class _Input extends StatelessWidget {
                 obscureText: obscure,
                 keyboardType: keyboard,
                 autocorrect: false,
-                style: const TextStyle(fontSize: 15, color: Nocturne.text),
-                cursorColor: Nocturne.accent,
+                style: TextStyle(fontSize: 15, color: Nocturne.palette.text),
+                cursorColor: Nocturne.palette.accent,
                 decoration: InputDecoration(
                   isDense: true,
                   border: InputBorder.none,
                   hintText: hint,
-                  hintStyle: const TextStyle(
-                      fontSize: 15, color: Nocturne.neutral600),
+                  hintStyle: TextStyle(
+                      fontSize: 15, color: Nocturne.palette.faint),
                 ),
               ),
             ),

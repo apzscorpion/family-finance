@@ -73,13 +73,13 @@ class _OnboardingV3State extends State<OnboardingV3> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Nocturne.bg,
+      backgroundColor: Nocturne.palette.bg,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: RadialGradient(
             center: Alignment(0, -1),
             radius: 1.1,
-            colors: [Color(0xFF1F2236), Nocturne.bg],
+            colors: [Nocturne.palette.tint, Nocturne.palette.bg],
           ),
         ),
         child: SafeArea(
@@ -97,19 +97,19 @@ class _OnboardingV3State extends State<OnboardingV3> {
                   const SizedBox(height: 18),
                   const KinPurseWordmark(size: 28),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                       'Create a workspace for your household, or join one '
                       'with its code.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 13,
                           height: 1.5,
-                          color: Nocturne.neutral500)),
+                          color: Nocturne.palette.muted)),
                   const SizedBox(height: 24),
                   Container(
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      color: Nocturne.surface,
+                      color: Nocturne.palette.surface,
                       borderRadius: BorderRadius.circular(11),
                     ),
                     child: Row(
@@ -127,12 +127,12 @@ class _OnboardingV3State extends State<OnboardingV3> {
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: _joining == o.$1
-                                      ? Nocturne.accent900
+                                      ? Nocturne.palette.tint
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: _joining == o.$1
-                                        ? Nocturne.accent600
+                                        ? Nocturne.palette.tintEdge
                                         : Colors.transparent,
                                     width: 1,
                                   ),
@@ -141,8 +141,8 @@ class _OnboardingV3State extends State<OnboardingV3> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: _joining == o.$1
-                                          ? Nocturne.accent100
-                                          : Nocturne.neutral400,
+                                          ? Nocturne.palette.accentLight
+                                          : Nocturne.palette.subtle,
                                     )),
                               ),
                             ),
@@ -155,15 +155,15 @@ class _OnboardingV3State extends State<OnboardingV3> {
                     height: 48,
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: Nocturne.surface,
+                      color: Nocturne.palette.surface,
                       borderRadius: BorderRadius.circular(13),
                       border:
-                          Border.all(color: Nocturne.neutral800, width: 1),
+                          Border.all(color: Nocturne.palette.edge, width: 1),
                     ),
                     child: Row(
                       children: [
                         Icon(_joining ? PhRegular.link : PhRegular.users,
-                            size: 18, color: Nocturne.neutral500),
+                            size: 18, color: Nocturne.palette.muted),
                         const SizedBox(width: 10),
                         Expanded(
                           child: TextField(
@@ -173,20 +173,20 @@ class _OnboardingV3State extends State<OnboardingV3> {
                                 : TextCapitalization.words,
                             style: TextStyle(
                               fontSize: 15,
-                              color: Nocturne.text,
+                              color: Nocturne.palette.text,
                               letterSpacing: _joining ? 2 : 0,
                             ),
-                            cursorColor: Nocturne.accent,
+                            cursorColor: Nocturne.palette.accent,
                             decoration: InputDecoration(
                               isDense: true,
                               border: InputBorder.none,
                               hintText: _joining
                                   ? 'Workspace code'
                                   : "e.g. Khan Family",
-                              hintStyle: const TextStyle(
+                              hintStyle: TextStyle(
                                   fontSize: 15,
                                   letterSpacing: 0,
-                                  color: Nocturne.neutral600),
+                                  color: Nocturne.palette.faint),
                             ),
                           ),
                         ),
@@ -199,22 +199,22 @@ class _OnboardingV3State extends State<OnboardingV3> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Nocturne.mix(NocturneSemantic.expense, 12),
+                        color: Nocturne.mix(Nocturne.palette.expense, 12),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: Nocturne.mix(NocturneSemantic.expense, 50),
+                            color: Nocturne.mix(Nocturne.palette.expense, 50),
                             width: 1),
                       ),
                       child: Row(
                         children: [
-                          const Icon(PhRegular.warning,
-                              size: 16, color: NocturneSemantic.expense),
+                          Icon(PhRegular.warning,
+                              size: 16, color: Nocturne.palette.expense),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(_error!,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 12.5,
-                                    color: NocturneSemantic.expense)),
+                                    color: Nocturne.palette.expense)),
                           ),
                         ],
                       ),
@@ -228,24 +228,24 @@ class _OnboardingV3State extends State<OnboardingV3> {
                       height: 50,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Nocturne.mix(Nocturne.accent, 18),
+                        color: Nocturne.mix(Nocturne.palette.accent, 18),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Nocturne.accent, width: 1),
+                        border: Border.all(color: Nocturne.palette.accent, width: 1),
                       ),
                       child: _busy
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Nocturne.accent100),
+                                  color: Nocturne.palette.accentLight),
                             )
                           : Text(
                               _joining ? 'Join workspace' : 'Create workspace',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
-                                  color: Nocturne.accent100),
+                                  color: Nocturne.palette.accentLight),
                             ),
                     ),
                   ),

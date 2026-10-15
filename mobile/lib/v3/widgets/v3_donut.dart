@@ -31,7 +31,7 @@ class V3Donut extends StatefulWidget {
   final double thickness;
 
   /// Fills the hole, matching whatever panel the doughnut sits on.
-  final Color centerColor;
+  final Color? centerColor;
   final Widget? center;
 
   /// Animates the sweep on first build and whenever the data changes.
@@ -42,7 +42,7 @@ class V3Donut extends StatefulWidget {
     required this.slices,
     this.size = 128,
     this.thickness = 15,
-    this.centerColor = Nocturne.surface,
+    this.centerColor,
     this.center,
     this.animate = true,
   });
@@ -91,7 +91,7 @@ class _V3DonutState extends State<V3Donut>
           boxShadow: [
             // 0 0 28px color-mix(in oklch, var(--color-accent) 14%, transparent)
             BoxShadow(
-              color: Nocturne.mix(Nocturne.accent, 14),
+              color: Nocturne.mix(Nocturne.palette.accent, 14),
               blurRadius: 28,
             ),
           ],
@@ -102,7 +102,7 @@ class _V3DonutState extends State<V3Donut>
             painter: _DonutPainter(
               slices: widget.slices,
               thickness: widget.thickness,
-              centerColor: widget.centerColor,
+              centerColor: widget.centerColor ?? Nocturne.palette.surface,
               progress: _a.value,
             ),
             child: Center(child: widget.center),
@@ -137,7 +137,7 @@ class _DonutPainter extends CustomPainter {
       canvas.drawCircle(
         center,
         radius,
-        Paint()..color = Nocturne.neutral900,
+        Paint()..color = Nocturne.palette.line,
       );
       canvas.drawCircle(
         center,
@@ -199,26 +199,26 @@ class V3DonutCenter extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
+        Text(
           'SPENT',
           style: TextStyle(
             fontSize: 10,
-            color: Nocturne.neutral500,
+            color: Nocturne.palette.muted,
             letterSpacing: 0.6, // .06em at 10px
           ),
         ),
         Text(
           amount,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
-            color: Nocturne.text,
+            color: Nocturne.palette.text,
             fontFeatures: [FontFeature.tabularFigures()],
           ),
         ),
         Text(
           '$categoryCount categories',
-          style: const TextStyle(fontSize: 10, color: Nocturne.neutral500),
+          style: TextStyle(fontSize: 10, color: Nocturne.palette.muted),
         ),
       ],
     );

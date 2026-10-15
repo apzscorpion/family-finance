@@ -145,8 +145,8 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Nocturne.accent300),
+      return Center(
+        child: CircularProgressIndicator(color: Nocturne.palette.accentMuted),
       );
     }
 
@@ -168,7 +168,7 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                     onTap: () => _selectProvider(AiProvider.values[i]),
                   ),
                   if (i < AiProvider.values.length - 1)
-                    const Divider(color: Nocturne.neutral900, height: 1),
+                    Divider(color: Nocturne.palette.line, height: 1),
                 ],
               ],
             ),
@@ -184,9 +184,9 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                 const _Label('SAVED KEYS'),
                 const SizedBox(height: 6),
                 if (_config.keysFor(provider).isEmpty)
-                  const Text(
+                  Text(
                     'No keys saved for this provider yet.',
-                    style: TextStyle(fontSize: 12.5, color: Nocturne.neutral500),
+                    style: TextStyle(fontSize: 12.5, color: Nocturne.palette.muted),
                   ),
                 for (final key in _config.keysFor(provider))
                   _KeyRow(
@@ -204,14 +204,14 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                   child: TextField(
                     controller: _alias,
                     autocorrect: false,
-                    style: const TextStyle(fontSize: 13.5, color: Nocturne.text),
-                    cursorColor: Nocturne.accent,
-                    decoration: const InputDecoration(
+                    style: TextStyle(fontSize: 13.5, color: Nocturne.palette.text),
+                    cursorColor: Nocturne.palette.accent,
+                    decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
                       hintText: 'Name, e.g. Personal or Work',
                       hintStyle:
-                          TextStyle(fontSize: 13.5, color: Nocturne.neutral600),
+                          TextStyle(fontSize: 13.5, color: Nocturne.palette.faint),
                     ),
                   ),
                 ),
@@ -226,18 +226,18 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                           autocorrect: false,
                           enableSuggestions: false,
                           onSubmitted: (_) => _addKey(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13.5,
-                            color: Nocturne.text,
+                            color: Nocturne.palette.text,
                           ),
-                          cursorColor: Nocturne.accent,
-                          decoration: const InputDecoration(
+                          cursorColor: Nocturne.palette.accent,
+                          decoration: InputDecoration(
                             isDense: true,
                             border: InputBorder.none,
                             hintText: 'Paste your API key…',
                             hintStyle: TextStyle(
                               fontSize: 13.5,
-                              color: Nocturne.neutral600,
+                              color: Nocturne.palette.faint,
                             ),
                           ),
                         ),
@@ -251,7 +251,7 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                           child: Icon(
                             _showKey ? PhRegular.eyeSlash : PhRegular.eye,
                             size: 17,
-                            color: Nocturne.neutral400,
+                            color: Nocturne.palette.subtle,
                           ),
                         ),
                       ),
@@ -261,18 +261,18 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                 const SizedBox(height: 6),
                 Text(
                   'Key source: ${provider.keyHint}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
-                    color: Nocturne.neutral500,
+                    color: Nocturne.palette.muted,
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'MODEL',
                   style: TextStyle(
                     fontSize: 10.5,
                     letterSpacing: 0.7,
-                    color: Nocturne.neutral500,
+                    color: Nocturne.palette.muted,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -281,27 +281,27 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   alignment: Alignment.centerLeft,
                   decoration: BoxDecoration(
-                    color: Nocturne.bg,
+                    color: Nocturne.palette.bg,
                     borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: Nocturne.neutral800, width: 1),
+                    border: Border.all(color: Nocturne.palette.edge, width: 1),
                   ),
                   child: TextField(
                     controller: _model,
                     autocorrect: false,
                     onChanged: (v) =>
                         _persist(_config.copyWith(model: v.trim())),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
-                      color: Nocturne.text,
+                      color: Nocturne.palette.text,
                     ),
-                    cursorColor: Nocturne.accent,
+                    cursorColor: Nocturne.palette.accent,
                     decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
                       hintText: provider.defaultModel,
-                      hintStyle: const TextStyle(
+                      hintStyle: TextStyle(
                         fontSize: 13.5,
-                        color: Nocturne.neutral600,
+                        color: Nocturne.palette.faint,
                       ),
                     ),
                   ),
@@ -309,19 +309,19 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                 const SizedBox(height: 6),
                 Text(
                   'Leave blank to use ${provider.defaultModel}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
-                    color: Nocturne.neutral500,
+                    color: Nocturne.palette.muted,
                   ),
                 ),
                 if (provider.needsBaseUrl) ...[
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'BASE URL',
                     style: TextStyle(
                       fontSize: 10.5,
                       letterSpacing: 0.7,
-                      color: Nocturne.neutral500,
+                      color: Nocturne.palette.muted,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -330,10 +330,10 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     alignment: Alignment.centerLeft,
                     decoration: BoxDecoration(
-                      color: Nocturne.bg,
+                      color: Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(11),
                       border:
-                          Border.all(color: Nocturne.neutral800, width: 1),
+                          Border.all(color: Nocturne.palette.edge, width: 1),
                     ),
                     child: TextField(
                       controller: _baseUrl,
@@ -341,28 +341,28 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                       keyboardType: TextInputType.url,
                       onChanged: (v) =>
                           _persist(_config.copyWith(baseUrl: v.trim())),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
-                        color: Nocturne.text,
+                        color: Nocturne.palette.text,
                       ),
-                      cursorColor: Nocturne.accent,
-                      decoration: const InputDecoration(
+                      cursorColor: Nocturne.palette.accent,
+                      decoration: InputDecoration(
                         isDense: true,
                         border: InputBorder.none,
                         hintText: 'https://openrouter.ai/api/v1',
                         hintStyle: TextStyle(
                           fontSize: 13.5,
-                          color: Nocturne.neutral600,
+                          color: Nocturne.palette.faint,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'OpenAI-compatible base URL (OpenRouter, Groq, Ollama, LM Studio)',
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: Nocturne.neutral500,
+                      color: Nocturne.palette.muted,
                     ),
                   ),
                 ],
@@ -377,30 +377,30 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                           height: 42,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: Nocturne.accent600,
+                            color: Nocturne.palette.tintEdge,
                             borderRadius: BorderRadius.circular(11),
                           ),
                           child: _testing
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Nocturne.text,
+                                    color: Nocturne.palette.text,
                                   ),
                                 )
-                              : const Row(
+                              : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(PhRegular.sparkle,
-                                        size: 16, color: Nocturne.text),
+                                        size: 16, color: Nocturne.palette.text),
                                     SizedBox(width: 7),
                                     Text(
                                       'Test connection',
                                       style: TextStyle(
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w600,
-                                        color: Nocturne.text,
+                                        color: Nocturne.palette.text,
                                       ),
                                     ),
                                   ],
@@ -417,16 +417,16 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                     decoration: BoxDecoration(
                       color: Nocturne.mix(
                         _testOk == true
-                            ? NocturneSemantic.income
-                            : NocturneSemantic.expense,
+                            ? Nocturne.palette.income
+                            : Nocturne.palette.expense,
                         12,
                       ),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: Nocturne.mix(
                           _testOk == true
-                              ? NocturneSemantic.income
-                              : NocturneSemantic.expense,
+                              ? Nocturne.palette.income
+                              : Nocturne.palette.expense,
                           35,
                         ),
                         width: 1,
@@ -440,16 +440,16 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
                               : PhRegular.warning,
                           size: 16,
                           color: _testOk == true
-                              ? NocturneSemantic.income
-                              : NocturneSemantic.expense,
+                              ? Nocturne.palette.income
+                              : Nocturne.palette.expense,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _testMessage!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
-                              color: Nocturne.neutral200,
+                              color: Nocturne.palette.text,
                             ),
                           ),
                         ),
@@ -461,7 +461,7 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
             ),
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
           child: Text(
             'Your API key stays on this device and is never shared with your '
@@ -471,7 +471,7 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
             style: TextStyle(
               fontSize: 11.5,
               height: 1.5,
-              color: Nocturne.neutral600,
+              color: Nocturne.palette.faint,
             ),
           ),
         ),
@@ -509,15 +509,15 @@ class _ProviderRow extends StatelessWidget {
                         fontSize: 14,
                         fontWeight:
                             selected ? FontWeight.w600 : FontWeight.w400,
-                        color: Nocturne.text,
+                        color: Nocturne.palette.text,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Default: ${provider.defaultModel}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
-                        color: Nocturne.neutral500,
+                        color: Nocturne.palette.muted,
                       ),
                     ),
                   ],
@@ -529,14 +529,14 @@ class _ProviderRow extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: selected ? Nocturne.accent600 : Colors.transparent,
+                  color: selected ? Nocturne.palette.tintEdge : Colors.transparent,
                   border: Border.all(
-                    color: selected ? Nocturne.accent500 : Nocturne.neutral700,
+                    color: selected ? Nocturne.palette.accent500 : Nocturne.palette.faint,
                     width: 1.5,
                   ),
                 ),
                 child: selected
-                    ? const Icon(PhBold.check, size: 11, color: Nocturne.text)
+                    ? Icon(PhBold.check, size: 11, color: Nocturne.palette.text)
                     : null,
               ),
             ],
@@ -554,10 +554,10 @@ class _Kicker extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
         child: Text(
           text.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             letterSpacing: 0.77,
-            color: Nocturne.neutral500,
+            color: Nocturne.palette.muted,
           ),
         ),
       );
@@ -572,7 +572,7 @@ class _Card extends StatelessWidget {
         margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.circular(18),
         ),
         child: child,
@@ -585,10 +585,10 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10.5,
           letterSpacing: 0.7,
-          color: Nocturne.neutral500,
+          color: Nocturne.palette.muted,
         ),
       );
 }
@@ -603,9 +603,9 @@ class _Field extends StatelessWidget {
         padding: const EdgeInsets.only(left: 12, right: 6),
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-          color: Nocturne.bg,
+          color: Nocturne.palette.bg,
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Nocturne.neutral800, width: 1),
+          border: Border.all(color: Nocturne.palette.edge, width: 1),
         ),
         child: child,
       );
@@ -632,9 +632,9 @@ class _KeyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (keyInfo.ok) {
-      true => ('Working', NocturneSemantic.income),
-      false => ('Failed', NocturneSemantic.expense),
-      null => ('Not tested', Nocturne.neutral500),
+      true => ('Working', Nocturne.palette.income),
+      false => ('Failed', Nocturne.palette.expense),
+      null => ('Not tested', Nocturne.palette.muted),
     };
     return GestureDetector(
       onTap: onSelect,
@@ -646,7 +646,7 @@ class _KeyRow extends StatelessWidget {
             Icon(
               active ? PhFill.checkCircle : PhRegular.circle,
               size: 18,
-              color: active ? Nocturne.accent400 : Nocturne.neutral600,
+              color: active ? Nocturne.palette.fabEdge : Nocturne.palette.faint,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -658,7 +658,7 @@ class _KeyRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                      color: Nocturne.text,
+                      color: Nocturne.palette.text,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -673,22 +673,22 @@ class _KeyRow extends StatelessWidget {
               tooltip: 'Test ${keyInfo.alias}',
               onPressed: testing ? null : onTest,
               icon: testing
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 14,
                       height: 14,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Nocturne.accent300,
+                        color: Nocturne.palette.accentMuted,
                       ),
                     )
-                  : const Icon(PhRegular.sparkle,
-                      size: 17, color: Nocturne.neutral400),
+                  : Icon(PhRegular.sparkle,
+                      size: 17, color: Nocturne.palette.subtle),
             ),
             IconButton(
               tooltip: 'Delete ${keyInfo.alias}',
               onPressed: onDelete,
-              icon: const Icon(PhRegular.trash,
-                  size: 17, color: Nocturne.neutral400),
+              icon: Icon(PhRegular.trash,
+                  size: 17, color: Nocturne.palette.subtle),
             ),
           ],
         ),

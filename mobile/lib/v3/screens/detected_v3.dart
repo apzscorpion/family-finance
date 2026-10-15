@@ -34,20 +34,20 @@ class DetectedV3 extends StatelessWidget {
         ),
         const _DetectionStatus(),
         if (s.detected.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 56, horizontal: 16),
             child: Column(
               children: [
-                Icon(PhRegular.tray, size: 38, color: Nocturne.neutral600),
+                Icon(PhRegular.tray, size: 38, color: Nocturne.palette.faint),
                 SizedBox(height: 8),
                 Text('All reviewed',
                     style:
-                        TextStyle(fontSize: 14, color: Nocturne.neutral300)),
+                        TextStyle(fontSize: 14, color: Nocturne.palette.neutral300)),
                 SizedBox(height: 4),
                 Text('New payment notifications will appear here',
                     textAlign: TextAlign.center,
                     style:
-                        TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+                        TextStyle(fontSize: 12, color: Nocturne.palette.muted)),
               ],
             ),
           )
@@ -70,20 +70,20 @@ class _DetectedCard extends StatelessWidget {
     final style = s.catStyle(d.categoryKey ?? 'shopping');
 
     final (confColor, confIcon) = switch (d.confidence) {
-      'high' => (NocturneSemantic.income, PhFill.checkCircle),
-      'duplicate' => (NocturneSemantic.expense, PhRegular.warning),
-      _ => (NocturneSemantic.warning, PhRegular.info),
+      'high' => (Nocturne.palette.income, PhFill.checkCircle),
+      'duplicate' => (Nocturne.palette.expense, PhRegular.warning),
+      _ => (Nocturne.palette.warning, PhRegular.info),
     };
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Nocturne.surface,
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: d.confidence == 'high'
-              ? Nocturne.neutral900
+              ? Nocturne.palette.line
               : Nocturne.mix(confColor, 40),
           width: 1,
         ),
@@ -93,15 +93,15 @@ class _DetectedCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(PhRegular.bellRinging,
-                  size: 14, color: Nocturne.neutral400),
+              Icon(PhRegular.bellRinging,
+                  size: 14, color: Nocturne.palette.subtle),
               const SizedBox(width: 8),
               Expanded(
                 child: Text('${d.sourceApp ?? 'Bank app'} · ${_when(d.detectedAt)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 11.5, color: Nocturne.neutral400)),
+                    style: TextStyle(
+                        fontSize: 11.5, color: Nocturne.palette.subtle)),
               ),
               Container(
                 padding:
@@ -141,23 +141,23 @@ class _DetectedCard extends StatelessWidget {
                     Text(d.merchant,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: Nocturne.text)),
+                            color: Nocturne.palette.text)),
                     Text('${style.name} · ${d.method ?? 'UPI'}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 12, color: Nocturne.neutral400)),
+                        style: TextStyle(
+                            fontSize: 12, color: Nocturne.palette.subtle)),
                   ],
                 ),
               ),
               V3Num(V3Design.inr(d.amount),
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 19,
                       fontWeight: FontWeight.w500,
-                      color: Nocturne.text)),
+                      color: Nocturne.palette.text)),
             ],
           ),
           if (d.snippet != null) ...[
@@ -166,24 +166,24 @@ class _DetectedCard extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 2),
                     child: Icon(PhRegular.quotes,
-                        size: 12, color: Nocturne.neutral600),
+                        size: 12, color: Nocturne.palette.faint),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(d.snippet,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 11.5,
                             height: 1.5,
-                            color: Nocturne.neutral400)),
+                            color: Nocturne.palette.subtle)),
                   ),
                 ],
               ),
@@ -200,8 +200,8 @@ class _DetectedCard extends StatelessWidget {
               Expanded(
                 child: _Action(
                   label: 'Ignore',
-                  border: Nocturne.neutral800,
-                  color: Nocturne.neutral400,
+                  border: Nocturne.palette.edge,
+                  color: Nocturne.palette.subtle,
                   onTap: () => s.resolveDetected(d, 'ignored'),
                 ),
               ),
@@ -210,9 +210,9 @@ class _DetectedCard extends StatelessWidget {
                 flex: 2,
                 child: _Action(
                   label: 'Add ${V3Design.inrShort(d.amount)}',
-                  border: Nocturne.accent,
-                  color: Nocturne.accent100,
-                  fill: Nocturne.mix(Nocturne.accent, 14),
+                  border: Nocturne.palette.accent,
+                  color: Nocturne.palette.accentLight,
+                  fill: Nocturne.mix(Nocturne.palette.accent, 14),
                   onTap: () => s.resolveDetected(d, 'added'),
                 ),
               ),
@@ -291,24 +291,24 @@ class _DetectionBanner extends StatelessWidget {
           margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Nocturne.accent900,
+            color: Nocturne.palette.tint,
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Row(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(PhRegular.bellRinging, size: 17, color: Nocturne.accent200),
+              Icon(PhRegular.bellRinging, size: 17, color: Nocturne.palette.accentLight),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Read from bank & UPI app notifications on this phone. '
                   'Your SMS inbox is never accessed.',
                   style: TextStyle(
-                      fontSize: 12, height: 1.45, color: Nocturne.accent200),
+                      fontSize: 12, height: 1.45, color: Nocturne.palette.accentLight),
                 ),
               ),
               SizedBox(width: 8),
-              Icon(PhRegular.caretRight, size: 14, color: Nocturne.accent300),
+              Icon(PhRegular.caretRight, size: 14, color: Nocturne.palette.accentMuted),
             ],
           ),
         ),
@@ -389,14 +389,14 @@ class _DetectionStatusState extends State<_DetectionStatus>
         margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Nocturne.surface,
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Nocturne.neutral800, width: 1),
+          border: Border.all(color: Nocturne.palette.edge, width: 1),
         ),
-        child: const Row(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(PhRegular.info, size: 17, color: Nocturne.neutral400),
+            Icon(PhRegular.info, size: 17, color: Nocturne.palette.subtle),
             SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -405,7 +405,7 @@ class _DetectionStatusState extends State<_DetectionStatus>
                 'from the Play Store. Add payments here by hand, or install '
                 'the detection build over USB.',
                 style: TextStyle(
-                    fontSize: 12.5, height: 1.45, color: Nocturne.neutral400),
+                    fontSize: 12.5, height: 1.45, color: Nocturne.palette.subtle),
               ),
             ),
           ],
@@ -423,20 +423,20 @@ class _DetectionStatusState extends State<_DetectionStatus>
           margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Nocturne.surface,
+            color: Nocturne.palette.surface,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Nocturne.neutral800, width: 1),
+            border: Border.all(color: Nocturne.palette.edge, width: 1),
           ),
           child: Row(
             children: [
-              const Icon(PhRegular.warning,
-                  size: 17, color: NocturneSemantic.warning),
+              Icon(PhRegular.warning,
+                  size: 17, color: Nocturne.palette.warning),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Detection is off — payments will not be added automatically',
                   style: TextStyle(
-                      fontSize: 12.5, height: 1.4, color: Nocturne.neutral300),
+                      fontSize: 12.5, height: 1.4, color: Nocturne.palette.neutral300),
                 ),
               ),
               Container(
@@ -444,11 +444,11 @@ class _DetectionStatusState extends State<_DetectionStatus>
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Nocturne.accent, width: 1),
+                  border: Border.all(color: Nocturne.palette.accent, width: 1),
                 ),
-                child: const Text('Turn on',
+                child: Text('Turn on',
                     style:
-                        TextStyle(fontSize: 11.5, color: Nocturne.accent200)),
+                        TextStyle(fontSize: 11.5, color: Nocturne.palette.accentLight)),
               ),
             ],
           ),
@@ -467,14 +467,14 @@ class _DetectionStatusState extends State<_DetectionStatus>
             Icon(_busy ? PhRegular.arrowsClockwise : PhFill.checkCircle,
                 size: 14,
                 color: _busy
-                    ? Nocturne.neutral400
-                    : NocturneSemantic.income),
+                    ? Nocturne.palette.subtle
+                    : Nocturne.palette.income),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 _busy ? 'Checking…' : 'Detection is on · tap to check now',
-                style: const TextStyle(
-                    fontSize: 12, color: Nocturne.neutral500),
+                style: TextStyle(
+                    fontSize: 12, color: Nocturne.palette.muted),
               ),
             ),
           ],

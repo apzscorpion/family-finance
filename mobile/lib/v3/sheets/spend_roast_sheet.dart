@@ -60,8 +60,8 @@ class _SpendRoastSheetState extends State<SpendRoastSheet> {
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -71,7 +71,7 @@ class _SpendRoastSheetState extends State<SpendRoastSheet> {
             child: Container(
               width: 36,
               height: 4,
-              decoration: BoxDecoration(color: Nocturne.neutral700, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: Nocturne.palette.faint, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 12),
@@ -80,9 +80,9 @@ class _SpendRoastSheetState extends State<SpendRoastSheet> {
           Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
             child: Row(
               children: [
@@ -114,7 +114,7 @@ class _SpendRoastSheetState extends State<SpendRoastSheet> {
           padding: const EdgeInsets.symmetric(vertical: 8),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? Nocturne.surface : Colors.transparent,
+            color: selected ? Nocturne.palette.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Text(
@@ -122,7 +122,7 @@ class _SpendRoastSheetState extends State<SpendRoastSheet> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-              color: selected ? Nocturne.text : Nocturne.neutral400,
+              color: selected ? Nocturne.palette.text : Nocturne.palette.subtle,
             ),
           ),
         ),
@@ -186,7 +186,7 @@ ${roast.punchline}
                       ),
                     ),
                     const Spacer(),
-                    const Text('KINPURSE AI', style: TextStyle(fontSize: 10, letterSpacing: 1.2, fontWeight: FontWeight.w600, color: Nocturne.neutral400)),
+                    Text('KINPURSE AI', style: TextStyle(fontSize: 10, letterSpacing: 1.2, fontWeight: FontWeight.w600, color: Nocturne.neutral400)),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -204,10 +204,10 @@ ${roast.punchline}
 
                 Text(
                   '"${roast.punchline}"',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13.5,
                     fontStyle: FontStyle.italic,
-                    color: Nocturne.neutral200,
+                    color: Nocturne.text,
                     height: 1.5,
                   ),
                 ),
@@ -222,11 +222,11 @@ ${roast.punchline}
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(PhRegular.lightning, size: 14, color: Nocturne.accent200),
+                      Icon(PhRegular.lightning, size: 14, color: Nocturne.accent200),
                       const SizedBox(width: 6),
                       Text(
                         roast.highlightStat,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Nocturne.accent100),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Nocturne.accent200),
                       ),
                     ],
                   ),
@@ -242,8 +242,8 @@ ${roast.punchline}
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Nocturne.text,
-                    side: const BorderSide(color: Nocturne.neutral700),
+                    foregroundColor: Nocturne.palette.text,
+                    side: BorderSide(color: Nocturne.palette.faint),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -280,18 +280,18 @@ ${roast.punchline}
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(PhRegular.sparkle, size: 18, color: Nocturne.accent200),
+                Icon(PhRegular.sparkle, size: 18, color: Nocturne.palette.accentLight),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Roasts analyze your actual Swiggy, Uber, coffee and impulse buys. New funny punchlines generate every 30 days.',
-                    style: TextStyle(color: Nocturne.neutral400, fontSize: 11.5, height: 1.4),
+                    style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11.5, height: 1.4),
                   ),
                 ),
               ],
@@ -317,17 +317,17 @@ ${roast.punchline}
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Nocturne.accent800.withValues(alpha: 0.4), Nocturne.surface],
+                colors: [Nocturne.palette.accent800.withValues(alpha: 0.4), Nocturne.palette.surface],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Nocturne.accent600),
+              border: Border.all(color: Nocturne.palette.tintEdge),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Your Family\'s Personal Inflation Rate', style: TextStyle(color: Nocturne.neutral300, fontSize: 12)),
+                Text('Your Family\'s Personal Inflation Rate', style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 12)),
                 const SizedBox(height: 6),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -335,23 +335,23 @@ ${roast.punchline}
                   children: [
                     Text(
                       '+${inf.overallInflationPct}%',
-                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Nocturne.accent100),
+                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Nocturne.palette.accentLight),
                     ),
                     const SizedBox(width: 8),
-                    const Text('vs prior period', style: TextStyle(fontSize: 13, color: Nocturne.neutral400)),
+                    Text('vs prior period', style: TextStyle(fontSize: 13, color: Nocturne.palette.subtle)),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Your household spent ${V3Design.inr(inf.currentSpend)} on staples this month, compared to ${V3Design.inr(inf.priorSpend)} in the previous period.',
-                  style: const TextStyle(color: Nocturne.neutral300, fontSize: 12, height: 1.4),
+                  style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 12, height: 1.4),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          const Text('Essential Staples Breakdown:', style: TextStyle(color: Nocturne.text, fontSize: 13, fontWeight: FontWeight.bold)),
+          Text('Essential Staples Breakdown:', style: TextStyle(color: Nocturne.palette.text, fontSize: 13, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
 
           _buildInflationItem(
@@ -377,18 +377,18 @@ ${roast.punchline}
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(PhRegular.info, size: 16, color: Nocturne.neutral400),
+                Icon(PhRegular.info, size: 16, color: Nocturne.palette.subtle),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Unlike national CPI surveys, this inflation index is calculated exclusively from what your family actually paid for recurring essentials.',
-                    style: TextStyle(color: Nocturne.neutral400, fontSize: 11, height: 1.4),
+                    style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11, height: 1.4),
                   ),
                 ),
               ],
@@ -411,28 +411,28 @@ ${roast.punchline}
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Nocturne.surface,
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Nocturne.neutral800),
+        border: Border.all(color: Nocturne.palette.edge),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 18, color: Nocturne.accent200),
+            child: Icon(icon, size: 18, color: Nocturne.palette.accentLight),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: Nocturne.text, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(title, style: TextStyle(color: Nocturne.palette.text, fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text(desc, style: const TextStyle(color: Nocturne.neutral400, fontSize: 11)),
+                Text(desc, style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11)),
               ],
             ),
           ),
@@ -440,7 +440,7 @@ ${roast.punchline}
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: (isIncrease ? NocturneSemantic.expense : NocturneSemantic.income).withValues(alpha: 0.16),
+              color: (isIncrease ? Nocturne.palette.expense : Nocturne.palette.income).withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -448,7 +448,7 @@ ${roast.punchline}
                 Icon(
                   isIncrease ? PhRegular.trendUp : PhRegular.trendDown,
                   size: 13,
-                  color: isIncrease ? NocturneSemantic.expense : NocturneSemantic.income,
+                  color: isIncrease ? Nocturne.palette.expense : Nocturne.palette.income,
                 ),
                 const SizedBox(width: 3),
                 Text(
@@ -456,7 +456,7 @@ ${roast.punchline}
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.bold,
-                    color: isIncrease ? NocturneSemantic.expense : NocturneSemantic.income,
+                    color: isIncrease ? Nocturne.palette.expense : Nocturne.palette.income,
                   ),
                 ),
               ],
@@ -497,24 +497,24 @@ ${roast.punchline}
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.accent600, width: 1.2),
+              border: Border.all(color: Nocturne.palette.tintEdge, width: 1.2),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(PhRegular.shareNetwork, size: 18, color: Nocturne.accent200),
+                    Icon(PhRegular.shareNetwork, size: 18, color: Nocturne.palette.accentLight),
                     SizedBox(width: 8),
-                    Text('Split with anyone — no app needed', style: TextStyle(color: Nocturne.text, fontSize: 13.5, fontWeight: FontWeight.bold)),
+                    Text('Split with anyone — no app needed', style: TextStyle(color: Nocturne.palette.text, fontSize: 13.5, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Send a WhatsApp link to friends. Tapping it opens their Google Pay / PhonePe with your share amount already filled in.',
-                  style: TextStyle(color: Nocturne.neutral300, fontSize: 11.5, height: 1.4),
+                  style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 11.5, height: 1.4),
                 ),
                 const SizedBox(height: 12),
 
@@ -524,10 +524,10 @@ ${roast.punchline}
                       flex: 2,
                       child: TextField(
                         controller: _splitTitleCtrl,
-                        style: const TextStyle(color: Nocturne.text, fontSize: 13),
-                        decoration: const InputDecoration(
+                        style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
+                        decoration: InputDecoration(
                           labelText: 'What is this for?',
-                          labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                          labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -539,11 +539,11 @@ ${roast.punchline}
                       child: TextField(
                         controller: _splitAmountCtrl,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(color: Nocturne.text, fontSize: 13),
+                        style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
                         onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Total (₹)',
-                          labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                          labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -556,22 +556,22 @@ ${roast.punchline}
                 // People counter
                 Row(
                   children: [
-                    const Text('Split between:', style: TextStyle(color: Nocturne.neutral300, fontSize: 12)),
+                    Text('Split between:', style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 12)),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(PhRegular.minus, size: 16, color: Nocturne.accent200),
+                      icon: Icon(PhRegular.minus, size: 16, color: Nocturne.palette.accentLight),
                       onPressed: _splitCount > 2 ? () => setState(() => _splitCount--) : null,
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Nocturne.surface,
+                        color: Nocturne.palette.surface,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text('$_splitCount people', style: const TextStyle(color: Nocturne.text, fontWeight: FontWeight.bold, fontSize: 12)),
+                      child: Text('$_splitCount people', style: TextStyle(color: Nocturne.palette.text, fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
                     IconButton(
-                      icon: const Icon(PhRegular.plus, size: 16, color: Nocturne.accent200),
+                      icon: Icon(PhRegular.plus, size: 16, color: Nocturne.palette.accentLight),
                       onPressed: () => setState(() => _splitCount++),
                     ),
                   ],
@@ -585,13 +585,13 @@ ${roast.punchline}
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: NocturneSemantic.income.withValues(alpha: 0.12),
+              color: Nocturne.palette.income.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: NocturneSemantic.income, width: 1),
+              border: Border.all(color: Nocturne.palette.income, width: 1),
             ),
             child: Row(
               children: [
-                const Icon(PhRegular.coins, color: NocturneSemantic.income, size: 22),
+                Icon(PhRegular.coins, color: Nocturne.palette.income, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -599,12 +599,12 @@ ${roast.punchline}
                     children: [
                       Text(
                         'Each person pays: ${V3Design.inr(perPerson)}',
-                        style: const TextStyle(color: Nocturne.text, fontSize: 14, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Nocturne.palette.text, fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Will be paid to UPI ID: $myUpi',
-                        style: const TextStyle(color: NocturneSemantic.income, fontSize: 11.5),
+                        style: TextStyle(color: Nocturne.palette.income, fontSize: 11.5),
                       ),
                     ],
                   ),
@@ -620,8 +620,8 @@ ${roast.punchline}
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Nocturne.text,
-                    side: const BorderSide(color: Nocturne.neutral700),
+                    foregroundColor: Nocturne.palette.text,
+                    side: BorderSide(color: Nocturne.palette.faint),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -639,8 +639,8 @@ ${roast.punchline}
               Expanded(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Nocturne.accent,
-                    foregroundColor: Nocturne.bg,
+                    backgroundColor: Nocturne.palette.accent,
+                    foregroundColor: Nocturne.palette.bg,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),

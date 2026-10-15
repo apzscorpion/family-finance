@@ -95,10 +95,10 @@ class _ImportReviewSheetState extends State<ImportReviewSheet> {
     return Container(
       constraints:
           BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral700, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.faint, width: 1)),
       ),
       padding: EdgeInsets.fromLTRB(
           16, 14, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
@@ -108,15 +108,15 @@ class _ImportReviewSheetState extends State<ImportReviewSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(PhRegular.sparkle, size: 18, color: Nocturne.accent200),
+                Icon(PhRegular.sparkle, size: 18, color: Nocturne.palette.accentLight),
                 SizedBox(width: 8),
                 Text('AI import review',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text)),
+                        color: Nocturne.palette.text)),
               ],
             ),
             const SizedBox(height: 10),
@@ -184,18 +184,18 @@ class _ImportReviewSheetState extends State<ImportReviewSheet> {
                       minLines: 1,
                       maxLines: 3,
                       style:
-                          const TextStyle(fontSize: 13.5, color: Nocturne.text),
+                          TextStyle(fontSize: 13.5, color: Nocturne.palette.text),
                       decoration: InputDecoration(
                         hintText: 'e.g. Allowance is my salary; '
                             '"With Sinu" is dining',
-                        hintStyle: const TextStyle(
-                            fontSize: 13, color: Nocturne.neutral500),
+                        hintStyle: TextStyle(
+                            fontSize: 13, color: Nocturne.palette.muted),
                         filled: true,
-                        fillColor: Nocturne.bg,
+                        fillColor: Nocturne.palette.bg,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide:
-                              const BorderSide(color: Nocturne.neutral800),
+                              BorderSide(color: Nocturne.palette.edge),
                         ),
                       ),
                     ),
@@ -204,10 +204,10 @@ class _ImportReviewSheetState extends State<ImportReviewSheet> {
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
                         onPressed: _asking ? null : _ask,
-                        icon: const Icon(PhRegular.arrowsClockwise,
-                            size: 15, color: Nocturne.accent200),
-                        label: const Text('Ask AI again',
-                            style: TextStyle(color: Nocturne.accent200)),
+                        icon: Icon(PhRegular.arrowsClockwise,
+                            size: 15, color: Nocturne.palette.accentLight),
+                        label: Text('Ask AI again',
+                            style: TextStyle(color: Nocturne.palette.accentLight)),
                       ),
                     ),
                   ],
@@ -222,15 +222,15 @@ class _ImportReviewSheetState extends State<ImportReviewSheet> {
                 height: 50,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Nocturne.accent700,
+                  color: Nocturne.palette.switchOn,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Nocturne.accent400),
+                  border: Border.all(color: Nocturne.palette.fabEdge),
                 ),
-                child: const Text('Apply to import',
+                child: Text('Apply to import',
                     style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.accent100)),
+                        color: Nocturne.palette.accentLight)),
               ),
             ),
           ],
@@ -252,7 +252,7 @@ class _Note extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(11),
         decoration: BoxDecoration(
-          color: amber ? const Color(0x22E2C06D) : Nocturne.accent900,
+          color: amber ? const Color(0x22E2C06D) : Nocturne.palette.tint,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -260,12 +260,12 @@ class _Note extends StatelessWidget {
           children: [
             Icon(icon,
                 size: 15,
-                color: amber ? const Color(0xFFE2C06D) : Nocturne.accent200),
+                color: amber ? const Color(0xFFE2C06D) : Nocturne.palette.accentLight),
             const SizedBox(width: 8),
             Expanded(
               child: Text(text,
-                  style: const TextStyle(
-                      fontSize: 12.5, height: 1.4, color: Nocturne.neutral200)),
+                  style: TextStyle(
+                      fontSize: 12.5, height: 1.4, color: Nocturne.palette.text)),
             ),
           ],
         ),
@@ -280,11 +280,11 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 12, bottom: 6),
         child: Text(text,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 11,
                 letterSpacing: 0.8,
                 fontWeight: FontWeight.w600,
-                color: Nocturne.neutral400)),
+                color: Nocturne.palette.subtle)),
       );
 }
 
@@ -314,18 +314,18 @@ class _MapRow extends StatelessWidget {
             child: Text('$label · $count',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: Nocturne.text)),
+                style: TextStyle(fontSize: 13, color: Nocturne.palette.text)),
           ),
-          const Icon(PhRegular.caretRight,
-              size: 12, color: Nocturne.neutral600),
+          Icon(PhRegular.caretRight,
+              size: 12, color: Nocturne.palette.faint),
           const SizedBox(width: 6),
           DropdownButton<String?>(
             value: known ? value : null,
-            hint: const Text('Auto',
-                style: TextStyle(fontSize: 13, color: Nocturne.neutral500)),
-            dropdownColor: Nocturne.surface,
+            hint: Text('Auto',
+                style: TextStyle(fontSize: 13, color: Nocturne.palette.muted)),
+            dropdownColor: Nocturne.palette.surface,
             underline: const SizedBox.shrink(),
-            style: const TextStyle(fontSize: 13, color: Nocturne.accent200),
+            style: TextStyle(fontSize: 13, color: Nocturne.palette.accentLight),
             items: [
               for (final o in options)
                 DropdownMenuItem(value: o.$1, child: Text(o.$2)),
@@ -362,8 +362,8 @@ class _TypeRow extends StatelessWidget {
               Icon(change.accepted ? PhFill.checkCircle : PhRegular.circle,
                   size: 18,
                   color: change.accepted
-                      ? Nocturne.accent
-                      : Nocturne.neutral500),
+                      ? Nocturne.palette.accent
+                      : Nocturne.palette.muted),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -374,12 +374,12 @@ class _TypeRow extends StatelessWidget {
                         '${change.isIncome ? 'income' : 'expense'}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 13, color: Nocturne.text)),
+                        style: TextStyle(
+                            fontSize: 13, color: Nocturne.palette.text)),
                     if (change.reason.isNotEmpty)
                       Text(change.reason,
-                          style: const TextStyle(
-                              fontSize: 11.5, color: Nocturne.neutral500)),
+                          style: TextStyle(
+                              fontSize: 11.5, color: Nocturne.palette.muted)),
                   ],
                 ),
               ),

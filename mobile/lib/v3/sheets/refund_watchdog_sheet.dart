@@ -120,8 +120,8 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
       builder: (ctx) => Container(
         height: MediaQuery.of(ctx).size.height * 0.85,
         padding: const EdgeInsets.all(18),
-        decoration: const BoxDecoration(
-          color: Nocturne.surface,
+        decoration: BoxDecoration(
+          color: Nocturne.palette.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -131,47 +131,47 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
               child: Container(
                 width: 36,
                 height: 4,
-                decoration: BoxDecoration(color: Nocturne.neutral700, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: Nocturne.palette.faint, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 14),
             Row(
               children: [
-                const Icon(PhRegular.warning, color: NocturneSemantic.expense, size: 20),
+                Icon(PhRegular.warning, color: Nocturne.palette.expense, size: 20),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'RBI Compensation Grievance Draft',
-                    style: TextStyle(color: Nocturne.text, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Nocturne.palette.text, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Nocturne.neutral400),
+                  icon: Icon(Icons.close, color: Nocturne.palette.subtle),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
               ],
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Cites RBI Circular DPSS.CO.PD No.629 on failed UPI/card reversals beyond T+5 calendar days (₹100/day compensation).',
-              style: TextStyle(color: Nocturne.neutral400, fontSize: 11.5, height: 1.4),
+              style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11.5, height: 1.4),
             ),
             const SizedBox(height: 12),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Nocturne.bg,
+                  color: Nocturne.palette.bg,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Nocturne.neutral800),
+                  border: Border.all(color: Nocturne.palette.edge),
                 ),
                 child: SingleChildScrollView(
                   child: SelectableText(
                     letter,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 11.5,
-                      color: Nocturne.neutral200,
+                      color: Nocturne.palette.text,
                       height: 1.45,
                     ),
                   ),
@@ -184,8 +184,8 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Nocturne.text,
-                      side: const BorderSide(color: Nocturne.neutral700),
+                      foregroundColor: Nocturne.palette.text,
+                      side: BorderSide(color: Nocturne.palette.faint),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -203,8 +203,8 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Nocturne.accent,
-                      foregroundColor: Nocturne.bg,
+                      backgroundColor: Nocturne.palette.accent,
+                      foregroundColor: Nocturne.palette.bg,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -235,8 +235,8 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -246,7 +246,7 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
             child: Container(
               width: 36,
               height: 4,
-              decoration: BoxDecoration(color: Nocturne.neutral700, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: Nocturne.palette.faint, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 12),
@@ -257,29 +257,29 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Nocturne.accent.withValues(alpha: 0.16),
+                  color: Nocturne.palette.accent.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(PhRegular.arrowCounterClockwise, size: 20, color: Nocturne.accent200),
+                child: Icon(PhRegular.arrowCounterClockwise, size: 20, color: Nocturne.palette.accentLight),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Never Lose A Refund Again',
-                      style: TextStyle(color: Nocturne.text, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Nocturne.palette.text, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       'Automatic 5-day SLA watch & RBI dispute drafter',
-                      style: TextStyle(color: Nocturne.neutral400, fontSize: 11.5),
+                      style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11.5),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: Icon(_showAddForm ? Icons.close : PhRegular.plus, color: Nocturne.accent200),
+                icon: Icon(_showAddForm ? Icons.close : PhRegular.plus, color: Nocturne.palette.accentLight),
                 onPressed: () => setState(() => _showAddForm = !_showAddForm),
               ),
             ],
@@ -291,13 +291,13 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: NocturneSemantic.expense.withValues(alpha: 0.14),
+                color: Nocturne.palette.expense.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: NocturneSemantic.expense, width: 1.2),
+                border: Border.all(color: Nocturne.palette.expense, width: 1.2),
               ),
               child: Row(
                 children: [
-                  const Icon(PhFill.warning, color: NocturneSemantic.expense, size: 22),
+                  Icon(PhFill.warning, color: Nocturne.palette.expense, size: 22),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -305,12 +305,12 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                       children: [
                         Text(
                           '🚨 ${delayed.length} Refund${delayed.length == 1 ? '' : 's'} Overdue (>5 Days)',
-                          style: const TextStyle(color: NocturneSemantic.expense, fontWeight: FontWeight.bold, fontSize: 13),
+                          style: TextStyle(color: Nocturne.palette.expense, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
+                        Text(
                           'RBI mandates refund in T+5 days. Compensation of ₹100/day applies. Tap below to generate complaint letter.',
-                          style: TextStyle(color: Nocturne.neutral300, fontSize: 11),
+                          style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 11),
                         ),
                       ],
                     ),
@@ -338,23 +338,23 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                         padding: const EdgeInsets.symmetric(vertical: 40),
                         child: Column(
                           children: [
-                            const Icon(PhRegular.checkCircle, size: 40, color: NocturneSemantic.income),
+                            Icon(PhRegular.checkCircle, size: 40, color: Nocturne.palette.income),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               'No pending refunds',
-                              style: TextStyle(color: Nocturne.text, fontSize: 15, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: Nocturne.palette.text, fontSize: 15, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'Whenever a failed UPI debit occurs or a store initiates a refund, track it here. We will alert you if money is not back within 5 days.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Nocturne.neutral400, fontSize: 12, height: 1.4),
+                              style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12, height: 1.4),
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Nocturne.accent,
-                                foregroundColor: Nocturne.bg,
+                                backgroundColor: Nocturne.palette.accent,
+                                foregroundColor: Nocturne.palette.bg,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                               onPressed: () => setState(() => _showAddForm = true),
@@ -381,33 +381,33 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Nocturne.bg,
+        color: Nocturne.palette.bg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Nocturne.accent600),
+        border: Border.all(color: Nocturne.palette.tintEdge),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Track New Refund / Failed UPI', style: TextStyle(color: Nocturne.text, fontWeight: FontWeight.bold, fontSize: 14)),
+          Text('Track New Refund / Failed UPI', style: TextStyle(color: Nocturne.palette.text, fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 8),
 
           // Paste SMS box
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: Nocturne.palette.surface,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _smsPasteCtrl,
-                    style: const TextStyle(fontSize: 12, color: Nocturne.text),
-                    decoration: const InputDecoration(
+                    style: TextStyle(fontSize: 12, color: Nocturne.palette.text),
+                    decoration: InputDecoration(
                       hintText: 'Paste refund SMS / failed debit text…',
-                      hintStyle: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                      hintStyle: TextStyle(fontSize: 11.5, color: Nocturne.palette.muted),
                       border: InputBorder.none,
                       isDense: true,
                     ),
@@ -415,7 +415,7 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                 ),
                 TextButton(
                   onPressed: _scanSms,
-                  child: const Text('Auto-Fill', style: TextStyle(color: Nocturne.accent200, fontSize: 11, fontWeight: FontWeight.bold)),
+                  child: Text('Auto-Fill', style: TextStyle(color: Nocturne.palette.accentLight, fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -431,8 +431,8 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: ActionChip(
-                      label: Text(p, style: const TextStyle(fontSize: 11, color: Nocturne.text)),
-                      backgroundColor: Nocturne.surface,
+                      label: Text(p, style: TextStyle(fontSize: 11, color: Nocturne.palette.text)),
+                      backgroundColor: Nocturne.palette.surface,
                       onPressed: () => setState(() => _merchantCtrl.text = p),
                     ),
                   ),
@@ -447,10 +447,10 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                 flex: 2,
                 child: TextField(
                   controller: _merchantCtrl,
-                  style: const TextStyle(color: Nocturne.text, fontSize: 13),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
+                  decoration: InputDecoration(
                     labelText: 'Merchant / Platform',
-                    labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -462,10 +462,10 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                 child: TextField(
                   controller: _amountCtrl,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Nocturne.text, fontSize: 13),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
+                  decoration: InputDecoration(
                     labelText: 'Amount (₹)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -477,10 +477,10 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
 
           TextField(
             controller: _utrCtrl,
-            style: const TextStyle(color: Nocturne.text, fontSize: 13),
-            decoration: const InputDecoration(
+            style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
+            decoration: InputDecoration(
               labelText: 'UTR / Bank Reference (Optional)',
-              labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+              labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
               border: OutlineInputBorder(),
               isDense: true,
             ),
@@ -492,13 +492,13 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
             children: [
               TextButton(
                 onPressed: () => setState(() => _showAddForm = false),
-                child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400)),
+                child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle)),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Nocturne.accent,
-                  foregroundColor: Nocturne.bg,
+                  backgroundColor: Nocturne.palette.accent,
+                  foregroundColor: Nocturne.palette.bg,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: _saveRefund,
@@ -521,11 +521,11 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: r.isPending
-            ? (isDelayed ? NocturneSemantic.expense.withValues(alpha: 0.10) : Nocturne.surface)
-            : Nocturne.bg,
+            ? (isDelayed ? Nocturne.palette.expense.withValues(alpha: 0.10) : Nocturne.palette.surface)
+            : Nocturne.palette.bg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDelayed ? NocturneSemantic.expense : Nocturne.neutral800,
+          color: isDelayed ? Nocturne.palette.expense : Nocturne.palette.edge,
           width: isDelayed ? 1.2 : 1,
         ),
       ),
@@ -537,12 +537,12 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
               Expanded(
                 child: Text(
                   r.merchant,
-                  style: const TextStyle(color: Nocturne.text, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Nocturne.palette.text, fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
               Text(
                 V3Design.inr(r.amount),
-                style: const TextStyle(color: Nocturne.text, fontSize: 15, fontWeight: FontWeight.bold),
+                style: TextStyle(color: Nocturne.palette.text, fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -552,15 +552,15 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
             children: [
               Text(
                 'Initiated ${DateFormat('d MMM yyyy').format(r.initiatedAt)} ($days days ago)',
-                style: const TextStyle(color: Nocturne.neutral400, fontSize: 11),
+                style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11),
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: r.isPending
-                      ? (isDelayed ? NocturneSemantic.expense : NocturneSemantic.warning)
-                      : NocturneSemantic.income,
+                      ? (isDelayed ? Nocturne.palette.expense : Nocturne.palette.warning)
+                      : Nocturne.palette.income,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -570,7 +570,7 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: r.isPending && isDelayed ? Colors.white : Nocturne.bg,
+                    color: r.isPending && isDelayed ? Colors.white : Nocturne.palette.bg,
                   ),
                 ),
               ),
@@ -579,7 +579,7 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
 
           if (r.utrRef != null) ...[
             const SizedBox(height: 4),
-            Text('Ref/UTR: ${r.utrRef}', style: const TextStyle(fontSize: 10.5, color: Nocturne.neutral500)),
+            Text('Ref/UTR: ${r.utrRef}', style: TextStyle(fontSize: 10.5, color: Nocturne.palette.muted)),
           ],
 
           if (isDelayed) ...[
@@ -587,17 +587,17 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Nocturne.surface,
+                color: Nocturne.palette.surface,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  const Icon(PhRegular.bank, size: 14, color: Nocturne.accent200),
+                  Icon(PhRegular.bank, size: 14, color: Nocturne.palette.accentLight),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Exceeds RBI T+5 SLA. Accrued statutory compensation: ₹${comp.toStringAsFixed(0)} (₹100/day).',
-                      style: const TextStyle(fontSize: 11, color: Nocturne.accent200, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 11, color: Nocturne.palette.accentLight, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -611,9 +611,9 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
               if (r.isPending) ...[
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isDelayed ? NocturneSemantic.expense : Nocturne.surface,
-                    foregroundColor: isDelayed ? Colors.white : Nocturne.accent200,
-                    side: BorderSide(color: isDelayed ? NocturneSemantic.expense : Nocturne.neutral700),
+                    backgroundColor: isDelayed ? Nocturne.palette.expense : Nocturne.palette.surface,
+                    foregroundColor: isDelayed ? Colors.white : Nocturne.palette.accentLight,
+                    side: BorderSide(color: isDelayed ? Nocturne.palette.expense : Nocturne.palette.faint),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -624,14 +624,14 @@ class _RefundWatchdogSheetState extends State<RefundWatchdogSheet> {
                 const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => s.updateRefundStatus(r.id, 'received'),
-                  child: const Text('Mark Received', style: TextStyle(color: NocturneSemantic.income, fontSize: 11, fontWeight: FontWeight.bold)),
+                  child: Text('Mark Received', style: TextStyle(color: Nocturne.palette.income, fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
               ] else ...[
-                const Text('Refund resolved & credited', style: TextStyle(color: NocturneSemantic.income, fontSize: 11)),
+                Text('Refund resolved & credited', style: TextStyle(color: Nocturne.palette.income, fontSize: 11)),
                 const Spacer(),
                 TextButton(
                   onPressed: () => s.updateRefundStatus(r.id, 'pending'),
-                  child: const Text('Re-open', style: TextStyle(color: Nocturne.neutral500, fontSize: 11)),
+                  child: Text('Re-open', style: TextStyle(color: Nocturne.palette.muted, fontSize: 11)),
                 ),
               ],
             ],

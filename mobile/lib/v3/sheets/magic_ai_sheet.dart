@@ -75,8 +75,8 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -86,7 +86,7 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
             child: Container(
               width: 36,
               height: 4,
-              decoration: BoxDecoration(color: Nocturne.neutral700, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: Nocturne.palette.faint, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 12),
@@ -97,23 +97,23 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
               Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: Nocturne.accent.withValues(alpha: 0.16),
+                  color: Nocturne.palette.accent.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(PhRegular.sparkle, size: 20, color: Nocturne.accent200),
+                child: Icon(PhRegular.sparkle, size: 20, color: Nocturne.palette.accentLight),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'AI That Feels Like Magic',
-                      style: TextStyle(color: Nocturne.text, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Nocturne.palette.text, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       'Goal accelerator · Duplicate finder · Polite reminders',
-                      style: TextStyle(color: Nocturne.neutral400, fontSize: 11.5),
+                      style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11.5),
                     ),
                   ],
                 ),
@@ -126,9 +126,9 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
             child: Row(
               children: [
@@ -163,7 +163,7 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           padding: const EdgeInsets.symmetric(vertical: 8),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? Nocturne.surface : Colors.transparent,
+            color: selected ? Nocturne.palette.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Text(
@@ -171,7 +171,7 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-              color: selected ? Nocturne.text : Nocturne.neutral400,
+              color: selected ? Nocturne.palette.text : Nocturne.palette.subtle,
             ),
           ),
         ),
@@ -192,11 +192,11 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(PhRegular.target, size: 40, color: Nocturne.accent300),
+              Icon(PhRegular.target, size: 40, color: Nocturne.palette.accentMuted),
               const SizedBox(height: 12),
-              const Text('No savings goals yet', style: TextStyle(color: Nocturne.text, fontSize: 15, fontWeight: FontWeight.bold)),
+              Text('No savings goals yet', style: TextStyle(color: Nocturne.palette.text, fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              const Text('Create a family goal (e.g. Umrah 2027, New Car) first to simulate acceleration.', textAlign: TextAlign.center, style: TextStyle(color: Nocturne.neutral400, fontSize: 12)),
+              Text('Create a family goal (e.g. Umrah 2027, New Car) first to simulate acceleration.', textAlign: TextAlign.center, style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12)),
             ],
           ),
         ),
@@ -232,32 +232,32 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.accent600, width: 1.2),
+              border: Border.all(color: Nocturne.palette.tintEdge, width: 1.2),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Choose Goal to Accelerate:', style: TextStyle(color: Nocturne.neutral400, fontSize: 11)),
+                Text('Choose Goal to Accelerate:', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11)),
                 const SizedBox(height: 6),
                 DropdownButton<String>(
                   value: targetGoal.id,
                   isExpanded: true,
-                  dropdownColor: Nocturne.surface,
+                  dropdownColor: Nocturne.palette.surface,
                   underline: const SizedBox.shrink(),
                   items: [
                     for (final g in goals)
                       DropdownMenuItem(
                         value: g.id,
-                        child: Text('${g.name} (${V3Design.inr(g.targetAmount)})', style: const TextStyle(color: Nocturne.text, fontSize: 13, fontWeight: FontWeight.bold)),
+                        child: Text('${g.name} (${V3Design.inr(g.targetAmount)})', style: TextStyle(color: Nocturne.palette.text, fontSize: 13, fontWeight: FontWeight.bold)),
                       ),
                   ],
                   onChanged: (id) => setState(() => _selectedGoalId = id),
                 ),
                 const SizedBox(height: 12),
 
-                const Text('Choose Category to Cut:', style: TextStyle(color: Nocturne.neutral400, fontSize: 11)),
+                Text('Choose Category to Cut:', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11)),
                 const SizedBox(height: 6),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -272,10 +272,10 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                         Padding(
                           padding: const EdgeInsets.only(right: 6),
                           child: ChoiceChip(
-                            label: Text(entry[1], style: TextStyle(fontSize: 11, color: _selectedCategoryKey == entry[0] ? Nocturne.bg : Nocturne.text)),
+                            label: Text(entry[1], style: TextStyle(fontSize: 11, color: _selectedCategoryKey == entry[0] ? Nocturne.palette.bg : Nocturne.palette.text)),
                             selected: _selectedCategoryKey == entry[0],
-                            selectedColor: Nocturne.accent,
-                            backgroundColor: Nocturne.surface,
+                            selectedColor: Nocturne.palette.accent,
+                            backgroundColor: Nocturne.palette.surface,
                             onSelected: (_) => setState(() => _selectedCategoryKey = entry[0]),
                           ),
                         ),
@@ -286,9 +286,9 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
 
                 Row(
                   children: [
-                    Text('Cut spend by ${_cutPercentage.round()}%', style: const TextStyle(color: Nocturne.text, fontSize: 13, fontWeight: FontWeight.bold)),
+                    Text('Cut spend by ${_cutPercentage.round()}%', style: TextStyle(color: Nocturne.palette.text, fontSize: 13, fontWeight: FontWeight.bold)),
                     const Spacer(),
-                    Text('Current: ${V3Design.inr(catMonthlySpend)}/mo', style: const TextStyle(color: Nocturne.neutral400, fontSize: 11.5)),
+                    Text('Current: ${V3Design.inr(catMonthlySpend)}/mo', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11.5)),
                   ],
                 ),
                 Slider(
@@ -296,8 +296,8 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                   min: 10,
                   max: 75,
                   divisions: 13,
-                  activeColor: Nocturne.accent,
-                  inactiveColor: Nocturne.neutral800,
+                  activeColor: Nocturne.palette.accent,
+                  inactiveColor: Nocturne.palette.edge,
                   onChanged: (v) => setState(() => _cutPercentage = v),
                 ),
               ],
@@ -309,21 +309,21 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: NocturneSemantic.income.withValues(alpha: 0.12),
+              color: Nocturne.palette.income.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: NocturneSemantic.income, width: 1.2),
+              border: Border.all(color: Nocturne.palette.income, width: 1.2),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(PhRegular.lightning, color: NocturneSemantic.income, size: 22),
+                    Icon(PhRegular.lightning, color: Nocturne.palette.income, size: 22),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Reach "${targetGoal.name}" ${sim.monthsSaved} months sooner!',
-                        style: const TextStyle(color: Nocturne.text, fontSize: 15, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Nocturne.palette.text, fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -331,7 +331,7 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                 const SizedBox(height: 8),
                 Text(
                   'Trimming ${_cutPercentage.round()}% frees up ${V3Design.inr(sim.monthlySavings)} every month (${V3Design.inr(sim.annualSavings)} per year). You achieve the goal in ${sim.newCompletionMonths} months instead of ${targetGoal.remainingMonths ?? 12}.',
-                  style: const TextStyle(color: NocturneSemantic.income, fontSize: 12, height: 1.45),
+                  style: TextStyle(color: Nocturne.palette.income, fontSize: 12, height: 1.45),
                 ),
               ],
             ),
@@ -343,8 +343,8 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
             width: double.infinity,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Nocturne.accent,
-                foregroundColor: Nocturne.bg,
+                backgroundColor: Nocturne.palette.accent,
+                foregroundColor: Nocturne.palette.bg,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -386,13 +386,13 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(PhRegular.playCircle, size: 20, color: Nocturne.accent200),
+                Icon(PhRegular.playCircle, size: 20, color: Nocturne.palette.accentLight),
                 SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -400,11 +400,11 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                     children: [
                       Text(
                         'Family Subscription Audit',
-                        style: TextStyle(color: Nocturne.text, fontSize: 13.5, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Nocturne.palette.text, fontSize: 13.5, fontWeight: FontWeight.bold),
                       ),
                       Text(
                         'Detects when multiple family members pay for separate individual plans.',
-                        style: TextStyle(color: Nocturne.neutral400, fontSize: 11),
+                        style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11),
                       ),
                     ],
                   ),
@@ -420,14 +420,14 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                 padding: const EdgeInsets.symmetric(vertical: 36),
                 child: Column(
                   children: [
-                    const Icon(PhRegular.checkCircle, size: 40, color: NocturneSemantic.income),
+                    Icon(PhRegular.checkCircle, size: 40, color: Nocturne.palette.income),
                     const SizedBox(height: 10),
-                    const Text('No duplicate subscriptions found', style: TextStyle(color: Nocturne.text, fontSize: 14, fontWeight: FontWeight.bold)),
+                    Text('No duplicate subscriptions found', style: TextStyle(color: Nocturne.palette.text, fontSize: 14, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'None of your family members are currently paying for duplicate Spotify, YouTube or Netflix plans.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Nocturne.neutral400, fontSize: 11.5),
+                      style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11.5),
                     ),
                   ],
                 ),
@@ -439,32 +439,32 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: NocturneSemantic.warning.withValues(alpha: 0.12),
+                  color: Nocturne.palette.warning.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: NocturneSemantic.warning, width: 1.2),
+                  border: Border.all(color: Nocturne.palette.warning, width: 1.2),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(PhRegular.warning, color: NocturneSemantic.warning, size: 18),
+                        Icon(PhRegular.warning, color: Nocturne.palette.warning, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Duplicate ${d.serviceName} Subscriptions',
-                            style: const TextStyle(color: Nocturne.text, fontSize: 14, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: Nocturne.palette.text, fontSize: 14, fontWeight: FontWeight.bold),
                           ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: NocturneSemantic.income,
+                            color: Nocturne.palette.income,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             'Saves ${V3Design.inr(d.annualSavings)}/yr',
-                            style: const TextStyle(color: Nocturne.bg, fontSize: 10.5, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: Nocturne.palette.bg, fontSize: 10.5, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -472,12 +472,12 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                     const SizedBox(height: 8),
                     Text(
                       '${d.payerNames.join(" and ")} both pay for individual plans. Combined current cost: ${V3Design.inr(d.currentMonthlySpend)}/mo.',
-                      style: const TextStyle(color: Nocturne.neutral300, fontSize: 12),
+                      style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 12),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Switching to a shared ${d.familyPlanName} (${V3Design.inr(d.familyPlanMonthlyCost)}/mo) saves your family ${V3Design.inr(d.annualSavings)} every year.',
-                      style: const TextStyle(color: NocturneSemantic.warning, fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: Nocturne.palette.warning, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -518,11 +518,11 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                 flex: 2,
                 child: TextField(
                   controller: _recipientCtrl,
-                  style: const TextStyle(color: Nocturne.text, fontSize: 13),
+                  style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Who owes you?',
-                    labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -534,11 +534,11 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                 child: TextField(
                   controller: _reminderAmountCtrl,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Nocturne.text, fontSize: 13),
+                  style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Amount (₹)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -550,11 +550,11 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
 
           TextField(
             controller: _reasonCtrl,
-            style: const TextStyle(color: Nocturne.text, fontSize: 13),
+            style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
             onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'What was this for? (e.g. dinner, cab, movie ticket)',
-              labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+              labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
               border: OutlineInputBorder(),
               isDense: true,
             ),
@@ -562,7 +562,7 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           const SizedBox(height: 12),
 
           // Tone Selector
-          const Text('Tone:', style: TextStyle(color: Nocturne.neutral400, fontSize: 11)),
+          Text('Tone:', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11)),
           const SizedBox(height: 4),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -577,10 +577,10 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: ChoiceChip(
-                      label: Text(t[1], style: TextStyle(fontSize: 11, color: _reminderTone == t[0] ? Nocturne.bg : Nocturne.text)),
+                      label: Text(t[1], style: TextStyle(fontSize: 11, color: _reminderTone == t[0] ? Nocturne.palette.bg : Nocturne.palette.text)),
                       selected: _reminderTone == t[0],
-                      selectedColor: Nocturne.accent,
-                      backgroundColor: Nocturne.bg,
+                      selectedColor: Nocturne.palette.accent,
+                      backgroundColor: Nocturne.palette.bg,
                       onSelected: (_) => setState(() => _reminderTone = t[0]),
                     ),
                   ),
@@ -590,7 +590,7 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           const SizedBox(height: 10),
 
           // Language Selector
-          const Text('Language:', style: TextStyle(color: Nocturne.neutral400, fontSize: 11)),
+          Text('Language:', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11)),
           const SizedBox(height: 4),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -605,10 +605,10 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: ChoiceChip(
-                      label: Text(l[1], style: TextStyle(fontSize: 11, color: _reminderLang == l[0] ? Nocturne.bg : Nocturne.text)),
+                      label: Text(l[1], style: TextStyle(fontSize: 11, color: _reminderLang == l[0] ? Nocturne.palette.bg : Nocturne.palette.text)),
                       selected: _reminderLang == l[0],
-                      selectedColor: Nocturne.accent,
-                      backgroundColor: Nocturne.bg,
+                      selectedColor: Nocturne.palette.accent,
+                      backgroundColor: Nocturne.palette.bg,
                       onSelected: (_) => setState(() => _reminderLang = l[0]),
                     ),
                   ),
@@ -621,24 +621,24 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Nocturne.accent700),
+              border: Border.all(color: Nocturne.palette.switchOn),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(PhRegular.chatCircleDots, size: 14, color: Nocturne.accent200),
+                    Icon(PhRegular.chatCircleDots, size: 14, color: Nocturne.palette.accentLight),
                     SizedBox(width: 6),
-                    Text('Ready to send:', style: TextStyle(color: Nocturne.accent200, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text('Ready to send:', style: TextStyle(color: Nocturne.palette.accentLight, fontSize: 11, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 8),
                 SelectableText(
                   reminderText,
-                  style: const TextStyle(fontSize: 13, color: Nocturne.text, height: 1.45),
+                  style: TextStyle(fontSize: 13, color: Nocturne.palette.text, height: 1.45),
                 ),
               ],
             ),
@@ -650,8 +650,8 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Nocturne.text,
-                    side: const BorderSide(color: Nocturne.neutral700),
+                    foregroundColor: Nocturne.palette.text,
+                    side: BorderSide(color: Nocturne.palette.faint),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -669,8 +669,8 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
               Expanded(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Nocturne.accent,
-                    foregroundColor: Nocturne.bg,
+                    backgroundColor: Nocturne.palette.accent,
+                    foregroundColor: Nocturne.palette.bg,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -705,13 +705,13 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(PhRegular.clock, size: 20, color: Nocturne.accent200),
+                Icon(PhRegular.clock, size: 20, color: Nocturne.palette.accentLight),
                 SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -719,11 +719,11 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                     children: [
                       Text(
                         'What Does It Really Cost?',
-                        style: TextStyle(color: Nocturne.text, fontSize: 13.5, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Nocturne.palette.text, fontSize: 13.5, fontWeight: FontWeight.bold),
                       ),
                       Text(
                         'Translates price tags into literal hours of your life and labor.',
-                        style: TextStyle(color: Nocturne.neutral400, fontSize: 11),
+                        style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11),
                       ),
                     ],
                   ),
@@ -739,11 +739,11 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                 child: TextField(
                   controller: _salaryCtrl,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Nocturne.text, fontSize: 13),
+                  style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Monthly Salary (₹)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -754,11 +754,11 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
                 child: TextField(
                   controller: _itemPriceCtrl,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Nocturne.text, fontSize: 13),
+                  style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Item Price (₹)',
-                    labelStyle: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    labelStyle: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -773,26 +773,26 @@ class _MagicAiSheetState extends State<MagicAiSheet> {
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Nocturne.accent800.withValues(alpha: 0.3), Nocturne.surface],
+                colors: [Nocturne.palette.accent800.withValues(alpha: 0.3), Nocturne.palette.surface],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Nocturne.accent600),
+              border: Border.all(color: Nocturne.palette.tintEdge),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Price in Hours of Life:', style: TextStyle(color: Nocturne.neutral300, fontSize: 12)),
+                Text('Price in Hours of Life:', style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 12)),
                 const SizedBox(height: 6),
                 Text(
                   formatted,
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Nocturne.accent100),
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Nocturne.palette.accentLight),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'At an hourly earning rate of ${V3Design.inr((salary / 160).round())}/hr, purchasing an item worth ${V3Design.inr(price)} requires approximately ${hours.toStringAsFixed(1)} hours of focused work.',
-                  style: const TextStyle(color: Nocturne.neutral300, fontSize: 12, height: 1.4),
+                  style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 12, height: 1.4),
                 ),
               ],
             ),

@@ -191,12 +191,12 @@ class FamilyV3 extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           'Direct messages',
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w500,
-                            color: Nocturne.text,
+                            color: Nocturne.palette.text,
                           ),
                         ),
                         Text(
@@ -206,8 +206,8 @@ class FamilyV3 extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11.5,
                             color: unreadTotal > 0
-                                ? Nocturne.accent200
-                                : Nocturne.neutral500,
+                                ? Nocturne.palette.accentLight
+                                : Nocturne.palette.muted,
                           ),
                         ),
                       ],
@@ -217,22 +217,22 @@ class FamilyV3 extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Nocturne.accent,
+                        color: Nocturne.palette.accent,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         unreadTotal > 9 ? '9+' : '$unreadTotal',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
-                          color: Nocturne.bg,
+                          color: Nocturne.palette.bg,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                   ],
-                  const Icon(PhRegular.caretRight,
-                      size: 14, color: Nocturne.neutral600),
+                  Icon(PhRegular.caretRight,
+                      size: 14, color: Nocturne.palette.faint),
                 ],
               ),
             ),
@@ -256,7 +256,7 @@ class FamilyV3 extends StatelessWidget {
                           children: [
                             V3IconTile(
                                 icon: PhRegular.pencilSimple,
-                                color: NocturneSemantic.warning,
+                                color: Nocturne.palette.warning,
                                 size: 36,
                                 radius: 11),
                             const SizedBox(width: 12),
@@ -270,23 +270,23 @@ class FamilyV3 extends StatelessWidget {
                                       '${s.memberName(s.approvals[i].requestedBy)}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w500,
-                                          color: Nocturne.text)),
+                                          color: Nocturne.palette.text)),
                                   Text(
                                       s.approvals[i].reason ??
                                           'Tap to review',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           fontSize: 11.5,
-                                          color: Nocturne.neutral500)),
+                                          color: Nocturne.palette.muted)),
                                 ],
                               ),
                             ),
-                            const Icon(PhRegular.caretRight,
-                                size: 14, color: Nocturne.neutral600),
+                            Icon(PhRegular.caretRight,
+                                size: 14, color: Nocturne.palette.faint),
                           ],
                         ),
                       ),
@@ -316,7 +316,7 @@ class FamilyV3 extends StatelessWidget {
                         children: [
                           V3IconTile(
                               icon: PhRegular.handCoins,
-                              color: Nocturne.accent300,
+                              color: Nocturne.palette.accentMuted,
                               size: 36,
                               radius: 11),
                           const SizedBox(width: 12),
@@ -330,22 +330,22 @@ class FamilyV3 extends StatelessWidget {
                                     '${s.memberName(s.settlements[i].toUser)}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w500,
-                                        color: Nocturne.text)),
+                                        color: Nocturne.palette.text)),
                                 Text(s.settlements[i].note ?? 'Split expense',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 11.5,
-                                        color: Nocturne.neutral500)),
+                                        color: Nocturne.palette.muted)),
                               ],
                             ),
                           ),
                           V3Num(V3Design.inr(s.settlements[i].amount),
-                              style: const TextStyle(
-                                  fontSize: 13.5, color: Nocturne.text)),
+                              style: TextStyle(
+                                  fontSize: 13.5, color: Nocturne.palette.text)),
                           const SizedBox(width: 8),
                           if (s.settlements[i].fromUser == s.myId) ...[
                             Builder(
@@ -372,22 +372,22 @@ class FamilyV3 extends StatelessWidget {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: NocturneSemantic.income.withValues(alpha: 0.15),
+                                        color: Nocturne.palette.income.withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
-                                            color: NocturneSemantic.income, width: 1),
+                                            color: Nocturne.palette.income, width: 1),
                                       ),
-                                      child: const Row(
+                                      child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(PhRegular.lightning,
-                                              size: 11, color: NocturneSemantic.income),
+                                              size: 11, color: Nocturne.palette.income),
                                           SizedBox(width: 3),
                                           Text('UPI',
                                               style: TextStyle(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w600,
-                                                  color: NocturneSemantic.income)),
+                                                  color: Nocturne.palette.income)),
                                         ],
                                       ),
                                     ),
@@ -405,12 +405,12 @@ class FamilyV3 extends StatelessWidget {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                    color: Nocturne.accent300, width: 1),
+                                    color: Nocturne.palette.accentMuted, width: 1),
                               ),
-                              child: const Text('Settle',
+                              child: Text('Settle',
                                   style: TextStyle(
                                       fontSize: 11.5,
-                                      color: Nocturne.accent300)),
+                                      color: Nocturne.palette.accentMuted)),
                             ),
                           ),
                         ],
@@ -452,22 +452,22 @@ class FamilyV3 extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Rename Workspace',
+        title: Text('Rename Workspace',
             style: TextStyle(
-                color: Nocturne.text,
+                color: Nocturne.palette.text,
                 fontSize: 18,
                 fontWeight: FontWeight.bold)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          style: const TextStyle(color: Nocturne.text),
+          style: TextStyle(color: Nocturne.palette.text),
           decoration: InputDecoration(
             hintText: 'Workspace name',
-            hintStyle: const TextStyle(color: Nocturne.neutral500),
+            hintStyle: TextStyle(color: Nocturne.palette.muted),
             filled: true,
-            fillColor: Nocturne.bg,
+            fillColor: Nocturne.palette.bg,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -477,13 +477,13 @@ class FamilyV3 extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: Nocturne.neutral400)),
+            child: Text('Cancel',
+                style: TextStyle(color: Nocturne.palette.subtle)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Nocturne.accent,
-              foregroundColor: Nocturne.bg,
+              backgroundColor: Nocturne.palette.accent,
+              foregroundColor: Nocturne.palette.bg,
             ),
             onPressed: () async {
               final val = ctrl.text.trim();
@@ -553,7 +553,7 @@ class _MemberRowTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
-                        color: palette.isDark ? Nocturne.neutral800 : palette.edge,
+                        color: palette.isDark ? Nocturne.palette.edge : palette.edge,
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(m.role,
@@ -677,7 +677,7 @@ class _MemberRowTile extends StatelessWidget {
     final m = s.members[i];
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Nocturne.surface,
+      backgroundColor: Nocturne.palette.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -687,10 +687,10 @@ class _MemberRowTile extends StatelessWidget {
           children: [
             const SizedBox(height: 12),
             Text(m.name,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Nocturne.text)),
+                    color: Nocturne.palette.text)),
             const SizedBox(height: 8),
             for (final role in const ['admin', 'member', 'viewer'])
               ListTile(
@@ -698,12 +698,12 @@ class _MemberRowTile extends StatelessWidget {
                   m.role == role ? PhFill.checkCircle : PhRegular.circle,
                   size: 18,
                   color: m.role == role
-                      ? Nocturne.accent300
-                      : Nocturne.neutral600,
+                      ? Nocturne.palette.accentMuted
+                      : Nocturne.palette.faint,
                 ),
                 title: Text('Set as $role',
-                    style: const TextStyle(
-                        fontSize: 14, color: Nocturne.text)),
+                    style: TextStyle(
+                        fontSize: 14, color: Nocturne.palette.text)),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await s.repo.setMemberRole(s.familyId, m.userId, role);
@@ -715,11 +715,11 @@ class _MemberRowTile extends StatelessWidget {
                 m.isActive ? PhRegular.xCircle : PhRegular.checkCircle,
                 size: 18,
                 color: m.isActive
-                    ? NocturneSemantic.expense
-                    : NocturneSemantic.income,
+                    ? Nocturne.palette.expense
+                    : Nocturne.palette.income,
               ),
               title: Text(m.isActive ? 'Disable access' : 'Re-enable access',
-                  style: const TextStyle(fontSize: 14, color: Nocturne.text)),
+                  style: TextStyle(fontSize: 14, color: Nocturne.palette.text)),
               onTap: () async {
                 Navigator.pop(ctx);
                 await s.setMemberStatus(
@@ -727,41 +727,41 @@ class _MemberRowTile extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(PhRegular.trash,
-                  size: 18, color: NocturneSemantic.expense),
-              title: const Text('Remove from workspace',
+              leading: Icon(PhRegular.trash,
+                  size: 18, color: Nocturne.palette.expense),
+              title: Text('Remove from workspace',
                   style: TextStyle(
-                      fontSize: 14, color: NocturneSemantic.expense)),
-              subtitle: const Text(
+                      fontSize: 14, color: Nocturne.palette.expense)),
+              subtitle: Text(
                   'Past transactions and shared records remain intact',
                   style: TextStyle(
-                      fontSize: 11.5, color: Nocturne.neutral500)),
+                      fontSize: 11.5, color: Nocturne.palette.muted)),
               onTap: () async {
                 Navigator.pop(ctx);
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (c) => AlertDialog(
-                    backgroundColor: Nocturne.surface,
+                    backgroundColor: Nocturne.palette.surface,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20)),
                     title: Text('Remove ${m.name}?',
-                        style: const TextStyle(
-                            color: Nocturne.text,
+                        style: TextStyle(
+                            color: Nocturne.palette.text,
                             fontSize: 18,
                             fontWeight: FontWeight.bold)),
                     content: Text(
                         'Are you sure you want to remove ${m.name} from the workspace? '
                         'Their shared transactions and history will be preserved.',
-                        style: const TextStyle(color: Nocturne.neutral400)),
+                        style: TextStyle(color: Nocturne.palette.subtle)),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(c, false),
-                        child: const Text('Cancel',
-                            style: TextStyle(color: Nocturne.neutral500)),
+                        child: Text('Cancel',
+                            style: TextStyle(color: Nocturne.palette.muted)),
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: NocturneSemantic.expense),
+                            backgroundColor: Nocturne.palette.expense),
                         onPressed: () => Navigator.pop(c, true),
                         child: const Text('Remove',
                             style: TextStyle(

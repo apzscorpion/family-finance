@@ -23,7 +23,7 @@ class SourcesManagerV3 extends StatelessWidget {
     final s = context.watch<V3State>();
 
     return Scaffold(
-      backgroundColor: Nocturne.bg,
+      backgroundColor: Nocturne.palette.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -34,19 +34,19 @@ class SourcesManagerV3 extends StatelessWidget {
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     behavior: HitTestBehavior.opaque,
-                    child: const SizedBox(
+                    child: SizedBox(
                       width: 42,
                       height: 42,
                       child: Icon(PhRegular.arrowLeft,
-                          size: 22, color: Nocturne.text),
+                          size: 22, color: Nocturne.palette.text),
                     ),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text('Money sources',
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
-                            color: Nocturne.text)),
+                            color: Nocturne.palette.text)),
                   ),
                 ],
               ),
@@ -55,7 +55,7 @@ class SourcesManagerV3 extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 32),
                 children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
                     child: Text(
                       'Where money comes from and goes to — salary, a loan, a '
@@ -63,22 +63,22 @@ class SourcesManagerV3 extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 12.5,
                           height: 1.5,
-                          color: Nocturne.neutral500),
+                          color: Nocturne.palette.muted),
                     ),
                   ),
                   const SizedBox(height: 14),
                   if (s.sources.isEmpty)
-                    const Padding(
+                    Padding(
                       padding:
                           EdgeInsets.symmetric(vertical: 40, horizontal: 16),
                       child: Column(
                         children: [
                           Icon(PhRegular.wallet,
-                              size: 34, color: Nocturne.neutral600),
+                              size: 34, color: Nocturne.palette.faint),
                           SizedBox(height: 10),
                           Text('No sources yet',
                               style: TextStyle(
-                                  fontSize: 14, color: Nocturne.neutral300)),
+                                  fontSize: 14, color: Nocturne.palette.neutral300)),
                         ],
                       ),
                     )
@@ -107,18 +107,18 @@ class SourcesManagerV3 extends StatelessWidget {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                              color: Nocturne.accent700, width: 1),
+                              color: Nocturne.palette.switchOn, width: 1),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(PhRegular.plus,
-                                size: 16, color: Nocturne.accent200),
+                                size: 16, color: Nocturne.palette.accentLight),
                             SizedBox(width: 8),
                             Text('Add a source',
                                 style: TextStyle(
                                     fontSize: 14,
-                                    color: Nocturne.accent200)),
+                                    color: Nocturne.palette.accentLight)),
                           ],
                         ),
                       ),
@@ -139,7 +139,7 @@ class SourcesManagerV3 extends StatelessWidget {
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
@@ -154,9 +154,9 @@ class SourcesManagerV3 extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          backgroundColor: Nocturne.surface,
-          title: const Text('Add money source',
-              style: TextStyle(fontSize: 17, color: Nocturne.text)),
+          backgroundColor: Nocturne.palette.surface,
+          title: Text('Add money source',
+              style: TextStyle(fontSize: 17, color: Nocturne.palette.text)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,14 +165,14 @@ class SourcesManagerV3 extends StatelessWidget {
                 controller: name,
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
-                style: const TextStyle(fontSize: 14, color: Nocturne.text),
-                cursorColor: Nocturne.accent,
+                style: TextStyle(fontSize: 14, color: Nocturne.palette.text),
+                cursorColor: Nocturne.palette.accent,
                 decoration: InputDecoration(
                   hintText: 'e.g. Side business, Rent income',
-                  hintStyle: const TextStyle(
-                      fontSize: 14, color: Nocturne.neutral600),
+                  hintStyle: TextStyle(
+                      fontSize: 14, color: Nocturne.palette.faint),
                   filled: true,
-                  fillColor: Nocturne.bg,
+                  fillColor: Nocturne.palette.bg,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -180,9 +180,9 @@ class SourcesManagerV3 extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text('Type',
+              Text('Type',
                   style:
-                      TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+                      TextStyle(fontSize: 12, color: Nocturne.palette.muted)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -203,13 +203,13 @@ class SourcesManagerV3 extends StatelessWidget {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: kind == k.$1
-                              ? Nocturne.accent900
-                              : Nocturne.bg,
+                              ? Nocturne.palette.tint
+                              : Nocturne.palette.bg,
                           borderRadius: BorderRadius.circular(15),
                           border: Border.all(
                             color: kind == k.$1
-                                ? Nocturne.accent600
-                                : Nocturne.neutral800,
+                                ? Nocturne.palette.tintEdge
+                                : Nocturne.palette.edge,
                             width: 1,
                           ),
                         ),
@@ -217,8 +217,8 @@ class SourcesManagerV3 extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               color: kind == k.$1
-                                  ? Nocturne.accent100
-                                  : Nocturne.neutral300,
+                                  ? Nocturne.palette.accentLight
+                                  : Nocturne.palette.neutral300,
                             )),
                       ),
                     ),
@@ -229,12 +229,12 @@ class SourcesManagerV3 extends StatelessWidget {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel',
-                    style: TextStyle(color: Nocturne.neutral400))),
+                child: Text('Cancel',
+                    style: TextStyle(color: Nocturne.palette.subtle))),
             TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Add',
-                    style: TextStyle(color: Nocturne.accent300))),
+                child: Text('Add',
+                    style: TextStyle(color: Nocturne.palette.accentMuted))),
           ],
         ),
       ),
@@ -279,22 +279,22 @@ class _SourceRowTile extends StatelessWidget {
                 Text(src.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 13.5, color: Nocturne.text)),
+                    style: TextStyle(
+                        fontSize: 13.5, color: Nocturne.palette.text)),
                 Text(
                   'Cash ${s.moneyShort(w.cash)} · Bank ${s.moneyShort(w.bank)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 12, color: Nocturne.accent200),
+                  style: TextStyle(
+                      fontSize: 12, color: Nocturne.palette.accentLight),
                 ),
                 Text(
                   '${_kindLabel(src.kind)} · In ${s.moneyShort(totals.inAmt)}'
                   ' · Spent ${s.moneyShort(totals.outAmt)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 11.5, color: Nocturne.neutral500),
+                  style: TextStyle(
+                      fontSize: 11.5, color: Nocturne.palette.muted),
                 ),
               ],
             ),
@@ -302,11 +302,11 @@ class _SourceRowTile extends StatelessWidget {
           GestureDetector(
             onTap: () => _menu(context, s, index),
             behavior: HitTestBehavior.opaque,
-            child: const SizedBox(
+            child: SizedBox(
               width: 32,
               height: 32,
               child: Icon(PhRegular.dotsThree,
-                  size: 18, color: Nocturne.neutral500),
+                  size: 18, color: Nocturne.palette.muted),
             ),
           ),
         ],
@@ -326,7 +326,7 @@ class _SourceRowTile extends StatelessWidget {
     final src = s.sources[i];
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Nocturne.surface,
+      backgroundColor: Nocturne.palette.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -336,64 +336,64 @@ class _SourceRowTile extends StatelessWidget {
           children: [
             const SizedBox(height: 14),
             Text(src.name,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Nocturne.text)),
+                    color: Nocturne.palette.text)),
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(PhRegular.wallet,
-                  size: 18, color: Nocturne.text),
-              title: const Text('Set cash & bank balance',
-                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
-              subtitle: const Text('What this account holds right now',
+              leading: Icon(PhRegular.wallet,
+                  size: 18, color: Nocturne.palette.text),
+              title: Text('Set cash & bank balance',
+                  style: TextStyle(fontSize: 14, color: Nocturne.palette.text)),
+              subtitle: Text('What this account holds right now',
                   style:
-                      TextStyle(fontSize: 11.5, color: Nocturne.neutral500)),
+                      TextStyle(fontSize: 11.5, color: Nocturne.palette.muted)),
               onTap: () async {
                 Navigator.pop(ctx);
                 await setBalances(context, s, src.id);
               },
             ),
             ListTile(
-              leading: const Icon(PhRegular.arrowCircleDown,
-                  size: 18, color: Nocturne.text),
-              title: const Text('Withdraw to cash',
-                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
+              leading: Icon(PhRegular.arrowCircleDown,
+                  size: 18, color: Nocturne.palette.text),
+              title: Text('Withdraw to cash',
+                  style: TextStyle(fontSize: 14, color: Nocturne.palette.text)),
               onTap: () async {
                 Navigator.pop(ctx);
                 await moveMoney(context, s, src.id, toCash: true);
               },
             ),
             ListTile(
-              leading: const Icon(PhRegular.bank,
-                  size: 18, color: Nocturne.text),
-              title: const Text('Deposit cash to bank',
-                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
+              leading: Icon(PhRegular.bank,
+                  size: 18, color: Nocturne.palette.text),
+              title: Text('Deposit cash to bank',
+                  style: TextStyle(fontSize: 14, color: Nocturne.palette.text)),
               onTap: () async {
                 Navigator.pop(ctx);
                 await moveMoney(context, s, src.id, toCash: false);
               },
             ),
             ListTile(
-              leading: const Icon(PhRegular.pencilSimple,
-                  size: 18, color: Nocturne.text),
-              title: const Text('Rename',
-                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
+              leading: Icon(PhRegular.pencilSimple,
+                  size: 18, color: Nocturne.palette.text),
+              title: Text('Rename',
+                  style: TextStyle(fontSize: 14, color: Nocturne.palette.text)),
               onTap: () async {
                 Navigator.pop(ctx);
                 await _rename(context, s, i);
               },
             ),
             ListTile(
-              leading: const Icon(PhRegular.trash,
-                  size: 18, color: NocturneSemantic.expense),
-              title: const Text('Remove',
+              leading: Icon(PhRegular.trash,
+                  size: 18, color: Nocturne.palette.expense),
+              title: Text('Remove',
                   style: TextStyle(
-                      fontSize: 14, color: NocturneSemantic.expense)),
-              subtitle: const Text(
+                      fontSize: 14, color: Nocturne.palette.expense)),
+              subtitle: Text(
                   'Kept as history if it has been used',
                   style:
-                      TextStyle(fontSize: 11.5, color: Nocturne.neutral500)),
+                      TextStyle(fontSize: 11.5, color: Nocturne.palette.muted)),
               onTap: () async {
                 Navigator.pop(ctx);
                 final outcome = await s.removeSource(src.id);
@@ -417,9 +417,9 @@ class _SourceRowTile extends StatelessWidget {
   static InputDecoration _amountField(String label) => InputDecoration(
         labelText: label,
         prefixText: '₹ ',
-        labelStyle: const TextStyle(fontSize: 13, color: Nocturne.neutral400),
+        labelStyle: TextStyle(fontSize: 13, color: Nocturne.palette.subtle),
         filled: true,
-        fillColor: Nocturne.bg,
+        fillColor: Nocturne.palette.bg,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
@@ -433,13 +433,13 @@ class _SourceRowTile extends StatelessWidget {
     final cash = TextEditingController(text: now.cash.toStringAsFixed(0));
     final bank = TextEditingController(text: now.bank.toStringAsFixed(0));
     const keyboard = TextInputType.numberWithOptions(decimal: true);
-    const style = TextStyle(fontSize: 14, color: Nocturne.text);
+    final style = TextStyle(fontSize: 14, color: Nocturne.palette.text);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         title: Text('${s.sourceById(sourceId)?.name ?? 'Account'} balance',
-            style: const TextStyle(fontSize: 17, color: Nocturne.text)),
+            style: TextStyle(fontSize: 17, color: Nocturne.palette.text)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -459,12 +459,12 @@ class _SourceRowTile extends StatelessWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Nocturne.neutral400))),
+              child: Text('Cancel',
+                  style: TextStyle(color: Nocturne.palette.subtle))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save',
-                  style: TextStyle(color: Nocturne.accent300))),
+              child: Text('Save',
+                  style: TextStyle(color: Nocturne.palette.accentMuted))),
         ],
       ),
     );
@@ -481,25 +481,25 @@ class _SourceRowTile extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         title: Text(toCash ? 'Withdraw to cash' : 'Deposit cash to bank',
-            style: const TextStyle(fontSize: 17, color: Nocturne.text)),
+            style: TextStyle(fontSize: 17, color: Nocturne.palette.text)),
         content: TextField(
           controller: amount,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: const TextStyle(fontSize: 14, color: Nocturne.text),
+          style: TextStyle(fontSize: 14, color: Nocturne.palette.text),
           decoration: _amountField('Amount'),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Nocturne.neutral400))),
+              child: Text('Cancel',
+                  style: TextStyle(color: Nocturne.palette.subtle))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(toCash ? 'Withdraw' : 'Deposit',
-                  style: const TextStyle(color: Nocturne.accent300))),
+                  style: TextStyle(color: Nocturne.palette.accentMuted))),
         ],
       ),
     );
@@ -521,18 +521,18 @@ class _SourceRowTile extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Nocturne.surface,
-        title: const Text('Rename source',
-            style: TextStyle(fontSize: 17, color: Nocturne.text)),
+        backgroundColor: Nocturne.palette.surface,
+        title: Text('Rename source',
+            style: TextStyle(fontSize: 17, color: Nocturne.palette.text)),
         content: TextField(
           controller: name,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
-          style: const TextStyle(fontSize: 14, color: Nocturne.text),
-          cursorColor: Nocturne.accent,
+          style: TextStyle(fontSize: 14, color: Nocturne.palette.text),
+          cursorColor: Nocturne.palette.accent,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Nocturne.bg,
+            fillColor: Nocturne.palette.bg,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -542,12 +542,12 @@ class _SourceRowTile extends StatelessWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Nocturne.neutral400))),
+              child: Text('Cancel',
+                  style: TextStyle(color: Nocturne.palette.subtle))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save',
-                  style: TextStyle(color: Nocturne.accent300))),
+              child: Text('Save',
+                  style: TextStyle(color: Nocturne.palette.accentMuted))),
         ],
       ),
     );
@@ -571,16 +571,16 @@ class _WalletSheet extends StatelessWidget {
           shrinkWrap: true,
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
           children: [
-            const Text('Cash & bank',
+            Text('Cash & bank',
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Nocturne.text)),
+                    color: Nocturne.palette.text)),
             const SizedBox(height: 4),
-            const Text(
+            Text(
                 'Cash entries change the cash part; UPI, bank and card change '
                 'the bank part.',
-                style: TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+                style: TextStyle(fontSize: 12, color: Nocturne.palette.muted)),
             for (final id in sourceIds) ...[
               const SizedBox(height: 14),
               _WalletCard(sourceId: id),
@@ -607,18 +607,18 @@ class _WalletCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  Icon(icon, size: 14, color: Nocturne.neutral400),
+                  Icon(icon, size: 14, color: Nocturne.palette.subtle),
                   const SizedBox(width: 6),
                   Text(label,
-                      style: const TextStyle(
-                          fontSize: 11.5, color: Nocturne.neutral400)),
+                      style: TextStyle(
+                          fontSize: 11.5, color: Nocturne.palette.subtle)),
                 ]),
                 const SizedBox(height: 4),
                 FittedBox(
@@ -629,8 +629,8 @@ class _WalletCard extends StatelessWidget {
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                           color: v >= 0
-                              ? Nocturne.text
-                              : NocturneSemantic.expense)),
+                              ? Nocturne.palette.text
+                              : Nocturne.palette.expense)),
                 ),
               ],
             ),
@@ -646,19 +646,19 @@ class _WalletCard extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Nocturne.accent700, width: 1),
+                border: Border.all(color: Nocturne.palette.switchOn, width: 1),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 14, color: Nocturne.accent200),
+                  Icon(icon, size: 14, color: Nocturne.palette.accentLight),
                   const SizedBox(width: 5),
                   Flexible(
                     child: Text(label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 12, color: Nocturne.accent200)),
+                        style: TextStyle(
+                            fontSize: 12, color: Nocturne.palette.accentLight)),
                   ),
                 ],
               ),
@@ -679,14 +679,14 @@ class _WalletCard extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(src.name,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Nocturne.text)),
+                    color: Nocturne.palette.text)),
           ),
           V3Num(s.money(w.cash + w.bank),
-              style: const TextStyle(
-                  fontSize: 13.5, color: Nocturne.neutral300)),
+              style: TextStyle(
+                  fontSize: 13.5, color: Nocturne.palette.neutral300)),
         ]),
         const SizedBox(height: 8),
         Row(children: [

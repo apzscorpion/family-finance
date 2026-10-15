@@ -78,26 +78,26 @@ class _GuardianSheetState extends State<GuardianSheet> {
         builder: (ctx, setDialogState) {
           final preset = CardOptimizerService.cardPresets[selectedPreset];
           return AlertDialog(
-            backgroundColor: Nocturne.surface,
+            backgroundColor: Nocturne.palette.surface,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Text('Add Family Credit Card', style: TextStyle(color: Nocturne.text, fontSize: 17, fontWeight: FontWeight.w600)),
+            title: Text('Add Family Credit Card', style: TextStyle(color: Nocturne.palette.text, fontSize: 17, fontWeight: FontWeight.w600)),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Select Card Preset:', style: TextStyle(color: Nocturne.neutral400, fontSize: 12)),
+                  Text('Select Card Preset:', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12)),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<int>(
                     initialValue: selectedPreset,
-                    dropdownColor: Nocturne.surface,
+                    dropdownColor: Nocturne.palette.surface,
                     items: [
                       for (int i = 0; i < CardOptimizerService.cardPresets.length; i++)
                         DropdownMenuItem(
                           value: i,
                           child: Text(
                             '${CardOptimizerService.cardPresets[i]['name']} (${CardOptimizerService.cardPresets[i]['bank']})',
-                            style: const TextStyle(color: Nocturne.text, fontSize: 13),
+                            style: TextStyle(color: Nocturne.palette.text, fontSize: 13),
                           ),
                         ),
                     ],
@@ -108,10 +108,10 @@ class _GuardianSheetState extends State<GuardianSheet> {
                     controller: lastFourCtrl,
                     keyboardType: TextInputType.number,
                     maxLength: 4,
-                    style: const TextStyle(color: Nocturne.text),
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: Nocturne.palette.text),
+                    decoration: InputDecoration(
                       labelText: 'Last 4 Digits (Optional)',
-                      labelStyle: TextStyle(color: Nocturne.neutral400),
+                      labelStyle: TextStyle(color: Nocturne.palette.subtle),
                       counterText: '',
                     ),
                   ),
@@ -119,26 +119,26 @@ class _GuardianSheetState extends State<GuardianSheet> {
                   TextField(
                     controller: pointsCtrl,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Nocturne.text),
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: Nocturne.palette.text),
+                    decoration: InputDecoration(
                       labelText: 'Reward Points Balance',
-                      labelStyle: TextStyle(color: Nocturne.neutral400),
+                      labelStyle: TextStyle(color: Nocturne.palette.subtle),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Nocturne.bg,
+                      color: Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Cashback Rules Included:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Nocturne.accent300)),
+                        Text('Cashback Rules Included:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Nocturne.palette.accentMuted)),
                         const SizedBox(height: 4),
                         for (final r in (preset['rules'] as Map<String, double>).entries)
-                          Text('• ${r.key.toUpperCase()}: ${r.value}% cashback', style: const TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                          Text('• ${r.key.toUpperCase()}: ${r.value}% cashback', style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle)),
                       ],
                     ),
                   ),
@@ -146,9 +146,9 @@ class _GuardianSheetState extends State<GuardianSheet> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400))),
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Nocturne.palette.subtle))),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+                style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
                 onPressed: () async {
                   final points = int.tryParse(pointsCtrl.text.trim()) ?? 0;
                   final ok = await s.addCreditCard(
@@ -184,10 +184,10 @@ class _GuardianSheetState extends State<GuardianSheet> {
         top: 14,
         bottom: MediaQuery.of(context).padding.bottom + 16,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral800, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.edge, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,7 +199,7 @@ class _GuardianSheetState extends State<GuardianSheet> {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -212,16 +212,16 @@ class _GuardianSheetState extends State<GuardianSheet> {
               Icon(
                 _tab == 0 ? PhFill.warning : PhFill.creditCard,
                 size: 22,
-                color: _tab == 0 ? NocturneSemantic.expense : Nocturne.accent300,
+                color: _tab == 0 ? Nocturne.palette.expense : Nocturne.palette.accentMuted,
               ),
               const SizedBox(width: 8),
               Text(
                 _tab == 0 ? 'Guardian Mode (Scam Watch)' : 'Card Cashback Optimizer',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Nocturne.text),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(PhRegular.x, size: 20, color: Nocturne.neutral400),
+                icon: Icon(PhRegular.x, size: 20, color: Nocturne.palette.subtle),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -274,28 +274,28 @@ class _GuardianSheetState extends State<GuardianSheet> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
             child: Row(
               children: [
-                const Icon(PhRegular.lockSimple, color: NocturneSemantic.income, size: 22),
+                Icon(PhRegular.lockSimple, color: Nocturne.palette.income, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Parent & Elderly Protection Active',
-                        style: TextStyle(color: Nocturne.text, fontWeight: FontWeight.w600, fontSize: 13),
+                        style: TextStyle(color: Nocturne.palette.text, fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         protectedMembers.isNotEmpty
                             ? 'Watching ${protectedMembers.map((m) => m.name).join(", ")} for fake KYC, power-cut SMS, and unfamiliar payees.'
                             : 'Tag your parents below so KinPurse flags scam messages and unusual debits immediately.',
-                        style: const TextStyle(color: Nocturne.neutral400, fontSize: 11),
+                        style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11),
                       ),
                     ],
                   ),
@@ -306,7 +306,7 @@ class _GuardianSheetState extends State<GuardianSheet> {
           const SizedBox(height: 14),
 
           // Protected members toggles
-          const Text('Protected Family Members (Guardian Mode):', style: TextStyle(color: Nocturne.neutral400, fontSize: 12, fontWeight: FontWeight.w500)),
+          Text('Protected Family Members (Guardian Mode):', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -319,10 +319,10 @@ class _GuardianSheetState extends State<GuardianSheet> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: m.isProtectedMember ? Nocturne.accent.withValues(alpha: 0.16) : Nocturne.bg,
+                      color: m.isProtectedMember ? Nocturne.palette.accent.withValues(alpha: 0.16) : Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: m.isProtectedMember ? Nocturne.accent : Nocturne.neutral800,
+                        color: m.isProtectedMember ? Nocturne.palette.accent : Nocturne.palette.edge,
                         width: 1.2,
                       ),
                     ),
@@ -332,7 +332,7 @@ class _GuardianSheetState extends State<GuardianSheet> {
                         Icon(
                           m.isProtectedMember ? PhBold.lock : PhRegular.lockSimple,
                           size: 14,
-                          color: m.isProtectedMember ? Nocturne.accent200 : Nocturne.neutral500,
+                          color: m.isProtectedMember ? Nocturne.palette.accentLight : Nocturne.palette.muted,
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -340,7 +340,7 @@ class _GuardianSheetState extends State<GuardianSheet> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: m.isProtectedMember ? FontWeight.w600 : FontWeight.w400,
-                            color: m.isProtectedMember ? Nocturne.text : Nocturne.neutral400,
+                            color: m.isProtectedMember ? Nocturne.palette.text : Nocturne.palette.subtle,
                           ),
                         ),
                       ],
@@ -353,49 +353,49 @@ class _GuardianSheetState extends State<GuardianSheet> {
 
           // Active Alerts List
           if (alerts.any((a) => a.isActive)) ...[
-            const Text('Active Security Alerts:', style: TextStyle(color: NocturneSemantic.expense, fontSize: 13, fontWeight: FontWeight.bold)),
+            Text('Active Security Alerts:', style: TextStyle(color: Nocturne.palette.expense, fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             for (final a in alerts.where((x) => x.isActive)) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: NocturneSemantic.expense.withValues(alpha: 0.12),
+                  color: Nocturne.palette.expense.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: NocturneSemantic.expense, width: 1.2),
+                  border: Border.all(color: Nocturne.palette.expense, width: 1.2),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(PhRegular.warning, size: 18, color: NocturneSemantic.expense),
+                        Icon(PhRegular.warning, size: 18, color: Nocturne.palette.expense),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             a.title,
-                            style: const TextStyle(color: Nocturne.text, fontSize: 14, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: Nocturne.palette.text, fontSize: 14, fontWeight: FontWeight.bold),
                           ),
                         ),
                         Text(
                           DateFormat('d MMM').format(a.createdAt),
-                          style: const TextStyle(color: Nocturne.neutral400, fontSize: 11),
+                          style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(a.description, style: const TextStyle(color: Nocturne.neutral300, fontSize: 12)),
+                    Text(a.description, style: TextStyle(color: Nocturne.palette.neutral300, fontSize: 12)),
                     if (a.snippet != null) ...[
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Nocturne.bg,
+                          color: Nocturne.palette.bg,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           '"${a.snippet}"',
-                          style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Nocturne.neutral400),
+                          style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Nocturne.palette.subtle),
                         ),
                       ),
                     ],
@@ -404,7 +404,7 @@ class _GuardianSheetState extends State<GuardianSheet> {
                       children: [
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: NocturneSemantic.expense,
+                            backgroundColor: Nocturne.palette.expense,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -425,7 +425,7 @@ class _GuardianSheetState extends State<GuardianSheet> {
                         const Spacer(),
                         TextButton(
                           onPressed: () => s.updateSecurityAlertStatus(a.id, 'resolved'),
-                          child: const Text('Mark Safe / Dismiss', style: TextStyle(color: Nocturne.neutral400, fontSize: 11)),
+                          child: Text('Mark Safe / Dismiss', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11)),
                         ),
                       ],
                     ),
@@ -440,28 +440,28 @@ class _GuardianSheetState extends State<GuardianSheet> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.neutral800),
+              border: Border.all(color: Nocturne.palette.edge),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(PhRegular.magnifyingGlass, color: Nocturne.accent300, size: 16),
+                    Icon(PhRegular.magnifyingGlass, color: Nocturne.palette.accentMuted, size: 16),
                     SizedBox(width: 6),
-                    Text('Check Suspicious Message or Link:', style: TextStyle(color: Nocturne.text, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('Check Suspicious Message or Link:', style: TextStyle(color: Nocturne.palette.text, fontSize: 13, fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _testTextCtrl,
                   maxLines: 2,
-                  style: const TextStyle(color: Nocturne.text, fontSize: 12),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Nocturne.palette.text, fontSize: 12),
+                  decoration: InputDecoration(
                     hintText: 'Paste suspicious SMS / WhatsApp text here to test…',
-                    hintStyle: TextStyle(color: Nocturne.neutral500, fontSize: 12),
+                    hintStyle: TextStyle(color: Nocturne.palette.muted, fontSize: 12),
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -470,8 +470,8 @@ class _GuardianSheetState extends State<GuardianSheet> {
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Nocturne.accent,
-                        foregroundColor: Nocturne.bg,
+                        backgroundColor: Nocturne.palette.accent,
+                        foregroundColor: Nocturne.palette.bg,
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
@@ -490,7 +490,7 @@ class _GuardianSheetState extends State<GuardianSheet> {
                           _testAssessment = GuardianService.analyzeText(_testTextCtrl.text);
                         });
                       },
-                      child: const Text('Test Power Scam Example', style: TextStyle(fontSize: 11, color: Nocturne.accent300)),
+                      child: Text('Test Power Scam Example', style: TextStyle(fontSize: 11, color: Nocturne.palette.accentMuted)),
                     ),
                   ],
                 ),
@@ -500,11 +500,11 @@ class _GuardianSheetState extends State<GuardianSheet> {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: _testAssessment!.isSuspicious
-                          ? NocturneSemantic.expense.withValues(alpha: 0.16)
-                          : NocturneSemantic.income.withValues(alpha: 0.16),
+                          ? Nocturne.palette.expense.withValues(alpha: 0.16)
+                          : Nocturne.palette.income.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: _testAssessment!.isSuspicious ? NocturneSemantic.expense : NocturneSemantic.income,
+                        color: _testAssessment!.isSuspicious ? Nocturne.palette.expense : Nocturne.palette.income,
                       ),
                     ),
                     child: Column(
@@ -515,14 +515,14 @@ class _GuardianSheetState extends State<GuardianSheet> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: _testAssessment!.isSuspicious ? NocturneSemantic.expense : NocturneSemantic.income,
+                            color: _testAssessment!.isSuspicious ? Nocturne.palette.expense : Nocturne.palette.income,
                           ),
                         ),
                         if (_testAssessment!.isSuspicious) ...[
                           const SizedBox(height: 4),
-                          Text(_testAssessment!.reason ?? '', style: const TextStyle(fontSize: 11, color: Nocturne.neutral300)),
+                          Text(_testAssessment!.reason ?? '', style: TextStyle(fontSize: 11, color: Nocturne.palette.neutral300)),
                           const SizedBox(height: 4),
-                          Text('Advice: ${_testAssessment!.safetyAdvice}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Nocturne.accent200)),
+                          Text('Advice: ${_testAssessment!.safetyAdvice}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Nocturne.palette.accentLight)),
                         ],
                       ],
                     ),
@@ -537,22 +537,22 @@ class _GuardianSheetState extends State<GuardianSheet> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Nocturne.surface,
+              color: Nocturne.palette.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Nocturne.neutral700),
+              border: Border.all(color: Nocturne.palette.faint),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('🛡️ The 4 Golden Rules for Parents:', style: TextStyle(color: Nocturne.text, fontSize: 13, fontWeight: FontWeight.bold)),
+                Text('🛡️ The 4 Golden Rules for Parents:', style: TextStyle(color: Nocturne.palette.text, fontSize: 13, fontWeight: FontWeight.bold)),
                 SizedBox(height: 6),
-                Text('1. UPI PIN is ONLY entered to SEND money, never to receive money or cashback.', style: TextStyle(fontSize: 11.5, color: Nocturne.neutral300)),
+                Text('1. UPI PIN is ONLY entered to SEND money, never to receive money or cashback.', style: TextStyle(fontSize: 11.5, color: Nocturne.palette.neutral300)),
                 SizedBox(height: 4),
-                Text('2. Power companies NEVER send SMS threatening disconnection tonight with a mobile number.', style: TextStyle(fontSize: 11.5, color: Nocturne.neutral300)),
+                Text('2. Power companies NEVER send SMS threatening disconnection tonight with a mobile number.', style: TextStyle(fontSize: 11.5, color: Nocturne.palette.neutral300)),
                 SizedBox(height: 4),
-                Text('3. NEVER install AnyDesk, RustDesk or TeamViewer on someone’s phone advice.', style: TextStyle(fontSize: 11.5, color: Nocturne.neutral300)),
+                Text('3. NEVER install AnyDesk, RustDesk or TeamViewer on someone’s phone advice.', style: TextStyle(fontSize: 11.5, color: Nocturne.palette.neutral300)),
                 SizedBox(height: 4),
-                Text('4. Banks will NEVER ask you to click SMS links to update PAN or unblock YONO.', style: TextStyle(fontSize: 11.5, color: Nocturne.neutral300)),
+                Text('4. Banks will NEVER ask you to click SMS links to update PAN or unblock YONO.', style: TextStyle(fontSize: 11.5, color: Nocturne.palette.neutral300)),
               ],
             ),
           ),
@@ -581,24 +581,24 @@ class _GuardianSheetState extends State<GuardianSheet> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.accent600, width: 1.2),
+              border: Border.all(color: Nocturne.palette.tintEdge, width: 1.2),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(PhFill.creditCard, color: Nocturne.accent300, size: 18),
+                    Icon(PhFill.creditCard, color: Nocturne.palette.accentMuted, size: 18),
                     SizedBox(width: 8),
-                    Text('Which card should I use here?', style: TextStyle(color: Nocturne.text, fontSize: 14, fontWeight: FontWeight.bold)),
+                    Text('Which card should I use here?', style: TextStyle(color: Nocturne.palette.text, fontSize: 14, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 10),
 
                 // Quick merchant buttons
-                const Text('Where are you spending?', style: TextStyle(color: Nocturne.neutral400, fontSize: 11)),
+                Text('Where are you spending?', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 11)),
                 const SizedBox(height: 6),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -608,10 +608,10 @@ class _GuardianSheetState extends State<GuardianSheet> {
                         Padding(
                           padding: const EdgeInsets.only(right: 6),
                           child: ChoiceChip(
-                            label: Text(m, style: TextStyle(fontSize: 11, color: _selectedMerchant == m ? Nocturne.bg : Nocturne.text)),
+                            label: Text(m, style: TextStyle(fontSize: 11, color: _selectedMerchant == m ? Nocturne.palette.bg : Nocturne.palette.text)),
                             selected: _selectedMerchant == m,
-                            selectedColor: Nocturne.accent,
-                            backgroundColor: Nocturne.surface,
+                            selectedColor: Nocturne.palette.accent,
+                            backgroundColor: Nocturne.palette.surface,
                             onSelected: (_) => setState(() => _selectedMerchant = m),
                           ),
                         ),
@@ -625,13 +625,13 @@ class _GuardianSheetState extends State<GuardianSheet> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: NocturneSemantic.income.withValues(alpha: 0.12),
+                      color: Nocturne.palette.income.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: NocturneSemantic.income, width: 1),
+                      border: Border.all(color: Nocturne.palette.income, width: 1),
                     ),
                     child: Row(
                       children: [
-                        const Icon(PhFill.star, color: NocturneSemantic.income, size: 24),
+                        Icon(PhFill.star, color: Nocturne.palette.income, size: 24),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -639,12 +639,12 @@ class _GuardianSheetState extends State<GuardianSheet> {
                             children: [
                               Text(
                                 'Use: ${recommendation.card.cardName}',
-                                style: const TextStyle(color: Nocturne.text, fontWeight: FontWeight.bold, fontSize: 14),
+                                style: TextStyle(color: Nocturne.palette.text, fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 '${recommendation.perkReason} · You save ${V3Design.inr(recommendation.estimatedSavings)} on ${V3Design.inr(_testAmount)} spend',
-                                style: const TextStyle(color: NocturneSemantic.income, fontSize: 12, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: Nocturne.palette.income, fontSize: 12, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -656,12 +656,12 @@ class _GuardianSheetState extends State<GuardianSheet> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Nocturne.surface,
+                      color: Nocturne.palette.surface,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Add your family credit cards below to see live cashback calculations.',
-                      style: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                      style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                     ),
                   ),
                 ],
@@ -674,11 +674,11 @@ class _GuardianSheetState extends State<GuardianSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${cards.length} Family Card(s)', style: const TextStyle(color: Nocturne.neutral400, fontSize: 13)),
+              Text('${cards.length} Family Card(s)', style: TextStyle(color: Nocturne.palette.subtle, fontSize: 13)),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Nocturne.accent,
-                  foregroundColor: Nocturne.bg,
+                  backgroundColor: Nocturne.palette.accent,
+                  foregroundColor: Nocturne.palette.bg,
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
@@ -697,18 +697,18 @@ class _GuardianSheetState extends State<GuardianSheet> {
               alignment: Alignment.center,
               child: Column(
                 children: [
-                  const Icon(PhRegular.creditCard, size: 38, color: Nocturne.neutral600),
+                  Icon(PhRegular.creditCard, size: 38, color: Nocturne.palette.faint),
                   const SizedBox(height: 8),
-                  const Text('No credit cards added yet', style: TextStyle(color: Nocturne.text, fontWeight: FontWeight.w600)),
+                  Text('No credit cards added yet', style: TextStyle(color: Nocturne.palette.text, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Add your family cards (HDFC Swiggy, SBI Cashback, ICICI Amazon)\nto maximize reward points and cashback on every family purchase.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Nocturne.neutral400, fontSize: 12),
+                    style: TextStyle(color: Nocturne.palette.subtle, fontSize: 12),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Nocturne.accent, foregroundColor: Nocturne.bg),
+                    style: ElevatedButton.styleFrom(backgroundColor: Nocturne.palette.accent, foregroundColor: Nocturne.palette.bg),
                     onPressed: _showAddCardDialog,
                     child: const Text('+ Add HDFC / SBI / ICICI Card'),
                   ),
@@ -721,9 +721,9 @@ class _GuardianSheetState extends State<GuardianSheet> {
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Nocturne.bg,
+                  color: Nocturne.palette.bg,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: c.hasExpiringPoints ? NocturneSemantic.warning : Nocturne.neutral800),
+                  border: Border.all(color: c.hasExpiringPoints ? Nocturne.palette.warning : Nocturne.palette.edge),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,23 +733,23 @@ class _GuardianSheetState extends State<GuardianSheet> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Nocturne.accent.withValues(alpha: 0.16),
+                            color: Nocturne.palette.accent.withValues(alpha: 0.16),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             c.bank.toUpperCase(),
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Nocturne.accent300),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Nocturne.palette.accentMuted),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             c.cardName,
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Nocturne.text),
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Nocturne.palette.text),
                           ),
                         ),
                         if (c.lastFour != null)
-                          Text('•••• ${c.lastFour}', style: const TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+                          Text('•••• ${c.lastFour}', style: TextStyle(fontSize: 12, color: Nocturne.palette.muted)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -757,17 +757,17 @@ class _GuardianSheetState extends State<GuardianSheet> {
                       children: [
                         Text(
                           '${NumberFormat.decimalPattern().format(c.rewardPointsBalance)} points',
-                          style: const TextStyle(fontSize: 12, color: Nocturne.neutral300, fontWeight: FontWeight.w500),
+                          style: TextStyle(fontSize: 12, color: Nocturne.palette.neutral300, fontWeight: FontWeight.w500),
                         ),
                         if (c.hasExpiringPoints) ...[
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: NocturneSemantic.warning.withValues(alpha: 0.16),
+                              color: Nocturne.palette.warning.withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text('⚠️ Expiring Soon', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: NocturneSemantic.warning)),
+                            child: Text('⚠️ Expiring Soon', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Nocturne.palette.warning)),
                           ),
                         ],
                       ],
@@ -781,12 +781,12 @@ class _GuardianSheetState extends State<GuardianSheet> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Nocturne.surface,
+                              color: Nocturne.palette.surface,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               '${r.key}: ${r.value}%',
-                              style: const TextStyle(fontSize: 10, color: Nocturne.neutral400),
+                              style: TextStyle(fontSize: 10, color: Nocturne.palette.subtle),
                             ),
                           ),
                       ],
@@ -823,10 +823,10 @@ class _TabPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? Nocturne.accent : Nocturne.bg,
+          color: selected ? Nocturne.palette.accent : Nocturne.palette.bg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: badgeAlert ? NocturneSemantic.expense : (selected ? Nocturne.accent : Nocturne.neutral800),
+            color: badgeAlert ? Nocturne.palette.expense : (selected ? Nocturne.palette.accent : Nocturne.palette.edge),
             width: badgeAlert ? 1.4 : 1,
           ),
         ),
@@ -838,12 +838,12 @@ class _TabPill extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? Nocturne.bg : Nocturne.text,
+                color: selected ? Nocturne.palette.bg : Nocturne.palette.text,
               ),
             ),
             if (badgeAlert) ...[
               const SizedBox(width: 4),
-              const Icon(PhFill.warning, size: 12, color: NocturneSemantic.expense),
+              Icon(PhFill.warning, size: 12, color: Nocturne.palette.expense),
             ],
           ],
         ),

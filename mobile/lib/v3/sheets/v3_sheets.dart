@@ -248,7 +248,7 @@ class V3ScopeSheet extends StatelessWidget {
             name: s.family?.name ?? 'Family',
             sub: '${members.length} members',
             amount: s.moneyShort(spentFor(null)),
-            color: Nocturne.accent700,
+            color: Nocturne.palette.switchOn,
             icon: PhRegular.users,
             selected: s.isFamily,
             onTap: () {
@@ -874,11 +874,11 @@ class _V3AddSheetState extends State<V3AddSheet> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) => Theme(
         data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: Nocturne.accent,
-            surface: Nocturne.surface,
+          colorScheme: ColorScheme.dark(
+            primary: Nocturne.palette.accent,
+            surface: Nocturne.palette.surface,
           ),
-          dialogTheme: const DialogThemeData(backgroundColor: Nocturne.surface),
+          dialogTheme: DialogThemeData(backgroundColor: Nocturne.palette.surface),
         ),
         child: child!,
       ),
@@ -1017,9 +1017,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
       Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Could not save — check your connection'),
-          backgroundColor: Nocturne.neutral800,
+          backgroundColor: Nocturne.palette.edge,
         ),
       );
     }
@@ -1100,17 +1100,17 @@ class _V3AddSheetState extends State<V3AddSheet> {
             children: [
               Text(
                 widget.edit == null ? 'Add entry' : 'Edit entry',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Nocturne.text,
+                  color: Nocturne.palette.text,
                 ),
               ),
               const Spacer(),
               V3Segmented(
                 labels: const ['Expense', 'Income'],
                 selected: _type == 'expense' ? 0 : 1,
-                ground: Nocturne.bg,
+                ground: Nocturne.palette.bg,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 5,
@@ -1136,14 +1136,14 @@ class _V3AddSheetState extends State<V3AddSheet> {
                   height: 36,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Nocturne.bg,
+                    color: Nocturne.palette.bg,
                     borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: Nocturne.neutral800, width: 1),
+                    border: Border.all(color: Nocturne.palette.edge, width: 1),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     PhRegular.sparkle,
                     size: 18,
-                    color: Nocturne.accent300,
+                    color: Nocturne.palette.accentMuted,
                   ),
                 ),
               ),
@@ -1159,9 +1159,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
                   decoration: BoxDecoration(
                     color: evaluated > 0
                         ? (_type == 'income'
-                              ? NocturneSemantic.income
-                              : Nocturne.accent)
-                        : Nocturne.neutral800,
+                              ? Nocturne.palette.income
+                              : Nocturne.palette.accent)
+                        : Nocturne.palette.edge,
                     borderRadius: BorderRadius.circular(11),
                   ),
                   child: _saving
@@ -1178,7 +1178,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                           size: 20,
                           color: evaluated > 0
                               ? Colors.white
-                              : Nocturne.neutral500,
+                              : Nocturne.palette.muted,
                         ),
                 ),
               ),
@@ -1196,32 +1196,32 @@ class _V3AddSheetState extends State<V3AddSheet> {
                   height: 34,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
-                    color: Nocturne.bg,
+                    color: Nocturne.palette.bg,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Nocturne.neutral800, width: 1),
+                    border: Border.all(color: Nocturne.palette.edge, width: 1),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         PhRegular.calendar,
                         size: 15,
-                        color: Nocturne.accent300,
+                        color: Nocturne.palette.accentMuted,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         V3DetailSheet._dateLabel(_date),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.text,
+                          color: Nocturne.palette.text,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(
+                      Icon(
                         PhBold.caretDown,
                         size: 10,
-                        color: Nocturne.neutral400,
+                        color: Nocturne.palette.subtle,
                       ),
                     ],
                   ),
@@ -1231,9 +1231,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
               if (members.length > 1) ...[
                 Text(
                   _type == 'income' ? 'From ' : 'Paid by ',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
-                    color: Nocturne.neutral500,
+                    color: Nocturne.palette.muted,
                   ),
                 ),
                 if (_type == 'income')
@@ -1245,11 +1245,11 @@ class _V3AddSheetState extends State<V3AddSheet> {
                         ? _payer
                         : '',
                     isDense: true,
-                    dropdownColor: Nocturne.surface,
+                    dropdownColor: Nocturne.palette.surface,
                     underline: const SizedBox.shrink(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
-                      color: Nocturne.accent200,
+                      color: Nocturne.palette.accentLight,
                     ),
                     items: [
                       const DropdownMenuItem(
@@ -1269,11 +1269,11 @@ class _V3AddSheetState extends State<V3AddSheet> {
                   DropdownButton<String>(
                     value: members.any((m) => m.userId == payer) ? payer : null,
                     isDense: true,
-                    dropdownColor: Nocturne.surface,
+                    dropdownColor: Nocturne.palette.surface,
                     underline: const SizedBox.shrink(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
-                      color: Nocturne.accent200,
+                      color: Nocturne.palette.accentLight,
                     ),
                     items: [
                       for (final m in members)
@@ -1298,16 +1298,16 @@ class _V3AddSheetState extends State<V3AddSheet> {
           ),
           const SizedBox(height: 8),
           if (_refineFailed)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 6),
               child: Text(
                 "Couldn't check this receipt with AI (see Settings → AI). "
                 'Please check the amount.',
-                style: TextStyle(fontSize: 11.5, color: NocturneSemantic.warning),
+                style: TextStyle(fontSize: 11.5, color: Nocturne.palette.warning),
               ),
             ),
           if (_refining)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 6),
               child: Row(
                 children: [
@@ -1316,13 +1316,13 @@ class _V3AddSheetState extends State<V3AddSheet> {
                     height: 11,
                     child: CircularProgressIndicator(
                       strokeWidth: 1.5,
-                      color: Nocturne.accent300,
+                      color: Nocturne.palette.accentMuted,
                     ),
                   ),
                   SizedBox(width: 8),
                   Text(
                     'Checking the receipt with AI…',
-                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral400),
+                    style: TextStyle(fontSize: 11.5, color: Nocturne.palette.subtle),
                   ),
                 ],
               ),
@@ -1333,26 +1333,26 @@ class _V3AddSheetState extends State<V3AddSheet> {
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: Nocturne.neutral800, width: 1),
+              border: Border.all(color: Nocturne.palette.edge, width: 1),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   PhRegular.notePencil,
                   size: 16,
-                  color: Nocturne.neutral500,
+                  color: Nocturne.palette.muted,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: _note,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
-                      color: Nocturne.text,
+                      color: Nocturne.palette.text,
                     ),
-                    cursorColor: Nocturne.accent,
+                    cursorColor: Nocturne.palette.accent,
                     onChanged: (text) {
                       if (_type == 'expense' && widget.edit == null) {
                         final predicted = CategoryMemoryService.predictCategorySync(text);
@@ -1373,9 +1373,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
                       hintText: _type == 'income'
                           ? 'What it was for (optional)'
                           : 'Merchant or note (optional)',
-                      hintStyle: const TextStyle(
+                      hintStyle: TextStyle(
                         fontSize: 13.5,
-                        color: Nocturne.neutral600,
+                        color: Nocturne.palette.faint,
                       ),
                     ),
                   ),
@@ -1406,10 +1406,10 @@ class _V3AddSheetState extends State<V3AddSheet> {
                   child: Container(
                     width: 62,
                     decoration: BoxDecoration(
-                      color: sel ? Nocturne.mix(c.color, 18) : Nocturne.bg,
+                      color: sel ? Nocturne.mix(c.color, 18) : Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: sel ? c.color : Nocturne.neutral800,
+                        color: sel ? c.color : Nocturne.palette.edge,
                         width: 1.2,
                       ),
                     ),
@@ -1419,7 +1419,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                         Icon(
                           c.icon,
                           size: 20,
-                          color: sel ? c.color : Nocturne.neutral400,
+                          color: sel ? c.color : Nocturne.palette.subtle,
                         ),
                         const SizedBox(height: 3),
                         Padding(
@@ -1434,7 +1434,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                               fontWeight: sel
                                   ? FontWeight.w600
                                   : FontWeight.w400,
-                              color: sel ? Nocturne.text : Nocturne.neutral400,
+                              color: sel ? Nocturne.palette.text : Nocturne.palette.subtle,
                             ),
                           ),
                         ),
@@ -1529,13 +1529,13 @@ class _V3AddSheetState extends State<V3AddSheet> {
             const SizedBox(height: 10),
             Row(
               children: [
-                const SizedBox(
+                SizedBox(
                   width: 52,
                   child: Text(
                     'For',
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: Nocturne.neutral500,
+                      color: Nocturne.palette.muted,
                     ),
                   ),
                 ),
@@ -1570,10 +1570,10 @@ class _V3AddSheetState extends State<V3AddSheet> {
                             decoration: BoxDecoration(
                               color: sel
                                   ? Nocturne.mix(m.color, 20)
-                                  : Nocturne.bg,
+                                  : Nocturne.palette.bg,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: sel ? m.color : Nocturne.neutral800,
+                                color: sel ? m.color : Nocturne.palette.edge,
                                 width: 1.2,
                               ),
                             ),
@@ -1595,8 +1595,8 @@ class _V3AddSheetState extends State<V3AddSheet> {
                                         ? FontWeight.w600
                                         : FontWeight.w400,
                                     color: sel
-                                        ? Nocturne.text
-                                        : Nocturne.neutral400,
+                                        ? Nocturne.palette.text
+                                        : Nocturne.palette.subtle,
                                   ),
                                 ),
                                 if (sel) ...[
@@ -1618,16 +1618,16 @@ class _V3AddSheetState extends State<V3AddSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Nocturne.neutral800, width: 1),
+                border: Border.all(color: Nocturne.palette.edge, width: 1),
               ),
-              child: const Row(
+              child: Row(
                 children: [
                   Icon(
                     PhRegular.usersThree,
                     size: 15,
-                    color: Nocturne.neutral500,
+                    color: Nocturne.palette.muted,
                   ),
                   SizedBox(width: 8),
                   Expanded(
@@ -1635,7 +1635,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                       'Invite members in More to split expenses and track who owes what.',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Nocturne.neutral500,
+                        color: Nocturne.palette.muted,
                       ),
                     ),
                   ),
@@ -1669,9 +1669,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
                   _splitMode == 'nil'
                       ? 'Paid for ${otherMember.name}. Nothing owed.'
                       : '${otherMember.name} owes ${payerIsMe ? 'you' : payerName} the full ${V3Design.inr(evaluated)}.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
-                    color: Nocturne.accent200,
+                    color: Nocturne.palette.accentLight,
                   ),
                 ),
               ],
@@ -1712,9 +1712,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
                         children: [
                           Text(
                             payerIsMe ? 'Your part' : '$payerName\'s part',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Nocturne.neutral400,
+                              color: Nocturne.palette.subtle,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1725,10 +1725,10 @@ class _V3AddSheetState extends State<V3AddSheet> {
                                 horizontal: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: Nocturne.surface,
+                                color: Nocturne.palette.surface,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: Nocturne.neutral700,
+                                  color: Nocturne.palette.faint,
                                   width: 1,
                                 ),
                               ),
@@ -1737,17 +1737,17 @@ class _V3AddSheetState extends State<V3AddSheet> {
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
                                     ),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: Nocturne.text,
+                                  color: Nocturne.palette.text,
                                 ),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   isDense: true,
                                   border: InputBorder.none,
                                   hintText: '0',
                                   hintStyle: TextStyle(
                                     fontSize: 13,
-                                    color: Nocturne.neutral600,
+                                    color: Nocturne.palette.faint,
                                   ),
                                 ),
                                 onChanged: (v) => setState(
@@ -1768,22 +1768,22 @@ class _V3AddSheetState extends State<V3AddSheet> {
                     ],
                     if (_splitMode == 'nil') ...[
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         'Records who it was for. Nobody owes anything.',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Nocturne.accent200,
+                          color: Nocturne.palette.accentLight,
                         ),
                       ),
                     ] else if (evaluated > 0 && owed.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Text(
                         'Each of ${owed.length} owes ${payerIsMe ? 'you' : payerName} ${V3Design.inr(each)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Nocturne.accent200,
+                          color: Nocturne.palette.accentLight,
                         ),
                       ),
                     ],
@@ -1801,12 +1801,12 @@ class _V3AddSheetState extends State<V3AddSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: Nocturne.bg,
+                color: Nocturne.palette.bg,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: _repeatMonthly
-                      ? Nocturne.accent600
-                      : Nocturne.neutral800,
+                      ? Nocturne.palette.tintEdge
+                      : Nocturne.palette.edge,
                   width: 1,
                 ),
               ),
@@ -1816,8 +1816,8 @@ class _V3AddSheetState extends State<V3AddSheet> {
                     PhRegular.arrowsClockwise,
                     size: 16,
                     color: _repeatMonthly
-                        ? Nocturne.accent300
-                        : Nocturne.neutral500,
+                        ? Nocturne.palette.accentMuted
+                        : Nocturne.palette.muted,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -1826,8 +1826,8 @@ class _V3AddSheetState extends State<V3AddSheet> {
                       style: TextStyle(
                         fontSize: 12,
                         color: _repeatMonthly
-                            ? Nocturne.text
-                            : Nocturne.neutral400,
+                            ? Nocturne.palette.text
+                            : Nocturne.palette.subtle,
                       ),
                     ),
                   ),
@@ -1907,23 +1907,23 @@ class _V3AddSheetState extends State<V3AddSheet> {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: Nocturne.neutral800,
+                          color: Nocturne.palette.edge,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               PhRegular.clock,
                               size: 11,
-                              color: Nocturne.neutral400,
+                              color: Nocturne.palette.subtle,
                             ),
                             const SizedBox(width: 3),
                             Text(
                               '≈ $workLabel',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10.5,
-                                color: Nocturne.neutral300,
+                                color: Nocturne.palette.neutral300,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -2093,18 +2093,18 @@ class _NewCatTile extends StatelessWidget {
     child: Container(
       width: 62,
       decoration: BoxDecoration(
-        color: Nocturne.bg,
+        color: Nocturne.palette.bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Nocturne.accent700, width: 1.2),
+        border: Border.all(color: Nocturne.palette.switchOn, width: 1.2),
       ),
-      child: const Column(
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(PhRegular.plus, size: 20, color: Nocturne.accent300),
+          Icon(PhRegular.plus, size: 20, color: Nocturne.palette.accentMuted),
           SizedBox(height: 3),
           Text(
             'New',
-            style: TextStyle(fontSize: 10, color: Nocturne.accent200),
+            style: TextStyle(fontSize: 10, color: Nocturne.palette.accentLight),
           ),
         ],
       ),
@@ -2124,7 +2124,7 @@ class _ChipRow extends StatelessWidget {
         width: 52,
         child: Text(
           label,
-          style: const TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+          style: TextStyle(fontSize: 11.5, color: Nocturne.palette.muted),
         ),
       ),
       Expanded(
@@ -2151,7 +2151,7 @@ class _MiniToggle extends StatelessWidget {
     width: 34,
     height: 20,
     decoration: BoxDecoration(
-      color: on ? Nocturne.accent600 : Nocturne.neutral800,
+      color: on ? Nocturne.palette.tintEdge : Nocturne.palette.edge,
       borderRadius: BorderRadius.circular(10),
     ),
     child: AnimatedAlign(
@@ -2162,7 +2162,7 @@ class _MiniToggle extends StatelessWidget {
         height: 14,
         margin: const EdgeInsets.symmetric(horizontal: 3),
         decoration: BoxDecoration(
-          color: on ? Nocturne.accent100 : Nocturne.neutral500,
+          color: on ? Nocturne.palette.accentLight : Nocturne.palette.muted,
           shape: BoxShape.circle,
         ),
       ),
@@ -2343,7 +2343,7 @@ class V3DetailSheet extends StatelessWidget {
                   _DetailAction(
                     icon: PhRegular.chatCircleDots,
                     label: 'Ask',
-                    color: Nocturne.accent300,
+                    color: Nocturne.palette.accentMuted,
                     onTap: () {
                       final payerId = txn.paidBy ?? txn.userId;
                       final nav = context.read<V3Nav?>();
@@ -2372,7 +2372,7 @@ class V3DetailSheet extends StatelessWidget {
                 _DetailAction(
                   icon: PhRegular.trash,
                   label: 'Delete',
-                  color: NocturneSemantic.expense,
+                  color: Nocturne.palette.expense,
                   onTap: () {
                     s.deleteTransaction(txn.id);
                     Navigator.pop(context);
@@ -2436,15 +2436,15 @@ class _DetailAction extends StatelessWidget {
           padding: const EdgeInsets.only(top: 12, bottom: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Nocturne.neutral800, width: 1),
+            border: Border.all(color: Nocturne.palette.edge, width: 1),
           ),
           child: Column(
             children: [
-              Icon(icon, size: 20, color: color ?? Nocturne.text),
+              Icon(icon, size: 20, color: color ?? Nocturne.palette.text),
               const SizedBox(height: 6),
               Text(
                 label,
-                style: TextStyle(fontSize: 11.5, color: color ?? Nocturne.text),
+                style: TextStyle(fontSize: 11.5, color: color ?? Nocturne.palette.text),
               ),
             ],
           ),
@@ -2510,9 +2510,9 @@ class _V3InviteSheetState extends State<V3InviteSheet> {
             "They'll join with the access you pick below",
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Role',
-            style: TextStyle(fontSize: 12.5, color: Nocturne.text),
+            style: TextStyle(fontSize: 12.5, color: Nocturne.palette.text),
           ),
           const SizedBox(height: 6),
           _SegRow(
@@ -2526,12 +2526,12 @@ class _V3InviteSheetState extends State<V3InviteSheet> {
           const SizedBox(height: 6),
           Text(
             _roleDesc[_role] ?? '',
-            style: const TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+            style: TextStyle(fontSize: 11.5, color: Nocturne.palette.muted),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'Notify me when they spend over',
-            style: TextStyle(fontSize: 12.5, color: Nocturne.text),
+            style: TextStyle(fontSize: 12.5, color: Nocturne.palette.text),
           ),
           const SizedBox(height: 6),
           _SegRow(
@@ -2546,10 +2546,10 @@ class _V3InviteSheetState extends State<V3InviteSheet> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: Nocturne.accent700,
+                color: Nocturne.palette.switchOn,
                 width: 1,
                 style: BorderStyle.solid,
               ),
@@ -2561,21 +2561,21 @@ class _V3InviteSheetState extends State<V3InviteSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
+                      Text(
                         'Invite code · valid 7 days',
                         style: TextStyle(
                           fontSize: 11,
-                          color: Nocturne.neutral500,
+                          color: Nocturne.palette.muted,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         _code ?? '— — — —',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           letterSpacing: 2.8,
                           fontFamily: 'monospace',
-                          color: Nocturne.accent200,
+                          color: Nocturne.palette.accentLight,
                         ),
                       ),
                     ],
@@ -2589,9 +2589,9 @@ class _V3InviteSheetState extends State<V3InviteSheet> {
                       : () {
                           Clipboard.setData(ClipboardData(text: _code!));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text('Invite code copied'),
-                              backgroundColor: Nocturne.neutral800,
+                              backgroundColor: Nocturne.palette.edge,
                             ),
                           );
                         },
@@ -2602,15 +2602,15 @@ class _V3InviteSheetState extends State<V3InviteSheet> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(9),
-                      border: Border.all(color: Nocturne.accent, width: 1),
+                      border: Border.all(color: Nocturne.palette.accent, width: 1),
                     ),
                     child: _busy
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 14,
                             height: 14,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Nocturne.accent200,
+                              color: Nocturne.palette.accentLight,
                             ),
                           )
                         : Row(
@@ -2619,14 +2619,14 @@ class _V3InviteSheetState extends State<V3InviteSheet> {
                               Icon(
                                 _code == null ? PhRegular.plus : PhRegular.copy,
                                 size: 14,
-                                color: Nocturne.accent200,
+                                color: Nocturne.palette.accentLight,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 _code == null ? 'Create' : 'Copy',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12.5,
-                                  color: Nocturne.accent200,
+                                  color: Nocturne.palette.accentLight,
                                 ),
                               ),
                             ],
@@ -2657,7 +2657,7 @@ class _SegRow extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(
-      color: Nocturne.bg,
+      color: Nocturne.palette.bg,
       borderRadius: BorderRadius.circular(10),
     ),
     child: Row(
@@ -2672,12 +2672,12 @@ class _SegRow extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: i == selected
-                      ? Nocturne.accent900
+                      ? Nocturne.palette.tint
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: i == selected
-                        ? Nocturne.accent600
+                        ? Nocturne.palette.tintEdge
                         : Colors.transparent,
                     width: 1,
                   ),
@@ -2687,8 +2687,8 @@ class _SegRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12.5,
                     color: i == selected
-                        ? Nocturne.accent100
-                        : Nocturne.neutral400,
+                        ? Nocturne.palette.accentLight
+                        : Nocturne.palette.subtle,
                   ),
                 ),
               ),
@@ -2723,15 +2723,15 @@ class V3ApprovalSheet extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               approval.reason!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 height: 1.45,
-                color: Nocturne.neutral300,
+                color: Nocturne.palette.neutral300,
               ),
             ),
           ),
@@ -2750,13 +2750,13 @@ class V3ApprovalSheet extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Nocturne.neutral700, width: 1),
+                    border: Border.all(color: Nocturne.palette.faint, width: 1),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Reject',
                     style: TextStyle(
                       fontSize: 13.5,
-                      color: Nocturne.neutral300,
+                      color: Nocturne.palette.neutral300,
                     ),
                   ),
                 ),
@@ -2774,16 +2774,16 @@ class V3ApprovalSheet extends StatelessWidget {
                   height: 44,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Nocturne.mix(Nocturne.accent, 18),
+                    color: Nocturne.mix(Nocturne.palette.accent, 18),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Nocturne.accent, width: 1),
+                    border: Border.all(color: Nocturne.palette.accent, width: 1),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Approve',
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w500,
-                      color: Nocturne.accent100,
+                      color: Nocturne.palette.accentLight,
                     ),
                   ),
                 ),

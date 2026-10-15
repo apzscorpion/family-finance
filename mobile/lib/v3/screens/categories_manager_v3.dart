@@ -38,11 +38,11 @@ class CategoriesManagerV3 extends StatefulWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) {
-          final tint = V3Design.parseHex(pickedColor) ?? Nocturne.accent;
+          final tint = V3Design.parseHex(pickedColor) ?? Nocturne.palette.accent;
           return AlertDialog(
-            backgroundColor: Nocturne.surface,
+            backgroundColor: Nocturne.palette.surface,
             title: Text(title,
-                style: const TextStyle(fontSize: 17, color: Nocturne.text)),
+                style: TextStyle(fontSize: 17, color: Nocturne.palette.text)),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -61,15 +61,15 @@ class CategoriesManagerV3 extends StatefulWidget {
                           controller: controller,
                           autofocus: name.isEmpty,
                           textCapitalization: TextCapitalization.words,
-                          style: const TextStyle(
-                              fontSize: 14, color: Nocturne.text),
-                          cursorColor: Nocturne.accent,
+                          style: TextStyle(
+                              fontSize: 14, color: Nocturne.palette.text),
+                          cursorColor: Nocturne.palette.accent,
                           decoration: InputDecoration(
                             hintText: 'Name',
-                            hintStyle: const TextStyle(
-                                fontSize: 14, color: Nocturne.neutral600),
+                            hintStyle: TextStyle(
+                                fontSize: 14, color: Nocturne.palette.faint),
                             filled: true,
-                            fillColor: Nocturne.bg,
+                            fillColor: Nocturne.palette.bg,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: BorderSide.none,
@@ -82,17 +82,17 @@ class CategoriesManagerV3 extends StatefulWidget {
                   const SizedBox(height: 14),
                   TextField(
                     onChanged: (v) => setLocal(() => query = v),
-                    style: const TextStyle(fontSize: 13, color: Nocturne.text),
-                    cursorColor: Nocturne.accent,
+                    style: TextStyle(fontSize: 13, color: Nocturne.palette.text),
+                    cursorColor: Nocturne.palette.accent,
                     decoration: InputDecoration(
                       isDense: true,
-                      prefixIcon: const Icon(PhRegular.magnifyingGlass,
-                          size: 16, color: Nocturne.neutral500),
+                      prefixIcon: Icon(PhRegular.magnifyingGlass,
+                          size: 16, color: Nocturne.palette.muted),
                       hintText: 'Search icons (e.g. car, pill, coffee)',
-                      hintStyle: const TextStyle(
-                          fontSize: 13, color: Nocturne.neutral600),
+                      hintStyle: TextStyle(
+                          fontSize: 13, color: Nocturne.palette.faint),
                       filled: true,
-                      fillColor: Nocturne.bg,
+                      fillColor: Nocturne.palette.bg,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,
@@ -103,13 +103,13 @@ class CategoriesManagerV3 extends StatefulWidget {
                   Builder(builder: (_) {
                     final names = iconMatches(query);
                     if (names.isEmpty) {
-                      return const Padding(
+                      return Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: Center(
                           child: Text('No icons match',
                               style: TextStyle(
                                   fontSize: 12.5,
-                                  color: Nocturne.neutral500)),
+                                  color: Nocturne.palette.muted)),
                         ),
                       );
                     }
@@ -138,18 +138,18 @@ class CategoriesManagerV3 extends StatefulWidget {
                                 decoration: BoxDecoration(
                                   color: sel
                                       ? Nocturne.mix(tint, 22)
-                                      : Nocturne.bg,
+                                      : Nocturne.palette.bg,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color:
-                                        sel ? tint : Nocturne.neutral800,
+                                        sel ? tint : Nocturne.palette.edge,
                                   ),
                                 ),
                                 child: Icon(V3Design.iconFromName(name),
                                     size: 18,
                                     color: sel
                                         ? tint
-                                        : Nocturne.neutral400),
+                                        : Nocturne.palette.subtle),
                               ),
                             ),
                           );
@@ -178,7 +178,7 @@ class CategoriesManagerV3 extends StatefulWidget {
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: pickedColor == hex
-                                      ? Nocturne.text
+                                      ? Nocturne.palette.text
                                       : Colors.transparent,
                                   width: 2,
                                 ),
@@ -194,12 +194,12 @@ class CategoriesManagerV3 extends StatefulWidget {
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Nocturne.neutral400))),
+                  child: Text('Cancel',
+                      style: TextStyle(color: Nocturne.palette.subtle))),
               TextButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Save',
-                      style: TextStyle(color: Nocturne.accent300))),
+                  child: Text('Save',
+                      style: TextStyle(color: Nocturne.palette.accentMuted))),
             ],
           );
         },
@@ -244,7 +244,7 @@ class _CategoriesManagerV3State extends State<CategoriesManagerV3> {
     final cats = s.topCategories(_kind);
 
     return Scaffold(
-      backgroundColor: Nocturne.bg,
+      backgroundColor: Nocturne.palette.bg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,19 +256,19 @@ class _CategoriesManagerV3State extends State<CategoriesManagerV3> {
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     behavior: HitTestBehavior.opaque,
-                    child: const SizedBox(
+                    child: SizedBox(
                       width: 42,
                       height: 42,
                       child: Icon(PhRegular.arrowLeft,
-                          size: 22, color: Nocturne.text),
+                          size: 22, color: Nocturne.palette.text),
                     ),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text('Categories',
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
-                            color: Nocturne.text)),
+                            color: Nocturne.palette.text)),
                   ),
                   V3Segmented(
                     labels: const ['Expense', 'Income'],
@@ -279,13 +279,13 @@ class _CategoriesManagerV3State extends State<CategoriesManagerV3> {
                 ],
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(16, 4, 16, 10),
               child: Text(
                 'Drag to reorder. The add-entry screen shows categories in '
                 'this order, so put the ones you use most at the top.',
                 style: TextStyle(
-                    fontSize: 12.5, height: 1.5, color: Nocturne.neutral500),
+                    fontSize: 12.5, height: 1.5, color: Nocturne.palette.muted),
               ),
             ),
             Expanded(
@@ -316,17 +316,17 @@ class _CategoriesManagerV3State extends State<CategoriesManagerV3> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(14),
                         border:
-                            Border.all(color: Nocturne.accent700, width: 1),
+                            Border.all(color: Nocturne.palette.switchOn, width: 1),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(PhRegular.plus,
-                              size: 16, color: Nocturne.accent200),
+                              size: 16, color: Nocturne.palette.accentLight),
                           SizedBox(width: 8),
                           Text('Add a category',
                               style: TextStyle(
-                                  fontSize: 14, color: Nocturne.accent200)),
+                                  fontSize: 14, color: Nocturne.palette.accentLight)),
                         ],
                       ),
                     ),
@@ -361,7 +361,7 @@ class _CategoryTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(4, 10, 8, 10),
       decoration: BoxDecoration(
-        color: Nocturne.surface,
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -371,11 +371,11 @@ class _CategoryTile extends StatelessWidget {
             children: [
               ReorderableDragStartListener(
                 index: index,
-                child: const SizedBox(
+                child: SizedBox(
                   width: 32,
                   height: 36,
                   child: Icon(PhRegular.dotsSixVertical,
-                      size: 18, color: Nocturne.neutral500),
+                      size: 18, color: Nocturne.palette.muted),
                 ),
               ),
               V3IconTile(
@@ -386,16 +386,16 @@ class _CategoryTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style:
-                        const TextStyle(fontSize: 13.5, color: Nocturne.text)),
+                        TextStyle(fontSize: 13.5, color: Nocturne.palette.text)),
               ),
               GestureDetector(
                 onTap: () => _menu(context, s, cat, canAddSub: true),
                 behavior: HitTestBehavior.opaque,
-                child: const SizedBox(
+                child: SizedBox(
                   width: 32,
                   height: 32,
                   child: Icon(PhRegular.dotsThree,
-                      size: 18, color: Nocturne.neutral500),
+                      size: 18, color: Nocturne.palette.muted),
                 ),
               ),
             ],
@@ -427,7 +427,7 @@ class _CategoryTile extends StatelessWidget {
       {required bool canAddSub}) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Nocturne.surface,
+      backgroundColor: Nocturne.palette.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -437,17 +437,17 @@ class _CategoryTile extends StatelessWidget {
           children: [
             const SizedBox(height: 14),
             Text(c.name,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Nocturne.text)),
+                    color: Nocturne.palette.text)),
             const SizedBox(height: 8),
             if (canAddSub)
               ListTile(
-                leading: const Icon(PhRegular.plus,
-                    size: 18, color: Nocturne.text),
-                title: const Text('Add subcategory',
-                    style: TextStyle(fontSize: 14, color: Nocturne.text)),
+                leading: Icon(PhRegular.plus,
+                    size: 18, color: Nocturne.palette.text),
+                title: Text('Add subcategory',
+                    style: TextStyle(fontSize: 14, color: Nocturne.palette.text)),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final r = await CategoriesManagerV3.promptCategory(
@@ -463,10 +463,10 @@ class _CategoryTile extends StatelessWidget {
                 },
               ),
             ListTile(
-              leading: const Icon(PhRegular.pencilSimple,
-                  size: 18, color: Nocturne.text),
-              title: const Text('Edit name & icon',
-                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
+              leading: Icon(PhRegular.pencilSimple,
+                  size: 18, color: Nocturne.palette.text),
+              title: Text('Edit name & icon',
+                  style: TextStyle(fontSize: 14, color: Nocturne.palette.text)),
               onTap: () async {
                 Navigator.pop(ctx);
                 final r = await CategoriesManagerV3.promptCategory(
@@ -479,17 +479,17 @@ class _CategoryTile extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(PhRegular.users,
-                  size: 18, color: Nocturne.text),
-              title: const Text('Linked people',
-                  style: TextStyle(fontSize: 14, color: Nocturne.text)),
+              leading: Icon(PhRegular.users,
+                  size: 18, color: Nocturne.palette.text),
+              title: Text('Linked people',
+                  style: TextStyle(fontSize: 14, color: Nocturne.palette.text)),
               subtitle: Text(
                   _names([
                     for (final m in s.members)
                       if (c.memberIds.contains(m.userId)) m.name,
                   ], 'Picking this category fills in "For" with them'),
-                  style: const TextStyle(
-                      fontSize: 11.5, color: Nocturne.neutral500)),
+                  style: TextStyle(
+                      fontSize: 11.5, color: Nocturne.palette.muted)),
               onTap: () async {
                 Navigator.pop(ctx);
                 final picked = await _pickMany(
@@ -510,17 +510,17 @@ class _CategoryTile extends StatelessWidget {
             ),
             if (!canAddSub)
               ListTile(
-                leading: const Icon(PhRegular.link,
-                    size: 18, color: Nocturne.text),
-                title: const Text('Also show under…',
-                    style: TextStyle(fontSize: 14, color: Nocturne.text)),
+                leading: Icon(PhRegular.link,
+                    size: 18, color: Nocturne.palette.text),
+                title: Text('Also show under…',
+                    style: TextStyle(fontSize: 14, color: Nocturne.palette.text)),
                 subtitle: Text(
                     _names([
                       for (final m in s.topCategories(c.kind))
                         if (c.alsoParentIds.contains(m.id)) m.name,
                     ], 'Use this subcategory in other categories too'),
-                    style: const TextStyle(
-                        fontSize: 11.5, color: Nocturne.neutral500)),
+                    style: TextStyle(
+                        fontSize: 11.5, color: Nocturne.palette.muted)),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final picked = await _pickMany(
@@ -540,17 +540,17 @@ class _CategoryTile extends StatelessWidget {
                 },
               ),
             ListTile(
-              leading: const Icon(PhRegular.trash,
-                  size: 18, color: NocturneSemantic.expense),
-              title: const Text('Delete',
+              leading: Icon(PhRegular.trash,
+                  size: 18, color: Nocturne.palette.expense),
+              title: Text('Delete',
                   style: TextStyle(
-                      fontSize: 14, color: NocturneSemantic.expense)),
+                      fontSize: 14, color: Nocturne.palette.expense)),
               subtitle: Text(
                   canAddSub
                       ? 'Past entries stay but lose this category; its subcategories go too'
                       : 'Past entries stay but lose this subcategory',
-                  style: const TextStyle(
-                      fontSize: 11.5, color: Nocturne.neutral500)),
+                  style: TextStyle(
+                      fontSize: 11.5, color: Nocturne.palette.muted)),
               onTap: () async {
                 Navigator.pop(ctx);
                 await s.deleteCategory(c.id);
@@ -578,9 +578,9 @@ class _CategoryTile extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
-          backgroundColor: Nocturne.surface,
+          backgroundColor: Nocturne.palette.surface,
           title: Text(title,
-              style: const TextStyle(fontSize: 17, color: Nocturne.text)),
+              style: TextStyle(fontSize: 17, color: Nocturne.palette.text)),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView(
@@ -590,9 +590,9 @@ class _CategoryTile extends StatelessWidget {
                   CheckboxListTile(
                     value: chosen.contains(o.id),
                     title: Text(o.label,
-                        style: const TextStyle(
-                            fontSize: 14, color: Nocturne.text)),
-                    activeColor: Nocturne.accent,
+                        style: TextStyle(
+                            fontSize: 14, color: Nocturne.palette.text)),
+                    activeColor: Nocturne.palette.accent,
                     contentPadding: EdgeInsets.zero,
                     onChanged: (v) => setInner(() =>
                         v == true ? chosen.add(o.id) : chosen.remove(o.id)),
@@ -603,13 +603,13 @@ class _CategoryTile extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Nocturne.neutral400)),
+              child: Text('Cancel',
+                  style: TextStyle(color: Nocturne.palette.subtle)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, chosen),
-              child: const Text('Save',
-                  style: TextStyle(color: Nocturne.accent300)),
+              child: Text('Save',
+                  style: TextStyle(color: Nocturne.palette.accentMuted)),
             ),
           ],
         ),

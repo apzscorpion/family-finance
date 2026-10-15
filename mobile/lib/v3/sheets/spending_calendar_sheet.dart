@@ -113,10 +113,10 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
         top: 16,
         bottom: MediaQuery.of(context).padding.bottom + 16,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral800, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.edge, width: 1)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -128,7 +128,7 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: Nocturne.neutral700,
+                color: Nocturne.palette.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -139,7 +139,7 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(PhRegular.caretLeft, size: 20, color: Nocturne.text),
+                icon: Icon(PhRegular.caretLeft, size: 20, color: Nocturne.palette.text),
                 onPressed: _prevMonth,
               ),
               Expanded(
@@ -147,24 +147,24 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
                   children: [
                     Text(
                       DateFormat('MMMM yyyy').format(_currentMonth),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
-                        color: Nocturne.text,
+                        color: Nocturne.palette.text,
                       ),
                     ),
                     Text(
                       'Total: ${V3Design.inr(monthTotal)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Nocturne.neutral400,
+                        color: Nocturne.palette.subtle,
                       ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(PhRegular.caretRight, size: 20, color: Nocturne.text),
+                icon: Icon(PhRegular.caretRight, size: 20, color: Nocturne.palette.text),
                 onPressed: _nextMonth,
               ),
             ],
@@ -215,14 +215,14 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
                   DateTime.now().month == date.month &&
                   DateTime.now().day == date.day;
 
-              Color cellColor = Nocturne.bg;
+              Color cellColor = Nocturne.palette.bg;
               if (spend > 0) {
                 if (fraction > 0.75) {
                   cellColor = const Color(0xFFDC2626); // High spend (red)
                 } else if (fraction > 0.40) {
                   cellColor = const Color(0xFFF59E0B); // Medium spend (amber)
                 } else {
-                  cellColor = Nocturne.accent600; // Normal spend (purple)
+                  cellColor = Nocturne.palette.tintEdge; // Normal spend (purple)
                 }
               }
 
@@ -238,7 +238,7 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
                     border: Border.all(
                       color: isSelected
                           ? Colors.white
-                          : (isToday ? Nocturne.accent300 : Nocturne.neutral800),
+                          : (isToday ? Nocturne.palette.accentMuted : Nocturne.palette.edge),
                       width: isSelected ? 2 : (isToday ? 1.5 : 0.8),
                     ),
                   ),
@@ -248,7 +248,7 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w500,
-                        color: spend > 0 ? Colors.white : Nocturne.neutral500,
+                        color: spend > 0 ? Colors.white : Nocturne.palette.muted,
                       ),
                     ),
                   ),
@@ -266,10 +266,10 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
               children: [
                 Text(
                   DateFormat('EEE, d MMM').format(_selectedDate!),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Nocturne.text,
+                    color: Nocturne.palette.text,
                   ),
                 ),
                 Text(
@@ -277,7 +277,7 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: selectedTotal > 0 ? Nocturne.text : Nocturne.neutral500,
+                    color: selectedTotal > 0 ? Nocturne.palette.text : Nocturne.palette.muted,
                   ),
                 ),
               ],
@@ -290,7 +290,7 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
                   ? Center(
                       child: Text(
                         'No expenses recorded on this day',
-                        style: TextStyle(fontSize: 13, color: Nocturne.neutral500),
+                        style: TextStyle(fontSize: 13, color: Nocturne.palette.muted),
                       ),
                     )
                   : ListView.separated(
@@ -307,9 +307,9 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             decoration: BoxDecoration(
-                              color: Nocturne.bg,
+                              color: Nocturne.palette.bg,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Nocturne.neutral800, width: 1),
+                              border: Border.all(color: Nocturne.palette.edge, width: 1),
                             ),
                             child: Row(
                               children: [
@@ -329,17 +329,17 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
                                     children: [
                                       Text(
                                         txn.title,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w500,
-                                          color: Nocturne.text,
+                                          color: Nocturne.palette.text,
                                         ),
                                       ),
                                       Text(
                                         cat.name,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11,
-                                          color: Nocturne.neutral400,
+                                          color: Nocturne.palette.subtle,
                                         ),
                                       ),
                                     ],
@@ -347,10 +347,10 @@ class _SpendingCalendarSheetState extends State<SpendingCalendarSheet> {
                                 ),
                                 Text(
                                   V3Design.inr(txn.amount),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: Nocturne.text,
+                                    color: Nocturne.palette.text,
                                   ),
                                 ),
                               ],
@@ -378,10 +378,10 @@ class _WeekdayLabel extends StatelessWidget {
       child: Text(
         label,
         textAlign: TextAlign.center,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w600,
-          color: Nocturne.neutral500,
+          color: Nocturne.palette.muted,
         ),
       ),
     );

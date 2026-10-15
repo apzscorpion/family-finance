@@ -49,7 +49,7 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
       children: [
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -58,11 +58,11 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.text)),
+                          color: Nocturne.palette.text)),
                   SizedBox(height: 2),
                   Text('Salary, rent, bills & EMIs tracked on a schedule',
                       style:
-                          TextStyle(fontSize: 12, color: Nocturne.neutral500)),
+                          TextStyle(fontSize: 12, color: Nocturne.palette.muted)),
                 ],
               ),
             ),
@@ -72,7 +72,7 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
-                  color: Nocturne.accent,
+                  color: Nocturne.palette.accent,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Row(
@@ -97,21 +97,21 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
-              color: Nocturne.mix(NocturneSemantic.warning, 12),
+              color: Nocturne.mix(Nocturne.palette.warning, 12),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: Nocturne.mix(NocturneSemantic.warning, 40), width: 1),
+                  color: Nocturne.mix(Nocturne.palette.warning, 40), width: 1),
             ),
             child: Row(
               children: [
-                const Icon(PhRegular.warning,
-                    size: 16, color: NocturneSemantic.warning),
+                Icon(PhRegular.warning,
+                    size: 16, color: Nocturne.palette.warning),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '$unownedCount recurring ${unownedCount == 1 ? 'charge has' : 'charges have'} no owner — tap a row to assign who it belongs to.',
-                    style: const TextStyle(
-                        fontSize: 11.5, color: Nocturne.neutral200),
+                    style: TextStyle(
+                        fontSize: 11.5, color: Nocturne.palette.text),
                   ),
                 ),
               ],
@@ -159,15 +159,15 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                     children: [
                       Text(
                         'Detected Subscription: ${top.title}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: Nocturne.text,
+                          color: Nocturne.palette.text,
                         ),
                       ),
                       Text(
                         'Charged ${V3Design.inr(top.amount)} ${top.cadence} (${top.occurrences}x detected). Add to recurring?',
-                        style: const TextStyle(fontSize: 11, color: Nocturne.neutral400),
+                        style: TextStyle(fontSize: 11, color: Nocturne.palette.subtle),
                       ),
                     ],
                   ),
@@ -210,15 +210,15 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             decoration: BoxDecoration(
-              color: Nocturne.bg,
+              color: Nocturne.palette.bg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Nocturne.neutral800, width: 1),
+              border: Border.all(color: Nocturne.palette.edge, width: 1),
             ),
             alignment: Alignment.center,
             child: Column(
               children: [
-                const Icon(PhRegular.arrowsClockwise,
-                    size: 32, color: Nocturne.neutral500),
+                Icon(PhRegular.arrowsClockwise,
+                    size: 32, color: Nocturne.palette.muted),
                 const SizedBox(height: 8),
                 Text(
                   _filter == 'income'
@@ -226,16 +226,16 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                       : _filter == 'expense'
                           ? 'No recurring expenses set up yet'
                           : 'No recurring transactions set up yet',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Nocturne.text),
+                      color: Nocturne.palette.text),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Set up salary credited on the 1st, rent, or Netflix subscriptions.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Nocturne.neutral500),
+                  style: TextStyle(fontSize: 12, color: Nocturne.palette.muted),
                 ),
               ],
             ),
@@ -270,12 +270,12 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Nocturne.bg,
+                      color: Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: r.ownerUserId == null
-                            ? Nocturne.mix(NocturneSemantic.warning, 45)
-                            : Nocturne.neutral800,
+                            ? Nocturne.mix(Nocturne.palette.warning, 45)
+                            : Nocturne.palette.edge,
                         width: 1,
                       ),
                     ),
@@ -300,10 +300,10 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                                       r.title,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
-                                          color: Nocturne.text),
+                                          color: Nocturne.palette.text),
                                     ),
                                   ),
                                   if (r.autoPost) ...[
@@ -312,14 +312,14 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 5, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: Nocturne.accent900,
+                                        color: Nocturne.palette.tint,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text('Auto',
+                                      child: Text('Auto',
                                           style: TextStyle(
                                               fontSize: 9.5,
                                               fontWeight: FontWeight.w600,
-                                              color: Nocturne.accent200)),
+                                              color: Nocturne.palette.accentLight)),
                                     ),
                                   ],
                                   const SizedBox(width: 6),
@@ -329,10 +329,10 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                                     decoration: BoxDecoration(
                                       color: r.ownerUserId == null
                                           ? Nocturne.mix(
-                                              NocturneSemantic.warning, 18)
+                                              Nocturne.palette.warning, 18)
                                           : Nocturne.mix(
                                               owner?.color ??
-                                                  Nocturne.accent600,
+                                                  Nocturne.palette.tintEdge,
                                               18),
                                       borderRadius: BorderRadius.circular(5),
                                     ),
@@ -342,9 +342,9 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                         color: r.ownerUserId == null
-                                            ? NocturneSemantic.warning
+                                            ? Nocturne.palette.warning
                                             : (owner?.color ??
-                                                Nocturne.accent200),
+                                                Nocturne.palette.accentLight),
                                       ),
                                     ),
                                   ),
@@ -353,8 +353,8 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                               const SizedBox(height: 2),
                               Text(
                                 '${_daySuffix(r.nextDue.day)} of month · $dueText',
-                                style: const TextStyle(
-                                    fontSize: 11.5, color: Nocturne.neutral500),
+                                style: TextStyle(
+                                    fontSize: 11.5, color: Nocturne.palette.muted),
                               ),
                             ],
                           ),
@@ -369,16 +369,16 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: r.isIncome
-                                    ? NocturneSemantic.income
-                                    : Nocturne.text,
+                                    ? Nocturne.palette.income
+                                    : Nocturne.palette.text,
                               ),
                             ),
                             const SizedBox(height: 4),
                             GestureDetector(
                               onTap: () => _confirmDelete(context, s, r),
                               behavior: HitTestBehavior.opaque,
-                              child: const Icon(PhRegular.trash,
-                                  size: 16, color: Nocturne.neutral500),
+                              child: Icon(PhRegular.trash,
+                                  size: 16, color: Nocturne.palette.muted),
                             ),
                           ],
                         ),
@@ -401,17 +401,17 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: sel ? Nocturne.neutral700 : Nocturne.bg,
+          color: sel ? Nocturne.palette.faint : Nocturne.palette.bg,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-              color: sel ? Nocturne.neutral600 : Nocturne.neutral800, width: 1),
+              color: sel ? Nocturne.palette.faint : Nocturne.palette.edge, width: 1),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
-            color: sel ? Nocturne.text : Nocturne.neutral400,
+            color: sel ? Nocturne.palette.text : Nocturne.palette.subtle,
           ),
         ),
       ),
@@ -422,23 +422,23 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: Nocturne.surface,
+        backgroundColor: Nocturne.palette.surface,
         title: Text('Delete "${r.title}"?'),
         content: const Text(
             'This will stop future recurring reminders or auto-posts for this item.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: Nocturne.neutral400)),
+            child: Text('Cancel',
+                style: TextStyle(color: Nocturne.palette.subtle)),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               s.deleteRecurring(r.id);
             },
-            child: const Text('Delete',
-                style: TextStyle(color: NocturneSemantic.expense)),
+            child: Text('Delete',
+                style: TextStyle(color: Nocturne.palette.expense)),
           ),
         ],
       ),
@@ -615,10 +615,10 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.92,
       ),
-      decoration: const BoxDecoration(
-        color: Nocturne.surface,
+      decoration: BoxDecoration(
+        color: Nocturne.palette.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Nocturne.neutral700, width: 1)),
+        border: Border(top: BorderSide(color: Nocturne.palette.faint, width: 1)),
       ),
       padding: EdgeInsets.only(
         left: 16,
@@ -634,7 +634,7 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
             height: 4,
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: Nocturne.neutral700,
+              color: Nocturne.palette.faint,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -650,15 +650,15 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                           widget.edit == null
                               ? 'Add recurring'
                               : 'Edit recurring',
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Nocturne.text)),
+                              color: Nocturne.palette.text)),
                       const Spacer(),
                       V3Segmented(
                         labels: const ['Income', 'Expense'],
                         selected: _type == 'income' ? 0 : 1,
-                        ground: Nocturne.bg,
+                        ground: Nocturne.palette.bg,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
                         onChanged: (i) => setState(() {
@@ -682,9 +682,9 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                           decoration: BoxDecoration(
                             color: _value > 0
                                 ? (_type == 'income'
-                                    ? NocturneSemantic.income
-                                    : Nocturne.accent)
-                                : Nocturne.neutral800,
+                                    ? Nocturne.palette.income
+                                    : Nocturne.palette.accent)
+                                : Nocturne.palette.edge,
                             borderRadius: BorderRadius.circular(11),
                           ),
                           child: _saving
@@ -699,7 +699,7 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                                   size: 20,
                                   color: _value > 0
                                       ? Colors.white
-                                      : Nocturne.neutral500,
+                                      : Nocturne.palette.muted,
                                 ),
                         ),
                       ),
@@ -710,26 +710,26 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                     height: 40,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: Nocturne.bg,
+                      color: Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(11),
-                      border: Border.all(color: Nocturne.neutral800, width: 1),
+                      border: Border.all(color: Nocturne.palette.edge, width: 1),
                     ),
                     child: Row(
                       children: [
-                        const Icon(PhRegular.notePencil,
-                            size: 16, color: Nocturne.neutral500),
+                        Icon(PhRegular.notePencil,
+                            size: 16, color: Nocturne.palette.muted),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _titleController,
-                            style: const TextStyle(
-                                fontSize: 13.5, color: Nocturne.text),
-                            decoration: const InputDecoration(
+                            style: TextStyle(
+                                fontSize: 13.5, color: Nocturne.palette.text),
+                            decoration: InputDecoration(
                               isDense: true,
                               border: InputBorder.none,
                               hintText: 'e.g. Salary, Rent, Netflix',
                               hintStyle: TextStyle(
-                                  fontSize: 13.5, color: Nocturne.neutral600),
+                                  fontSize: 13.5, color: Nocturne.palette.faint),
                             ),
                           ),
                         ),
@@ -740,11 +740,11 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           width: 52,
                           child: Text('For',
                               style: TextStyle(
-                                  fontSize: 11.5, color: Nocturne.neutral500)),
+                                  fontSize: 11.5, color: Nocturne.palette.muted)),
                         ),
                         Expanded(
                           child: SizedBox(
@@ -769,11 +769,11 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                                     decoration: BoxDecoration(
                                       color: sel
                                           ? Nocturne.mix(m.color, 20)
-                                          : Nocturne.bg,
+                                          : Nocturne.palette.bg,
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
                                         color:
-                                            sel ? m.color : Nocturne.neutral800,
+                                            sel ? m.color : Nocturne.palette.edge,
                                         width: 1.2,
                                       ),
                                     ),
@@ -795,8 +795,8 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                                                 ? FontWeight.w600
                                                 : FontWeight.w400,
                                             color: sel
-                                                ? Nocturne.text
-                                                : Nocturne.neutral400,
+                                                ? Nocturne.palette.text
+                                                : Nocturne.palette.subtle,
                                           ),
                                         ),
                                         if (sel) ...[
@@ -819,11 +819,11 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                   // Day of month selector
                   Row(
                     children: [
-                      const SizedBox(
+                      SizedBox(
                         width: 52,
                         child: Text('Date',
                             style: TextStyle(
-                                fontSize: 11.5, color: Nocturne.neutral500)),
+                                fontSize: 11.5, color: Nocturne.palette.muted)),
                       ),
                       Expanded(
                         child: SizedBox(
@@ -842,12 +842,12 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                                   width: 32,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: sel ? Nocturne.accent : Nocturne.bg,
+                                    color: sel ? Nocturne.palette.accent : Nocturne.palette.bg,
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: sel
-                                          ? Nocturne.accent
-                                          : Nocturne.neutral800,
+                                          ? Nocturne.palette.accent
+                                          : Nocturne.palette.edge,
                                       width: 1,
                                     ),
                                   ),
@@ -860,7 +860,7 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                                           : FontWeight.w400,
                                       color: sel
                                           ? Colors.white
-                                          : Nocturne.neutral400,
+                                          : Nocturne.palette.subtle,
                                     ),
                                   ),
                                 ),
@@ -891,10 +891,10 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                             decoration: BoxDecoration(
                               color: sel
                                   ? Nocturne.mix(c.color, 18)
-                                  : Nocturne.bg,
+                                  : Nocturne.palette.bg,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: sel ? c.color : Nocturne.neutral800,
+                                color: sel ? c.color : Nocturne.palette.edge,
                                 width: 1.2,
                               ),
                             ),
@@ -903,7 +903,7 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                               children: [
                                 Icon(c.icon,
                                     size: 19,
-                                    color: sel ? c.color : Nocturne.neutral400),
+                                    color: sel ? c.color : Nocturne.palette.subtle),
                                 const SizedBox(height: 3),
                                 Text(
                                   c.short,
@@ -912,8 +912,8 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: sel
-                                        ? Nocturne.text
-                                        : Nocturne.neutral400,
+                                        ? Nocturne.palette.text
+                                        : Nocturne.palette.subtle,
                                   ),
                                 ),
                               ],
@@ -932,12 +932,12 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Nocturne.bg,
+                        color: Nocturne.palette.bg,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: _autoPost
-                              ? Nocturne.accent600
-                              : Nocturne.neutral800,
+                              ? Nocturne.palette.tintEdge
+                              : Nocturne.palette.edge,
                           width: 1,
                         ),
                       ),
@@ -946,8 +946,8 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                           Icon(PhRegular.lightning,
                               size: 16,
                               color: _autoPost
-                                  ? Nocturne.accent300
-                                  : Nocturne.neutral500),
+                                  ? Nocturne.palette.accentMuted
+                                  : Nocturne.palette.muted),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -957,8 +957,8 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                               style: TextStyle(
                                 fontSize: 11.5,
                                 color: _autoPost
-                                    ? Nocturne.text
-                                    : Nocturne.neutral400,
+                                    ? Nocturne.palette.text
+                                    : Nocturne.palette.subtle,
                               ),
                             ),
                           ),
@@ -973,16 +973,16 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Nocturne.bg,
+                      color: Nocturne.palette.bg,
                       borderRadius: BorderRadius.circular(12),
                       border:
-                          Border.all(color: Nocturne.neutral800, width: 1),
+                          Border.all(color: Nocturne.palette.edge, width: 1),
                     ),
                     child: Row(
                       children: [
-                        const Text('₹',
+                        Text('₹',
                             style: TextStyle(
-                                fontSize: 20, color: Nocturne.neutral500)),
+                                fontSize: 20, color: Nocturne.palette.muted)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -991,8 +991,8 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                               fontSize: 26,
                               fontWeight: FontWeight.w600,
                               color: _type == 'income'
-                                  ? NocturneSemantic.income
-                                  : Nocturne.text,
+                                  ? Nocturne.palette.income
+                                  : Nocturne.palette.text,
                               fontFeatures: const [
                                 FontFeature.tabularFigures()
                               ],
@@ -1005,15 +1005,15 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Nocturne.accent900,
+                              color: Nocturne.palette.tint,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               '= ₹${CalcEngine.format(_value)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: Nocturne.accent200),
+                                  color: Nocturne.palette.accentLight),
                             ),
                           ),
                         ],
@@ -1053,7 +1053,7 @@ class _MiniToggle extends StatelessWidget {
         width: 34,
         height: 20,
         decoration: BoxDecoration(
-          color: on ? Nocturne.accent600 : Nocturne.neutral800,
+          color: on ? Nocturne.palette.tintEdge : Nocturne.palette.edge,
           borderRadius: BorderRadius.circular(10),
         ),
         child: AnimatedAlign(
@@ -1064,7 +1064,7 @@ class _MiniToggle extends StatelessWidget {
             height: 14,
             margin: const EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
-              color: on ? Nocturne.accent100 : Nocturne.neutral500,
+              color: on ? Nocturne.palette.accentLight : Nocturne.palette.muted,
               shape: BoxShape.circle,
             ),
           ),
@@ -1086,21 +1086,21 @@ class _Key extends StatelessWidget {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isOp ? Nocturne.neutral800 : Nocturne.bg,
+          color: isOp ? Nocturne.palette.edge : Nocturne.palette.bg,
           borderRadius: BorderRadius.circular(11),
           border: Border.all(
-            color: isOp ? Nocturne.accent600.withValues(alpha: 0.3) : Nocturne.neutral900,
+            color: isOp ? Nocturne.palette.tintEdge.withValues(alpha: 0.3) : Nocturne.palette.line,
             width: 1,
           ),
         ),
         child: label == '<'
-            ? const Icon(PhRegular.backspace, size: 19, color: Nocturne.text)
+            ? Icon(PhRegular.backspace, size: 19, color: Nocturne.palette.text)
             : Text(
                 label,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: isOp ? FontWeight.w600 : FontWeight.w500,
-                  color: isOp ? Nocturne.accent200 : Nocturne.text,
+                  color: isOp ? Nocturne.palette.accentLight : Nocturne.palette.text,
                 ),
               ),
       ),

@@ -255,20 +255,20 @@ class _ActivityV3State extends State<ActivityV3> {
         ),
         content: Text(
           'This will permanently delete all $count imported transaction${count == 1 ? '' : 's'} in ${s.isFamily ? 'this workspace' : "${s.scopeName}'s view"}. Manually added entries will not be touched.',
-          style: const TextStyle(fontSize: 13, color: Nocturne.neutral400),
+          style: TextStyle(fontSize: 13, color: Nocturne.palette.subtle),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: Nocturne.neutral400)),
+            child: Text('Cancel',
+                style: TextStyle(color: Nocturne.palette.subtle)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Delete imported',
               style: TextStyle(
-                color: NocturneSemantic.expense,
+                color: Nocturne.palette.expense,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -461,17 +461,17 @@ class _ActivityV3State extends State<ActivityV3> {
                             border: Border.all(
                                 color: palette.edge, width: 1),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(PhRegular.downloadSimple,
-                                  size: 12, color: Nocturne.accent200),
+                                  size: 12, color: Nocturne.palette.accentLight),
                               SizedBox(width: 4),
                               Text('Import',
                                   style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w500,
-                                      color: Nocturne.accent200)),
+                                      color: Nocturne.palette.accentLight)),
                             ],
                           ),
                         ),
@@ -646,17 +646,17 @@ class _ActivityV3State extends State<ActivityV3> {
                             : PhFill.checkCircle,
                         size: 18,
                         color: _selectedIds.isEmpty
-                            ? Nocturne.neutral500
-                            : Nocturne.accent,
+                            ? Nocturne.palette.muted
+                            : Nocturne.palette.accent,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '${_selectedIds.length} selected',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
-                            color: Nocturne.text,
+                            color: Nocturne.palette.text,
                           ),
                         ),
                       ),
@@ -672,13 +672,13 @@ class _ActivityV3State extends State<ActivityV3> {
                               horizontal: 11, vertical: 6),
                           decoration: BoxDecoration(
                             color: _selectedIds.isEmpty
-                                ? Nocturne.neutral800
-                                : Nocturne.accent900,
+                                ? Nocturne.palette.edge
+                                : Nocturne.palette.tint,
                             borderRadius: BorderRadius.circular(9),
                             border: Border.all(
                               color: _selectedIds.isEmpty
-                                  ? Nocturne.neutral700
-                                  : Nocturne.accent400,
+                                  ? Nocturne.palette.faint
+                                  : Nocturne.palette.fabEdge,
                               width: 1,
                             ),
                           ),
@@ -689,8 +689,8 @@ class _ActivityV3State extends State<ActivityV3> {
                                 PhRegular.pencilSimple,
                                 size: 13,
                                 color: _selectedIds.isEmpty
-                                    ? Nocturne.neutral500
-                                    : Nocturne.accent200,
+                                    ? Nocturne.palette.muted
+                                    : Nocturne.palette.accentLight,
                               ),
                               const SizedBox(width: 5),
                               Text(
@@ -699,8 +699,8 @@ class _ActivityV3State extends State<ActivityV3> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: _selectedIds.isEmpty
-                                      ? Nocturne.neutral500
-                                      : Nocturne.accent200,
+                                      ? Nocturne.palette.muted
+                                      : Nocturne.palette.accentLight,
                                 ),
                               ),
                             ],
@@ -717,13 +717,13 @@ class _ActivityV3State extends State<ActivityV3> {
                               horizontal: 11, vertical: 6),
                           decoration: BoxDecoration(
                             color: _selectedIds.isEmpty
-                                ? Nocturne.neutral800
-                                : Nocturne.mix(NocturneSemantic.expense, 20),
+                                ? Nocturne.palette.edge
+                                : Nocturne.mix(Nocturne.palette.expense, 20),
                             borderRadius: BorderRadius.circular(9),
                             border: Border.all(
                               color: _selectedIds.isEmpty
-                                  ? Nocturne.neutral700
-                                  : NocturneSemantic.expense,
+                                  ? Nocturne.palette.faint
+                                  : Nocturne.palette.expense,
                               width: 1,
                             ),
                           ),
@@ -734,8 +734,8 @@ class _ActivityV3State extends State<ActivityV3> {
                                 PhRegular.trash,
                                 size: 13,
                                 color: _selectedIds.isEmpty
-                                    ? Nocturne.neutral500
-                                    : NocturneSemantic.expense,
+                                    ? Nocturne.palette.muted
+                                    : Nocturne.palette.expense,
                               ),
                               const SizedBox(width: 5),
                               Text(
@@ -746,8 +746,8 @@ class _ActivityV3State extends State<ActivityV3> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: _selectedIds.isEmpty
-                                      ? Nocturne.neutral500
-                                      : NocturneSemantic.expense,
+                                      ? Nocturne.palette.muted
+                                      : Nocturne.palette.expense,
                                 ),
                               ),
                             ],
@@ -862,9 +862,9 @@ class _ActivityV3State extends State<ActivityV3> {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Row(
                 children: [
-                  const Text('By',
+                  Text('By',
                       style: TextStyle(
-                          fontSize: 11.5, color: Nocturne.neutral500)),
+                          fontSize: 11.5, color: Nocturne.palette.muted)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: SizedBox(
@@ -885,7 +885,7 @@ class _ActivityV3State extends State<ActivityV3> {
                               size: 30,
                               fontSize: 11.5,
                               opacity: _memberId == null || on ? 1 : 0.4,
-                              ringColor: on ? Nocturne.accent400 : null,
+                              ringColor: on ? Nocturne.palette.fabEdge : null,
                             ),
                           );
                         },
@@ -900,9 +900,9 @@ class _ActivityV3State extends State<ActivityV3> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
                 children: [
-                  const Text('For',
+                  Text('For',
                       style: TextStyle(
-                          fontSize: 11.5, color: Nocturne.neutral500)),
+                          fontSize: 11.5, color: Nocturne.palette.muted)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: SizedBox(
@@ -923,7 +923,7 @@ class _ActivityV3State extends State<ActivityV3> {
                               size: 30,
                               fontSize: 11.5,
                               opacity: _forId == null || on ? 1 : 0.4,
-                              ringColor: on ? Nocturne.accent400 : null,
+                              ringColor: on ? Nocturne.palette.fabEdge : null,
                             ),
                           );
                         },
@@ -942,7 +942,7 @@ class _ActivityV3State extends State<ActivityV3> {
                   child: _MiniStat(
                       label: 'Spent · shown',
                       value: s.money(spent),
-                      color: Nocturne.text),
+                      color: Nocturne.palette.text),
                 ),
                 const SizedBox(width: 8),
                   Expanded(
@@ -950,11 +950,11 @@ class _ActivityV3State extends State<ActivityV3> {
                       ? _MiniStat(
                           label: "$forName's share",
                           value: s.money(forShare),
-                          color: Nocturne.accent200)
+                          color: Nocturne.palette.accentLight)
                       : _MiniStat(
                           label: 'Received · shown',
                           value: s.money(received),
-                          color: NocturneSemantic.income),
+                          color: Nocturne.palette.income),
                 ),
               ],
             ),
@@ -964,12 +964,12 @@ class _ActivityV3State extends State<ActivityV3> {
               padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 16),
               child: Column(
                 children: [
-                  const Icon(PhRegular.receiptX,
-                      size: 38, color: Nocturne.neutral600),
+                  Icon(PhRegular.receiptX,
+                      size: 38, color: Nocturne.palette.faint),
                   const SizedBox(height: 8),
-                  const Text('No transactions match',
+                  Text('No transactions match',
                       style: TextStyle(
-                          fontSize: 14, color: Nocturne.neutral300)),
+                          fontSize: 14, color: Nocturne.palette.neutral300)),
                   const SizedBox(height: 12),
                   GestureDetector(
                     onTap: _reset,
@@ -981,11 +981,11 @@ class _ActivityV3State extends State<ActivityV3> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
                         border:
-                            Border.all(color: Nocturne.accent700, width: 1),
+                            Border.all(color: Nocturne.palette.switchOn, width: 1),
                       ),
-                      child: const Text('Reset filters',
+                      child: Text('Reset filters',
                           style: TextStyle(
-                              fontSize: 12.5, color: Nocturne.accent200)),
+                              fontSize: 12.5, color: Nocturne.palette.accentLight)),
                     ),
                   ),
                 ],
@@ -1015,24 +1015,24 @@ class _ActivityV3State extends State<ActivityV3> {
                               size: 15,
                               color: groups[day]!
                                       .every((t) => _selectedIds.contains(t.id))
-                                  ? Nocturne.accent
-                                  : Nocturne.neutral500,
+                                  ? Nocturne.palette.accent
+                                  : Nocturne.palette.muted,
                             ),
                             const SizedBox(width: 6),
                           ],
                           Text(_dayLabel(day).toUpperCase(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 11.5,
                                   letterSpacing: 0.58,
-                                  color: Nocturne.neutral500)),
+                                  color: Nocturne.palette.muted)),
                         ],
                       ),
                       V3Num(
                         s.money(groups[day]!
                             .where((t) => t.isExpense)
                             .fold(0.0, (a, t) => a + t.amount)),
-                        style: const TextStyle(
-                            fontSize: 11.5, color: Nocturne.neutral500),
+                        style: TextStyle(
+                            fontSize: 11.5, color: Nocturne.palette.muted),
                       ),
                     ],
                   ),
@@ -1092,20 +1092,20 @@ class _ActionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = danger
-        ? NocturneSemantic.expense
+        ? Nocturne.palette.expense
         : accent
-            ? Nocturne.accent200
-            : Nocturne.neutral300;
+            ? Nocturne.palette.accentLight
+            : Nocturne.palette.neutral300;
     final bg = danger
-        ? Nocturne.mix(NocturneSemantic.expense, 14)
+        ? Nocturne.mix(Nocturne.palette.expense, 14)
         : accent
-            ? Nocturne.accent900
-            : Nocturne.bg;
+            ? Nocturne.palette.tint
+            : Nocturne.palette.bg;
     final border = danger
-        ? Nocturne.mix(NocturneSemantic.expense, 40)
+        ? Nocturne.mix(Nocturne.palette.expense, 40)
         : accent
-            ? Nocturne.accent700
-            : Nocturne.neutral800;
+            ? Nocturne.palette.switchOn
+            : Nocturne.palette.edge;
 
     return GestureDetector(
       onTap: onTap,
