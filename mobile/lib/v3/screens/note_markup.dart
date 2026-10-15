@@ -32,6 +32,11 @@ class MarkupController extends TextEditingController {
       );
     }
     final marker = TextStyle(color: Nocturne.palette.faint);
+    // Markers show only around the caret, where they are being edited;
+    // elsewhere they take no space, so **bold** reads as bold.
+    const hidden = TextStyle(
+        color: Color(0x00000000), fontSize: 0.1, letterSpacing: 0);
+    final caret = selection.isValid ? selection.baseOffset : -1;
     final spans = <TextSpan>[];
     var last = 0;
     for (final m in _pattern.allMatches(text)) {
@@ -50,10 +55,11 @@ class MarkupController extends TextEditingController {
               ),
             )
           : ('*', m[3]!, const TextStyle(fontStyle: FontStyle.italic));
+      final edge = caret >= m.start && caret <= m.end ? marker : hidden;
       spans
-        ..add(TextSpan(text: mark, style: marker))
+        ..add(TextSpan(text: mark, style: edge))
         ..add(TextSpan(text: inner, style: look))
-        ..add(TextSpan(text: mark, style: marker));
+        ..add(TextSpan(text: mark, style: edge));
       last = m.end;
     }
     if (last < text.length) spans.add(TextSpan(text: text.substring(last)));

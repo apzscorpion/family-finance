@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -271,12 +273,42 @@ Return only JSON matching the schema.''';
     required _SchemaFn schema,
     required Map<String, dynamic> example,
     AiImage? image,
-  }) => switch (config.provider) {
-    AiProvider.gemini => _gemini(input, config, system, schema, image),
-    AiProvider.claude => _claude(input, config, system, schema, image),
-    AiProvider.openai || AiProvider.compatible =>
-      _openAiCompatible(input, config, system, example, image),
-  };
+  }) async {
+    Future<String?> once() => switch (config.provider) {
+          AiProvider.gemini => _gemini(input, config, system, schema, image),
+          AiProvider.claude => _claude(input, config, system, schema, image),
+          AiProvider.openai || AiProvider.compatible =>
+            _openAiCompatible(input, config, system, example, image),
+        };
+    // A dropped mobile connection is common; try once more before giving up.
+    try {
+      return await once();
+    } on http.ClientException {
+      await Future<void>.delayed(const Duration(seconds: 2));
+      return once();
+    } on TimeoutException {
+      return once();
+    }
+  }
+
+  /// Gemini takes an OpenAPI-style schema: one `type` per field, with
+  /// `nullable` instead of JSON Schema's `["string", "null"]`.
+  @visibleForTesting
+  static Object? forGemini(Object? node) {
+    if (node is List) return [for (final x in node) forGemini(x)];
+    if (node is! Map) return node;
+    final out = <String, Object?>{};
+    node.forEach((k, v) {
+      if (k == 'type' && v is List) {
+        final types = [for (final t in v) if (t != 'null') t];
+        out['type'] = types.isEmpty ? 'string' : types.first;
+        if (types.length < v.length) out['nullable'] = true;
+      } else {
+        out['$k'] = forGemini(v);
+      }
+    });
+    return out;
+  }
 
   /// Gemini supports a native response schema, so the reply is already JSON.
   static Future<String?> _gemini(
@@ -322,7 +354,7 @@ Return only JSON matching the schema.''';
               'responseMimeType': 'application/json',
               // Gemini follows a subset of OpenAPI schema and rejects
               // `additionalProperties`, so it gets the permissive variant.
-              'responseSchema': schema(strict: false),
+              'responseSchema': forGemini(schema(strict: false)),
               'temperature': 0,
             },
           }),
