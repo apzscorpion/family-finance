@@ -62,6 +62,10 @@ class DataExport {
           buf.writeln();
         case NoteBlockKind.table:
           _writeTable(buf, b);
+        case NoteBlockKind.image:
+          buf
+            ..writeln('[image]')
+            ..writeln();
         case NoteBlockKind.paragraph:
           if (b.text.trim().isNotEmpty) {
             buf

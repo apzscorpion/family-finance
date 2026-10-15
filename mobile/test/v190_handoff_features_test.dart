@@ -345,14 +345,63 @@ void main() {
         .where((t) => t.length == 1)
         .toList();
 
-    testWidgets('long-pressing a toolbar icon shows what it does',
-        (tester) async {
+    testWidgets('top-bar menu lists labelled note actions', (tester) async {
       await tester.pumpWidget(await buildEditor(tester));
       await tester.pumpAndSettle();
 
-      await tester.longPress(find.byTooltip('Add checklist'));
+      await tester.tap(find.byTooltip('More options'));
       await tester.pumpAndSettle();
-      expect(find.text('Add checklist'), findsOneWidget);
+      for (final label in [
+        'Ask AI to edit this note',
+        'Restructure with AI',
+        'Add checklist',
+        'Add table',
+        'Add image',
+        'Paste as list or table',
+        'Share note',
+        'Delete note',
+      ]) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      await tester.tap(find.text('Add checklist'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is TextField && w.decoration?.hintText == 'To-do',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('formatting bar shows while typing and bolds the selection',
+        (tester) async {
+      await tester.pumpWidget(await buildEditor(
+        tester,
+        initialBlocks: [NoteBlock.paragraph('buy milk')],
+      ));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Bold'), findsNothing);
+
+      await tester.tap(find.text('buy milk'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Bold'), findsOneWidget);
+      expect(find.byTooltip('Underline'), findsOneWidget);
+      expect(find.byTooltip('Make heading'), findsOneWidget);
+
+      final field = tester.state<EditableTextState>(
+        find.byWidgetPredicate(
+          (w) => w is EditableText && w.controller.text == 'buy milk',
+        ),
+      );
+      field.userUpdateTextEditingValue(
+        field.textEditingValue.copyWith(
+          selection: const TextSelection(baseOffset: 4, extentOffset: 8),
+        ),
+        SelectionChangedCause.keyboard,
+      );
+      await tester.tap(find.byTooltip('Bold'));
+      await tester.pumpAndSettle();
+      expect(field.textEditingValue.text, 'buy **milk**');
     });
 
     testWidgets('checklist lines can be deleted and reordered', (tester) async {

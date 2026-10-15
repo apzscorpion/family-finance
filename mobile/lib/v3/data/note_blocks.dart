@@ -5,7 +5,8 @@
 
 library;
 
-enum NoteBlockKind { heading, paragraph, todo, table }
+/// `image` keeps a base64 JPEG in [NoteBlock.text] (no file storage needed).
+enum NoteBlockKind { heading, paragraph, todo, table, image }
 
 class TodoItem {
   final String text;
@@ -72,6 +73,13 @@ class NoteBlock {
         text: text,
       );
 
+  /// [base64] is the encoded image bytes.
+  factory NoteBlock.image(String base64) => NoteBlock(
+        id: _id(),
+        kind: NoteBlockKind.image,
+        text: base64,
+      );
+
   factory NoteBlock.todo() => NoteBlock(
         id: _id(),
         kind: NoteBlockKind.todo,
@@ -121,7 +129,9 @@ class NoteBlock {
   Map<String, dynamic> toJson() => {
         'id': id,
         'kind': kind.name,
-        if (kind == NoteBlockKind.heading || kind == NoteBlockKind.paragraph)
+        if (kind == NoteBlockKind.heading ||
+            kind == NoteBlockKind.paragraph ||
+            kind == NoteBlockKind.image)
           'text': text,
         if (kind == NoteBlockKind.todo)
           'items': items.map((i) => i.toJson()).toList(),
@@ -189,6 +199,8 @@ class NoteBlock {
         NoteBlockKind.todo => items.map((i) => i.text).join(', '),
         NoteBlockKind.table =>
           [head.join(' | '), ...rows.map((r) => r.join(' | '))].join('\n'),
+        // Never mirror image bytes into previews, search or AI prompts.
+        NoteBlockKind.image => '',
       };
 
   bool get isEmpty => switch (kind) {
@@ -198,6 +210,7 @@ class NoteBlock {
         NoteBlockKind.table =>
           head.every((h) => h.trim().isEmpty) &&
               rows.every((r) => r.every((c) => c.trim().isEmpty)),
+        NoteBlockKind.image => text.isEmpty,
       };
 }
 
