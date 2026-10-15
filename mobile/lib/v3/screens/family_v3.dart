@@ -1005,6 +1005,19 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                 _stat('Split together', s.moneyShort(together), palette),
               ],
             ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: palette.accent,
+                  side: BorderSide(color: palette.edge),
+                ),
+                icon: const Icon(PhRegular.handCoins, size: 16),
+                label: Text('Send money to $name'),
+                onPressed: () => _sendMoney(context, s, name),
+              ),
+            ),
             const SizedBox(height: 16),
             Text('SHARED ENTRIES',
                 style: TextStyle(
@@ -1064,6 +1077,66 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
         ],
       ),
     );
+  }
+
+  /// Records money I gave [name]: my expense now, their income once they
+  /// approve it.
+  Future<void> _sendMoney(BuildContext context, V3State s, String name) async {
+    final amount = TextEditingController();
+    final note = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: Nocturne.palette.surface,
+        title: Text('Send money to $name',
+            style: TextStyle(color: Nocturne.palette.text, fontSize: 17)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: amount,
+              autofocus: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: TextStyle(color: Nocturne.palette.text),
+              decoration: const InputDecoration(labelText: 'Amount (₹)'),
+            ),
+            TextField(
+              controller: note,
+              style: TextStyle(color: Nocturne.palette.text),
+              decoration: const InputDecoration(labelText: 'Note (optional)'),
+            ),
+            const SizedBox(height: 8),
+            Text('From your main account. It counts for $name once they approve it.',
+                style: TextStyle(
+                    fontSize: 11.5, color: Nocturne.palette.muted)),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: Text('Cancel',
+                  style: TextStyle(color: Nocturne.palette.muted))),
+          TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: Text('Send',
+                  style: TextStyle(color: Nocturne.palette.accentMuted))),
+        ],
+      ),
+    );
+    final value = double.tryParse(amount.text.trim());
+    if (ok != true || value == null || value <= 0) return;
+    final sent = await s.transferMoney(
+      toUserId: widget.otherId,
+      amount: value,
+      note: note.text.trim().isEmpty ? null : note.text.trim(),
+      sourceId: s.mainSourceId,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(sent
+            ? 'Sent ${s.money(value)} to $name. Waiting for them to approve.'
+            : 'Could not send. Check your connection.')));
   }
 
   Widget _stat(String label, String value, NocturnePalette palette) => Expanded(

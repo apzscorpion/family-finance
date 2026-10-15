@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/app_log.dart';
 import '../../services/update_service.dart';
+import '../../theme/nocturne.dart';
 import '../../theme/nocturne_palette.dart';
 import '../data/data_export.dart';
 import '../data/prayer/prayer_controller.dart';
@@ -259,6 +260,17 @@ class _SettingsV3State extends State<SettingsV3> {
             value: '${s.manageableSources.length}',
             keywords: 'accounts bank cash wallet money sources',
             onTap: () => SourcesManagerV3.open(context),
+          ),
+          _SettingsRowDef(
+            icon: PhRegular.eyeSlash,
+            label: 'Hide my money from',
+            value: switch (s.me?.hiddenFrom.length ?? 0) {
+              0 => 'Nobody',
+              1 => s.memberName(s.me!.hiddenFrom.first),
+              final n => '$n people',
+            },
+            keywords: 'privacy hide private balance money visible',
+            onTap: () => _pickHiddenFrom(context, s),
           ),
           _SettingsRowDef(
             icon: PhRegular.users,
@@ -2465,3 +2477,63 @@ typedef V3SettingsSwitch = _Switch;
 
 /// Keeps the import of PrefsRow meaningful to readers of this file.
 typedef V3Prefs = PrefsRow;
+
+/// Lets me choose who may not see my money. Owners always can, so they are
+/// listed but can't be picked.
+Future<void> _pickHiddenFrom(BuildContext context, V3State s) async {
+  final others = [for (final m in s.members) if (m.userId != s.myId) m];
+  final chosen = {...?s.me?.hiddenFrom};
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, setLocal) => AlertDialog(
+        backgroundColor: Nocturne.palette.surface,
+        title: Text('Hide my money from',
+            style: TextStyle(color: Nocturne.palette.text, fontSize: 17)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                  "They won't see your entries, accounts or balance. "
+                  'Owners always can.',
+                  style: TextStyle(
+                      fontSize: 12.5, color: Nocturne.palette.subtle)),
+              const SizedBox(height: 8),
+              for (final m in others)
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: m.role == 'owner' ? false : chosen.contains(m.userId),
+                  onChanged: m.role == 'owner'
+                      ? null
+                      : (v) => setLocal(() => v == true
+                          ? chosen.add(m.userId)
+                          : chosen.remove(m.userId)),
+                  title: Text(m.name,
+                      style: TextStyle(color: Nocturne.palette.text)),
+                  subtitle: m.role == 'owner'
+                      ? Text('Owner · always sees',
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              color: Nocturne.palette.muted))
+                      : null,
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: Text('Cancel',
+                  style: TextStyle(color: Nocturne.palette.muted))),
+          TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: Text('Save',
+                  style: TextStyle(color: Nocturne.palette.accentMuted))),
+        ],
+      ),
+    ),
+  );
+  if (ok == true) await s.setHiddenFrom(chosen.toList());
+}

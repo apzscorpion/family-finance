@@ -49,6 +49,9 @@ class MemberRow {
   final String? upiId;
   final bool isProtectedMember;
 
+  /// People this member hides their money from (owners still see it).
+  final List<String> hiddenFrom;
+
   const MemberRow({
     required this.userId,
     required this.name,
@@ -60,6 +63,7 @@ class MemberRow {
     this.isAllowance = false,
     this.upiId,
     this.isProtectedMember = false,
+    this.hiddenFrom = const [],
   });
 
   factory MemberRow.fromJson(Map<String, dynamic> j) {
@@ -86,6 +90,9 @@ class MemberRow {
       isAllowance: (j['is_allowance'] as bool?) ?? false,
       upiId: (upi == null || upi.trim().isEmpty) ? null : upi.trim(),
       isProtectedMember: isProtected ?? false,
+      hiddenFrom: [
+        for (final u in (j['hidden_from'] as List?) ?? const []) u.toString()
+      ],
     );
   }
 

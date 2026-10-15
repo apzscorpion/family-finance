@@ -52,11 +52,36 @@ class V3Repository {
     final rows = await _db
         .from('family_memberships')
         .select(
-            'user_id,role,status,relationship,avatar_hue,monthly_budget,is_allowance,profiles(full_name,upi_id)')
+            'user_id,role,status,relationship,avatar_hue,monthly_budget,is_allowance,hidden_from,profiles(full_name,upi_id)')
         .eq('family_id', familyId);
     return (rows as List)
         .map((r) => MemberRow.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
+  }
+
+  /// Who may not see my money in this family.
+  Future<void> setHiddenFrom(String familyId, List<String> userIds) async {
+    await _db.rpc('set_hidden_from',
+        params: {'p_family': familyId, 'p_users': userIds});
+  }
+
+  /// Sends money to another member: my expense, their income to approve.
+  Future<void> transferMoney({
+    required String familyId,
+    required String toUserId,
+    required double amount,
+    String? note,
+    String? sourceId,
+    String method = 'UPI',
+  }) async {
+    await _db.rpc('transfer_money', params: {
+      'p_family': familyId,
+      'p_to': toUserId,
+      'p_amount': amount,
+      'p_note': note,
+      'p_source': sourceId,
+      'p_method': method,
+    });
   }
 
   Future<void> setMemberStatus(

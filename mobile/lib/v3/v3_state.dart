@@ -113,6 +113,14 @@ class V3State extends ChangeNotifier {
   /// one who grants or removes the owner role.
   bool get isPrimaryOwner => myId != null && family?.ownerId == myId;
 
+  /// The member in view hides their money from me, so the server sends none
+  /// of it; their totals would read as zero. Owners see everything.
+  bool get scopePrivate =>
+      !isFamily &&
+      scope != myId &&
+      !isOwner &&
+      (scopeMember?.hiddenFrom.contains(myId) ?? false);
+
   // ── Loading ───────────────────────────────────────────────────────────────
 
   Future<void> bootstrap() async {
@@ -1044,6 +1052,33 @@ class V3State extends ChangeNotifier {
       () => _repo.setMemberRole(familyId, userId, role),
     );
     unawaited(refresh());
+  }
+
+  Future<void> setHiddenFrom(List<String> userIds) async {
+    await V3Repository.guard(
+        'setHiddenFrom', () => _repo.setHiddenFrom(familyId, userIds));
+    await refresh();
+  }
+
+  Future<bool> transferMoney({
+    required String toUserId,
+    required double amount,
+    String? note,
+    String? sourceId,
+    String method = 'UPI',
+  }) async {
+    final ok = await V3Repository.guard('transferMoney', () async {
+      await _repo.transferMoney(
+          familyId: familyId,
+          toUserId: toUserId,
+          amount: amount,
+          note: note,
+          sourceId: sourceId,
+          method: method);
+      return true;
+    });
+    await refresh();
+    return ok == true;
   }
 
   Future<void> transferOwnership(String userId) async {

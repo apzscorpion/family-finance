@@ -514,6 +514,23 @@ class _HeroCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (s.scopePrivate) ...[
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Icon(PhRegular.lock, size: 16, color: palette.accent),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${s.scopeName} keeps their money private',
+                            style:
+                                TextStyle(fontSize: 14, color: palette.text),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                  ] else ...[
                   const SizedBox(height: 14),
                   Text(
                     s.isFamily
@@ -794,6 +811,7 @@ class _HeroCard extends StatelessWidget {
                               V3Sheets.openMagicAi(context, initialTab: 0)),
                     ],
                   ),
+                  ],
                 ],
               ),
             ),
