@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// "KinPurse" in the logo's colours: "Kin" (family) in its warm gold,
-/// "Purse" (money) in its teal, each with the logo's top-to-bottom shading.
+/// "KinPurse" in the logo's blue: "Kin" lighter, "Purse" deeper, each with
+/// a top-to-bottom shading.
 class KinPurseWordmark extends StatelessWidget {
   final double size;
   const KinPurseWordmark({super.key, this.size = 26});
 
-  static const gold = [Color(0xFFFFE595), Color(0xFFC0933F)];
-  static const teal = [Color(0xFF45C3CE), Color(0xFF1E7F8E)];
+  static const kin = [Color(0xFF7DB4FF), Color(0xFF0169FE)]; // "Kin", logo blue
+  static const purse = [Color(0xFF0169FE), Color(0xFF0050C8)]; // "Purse"
 
   Widget _part(String text, List<Color> colors, FontWeight weight) =>
       ShaderMask(
@@ -35,8 +35,8 @@ class KinPurseWordmark extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _part('Kin', gold, FontWeight.w700),
-              _part('Purse', teal, FontWeight.w600),
+              _part('Kin', kin, FontWeight.w700),
+              _part('Purse', purse, FontWeight.w600),
             ],
           ),
         ),
