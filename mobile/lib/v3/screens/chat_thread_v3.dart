@@ -51,6 +51,11 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
         members: s.members,
       );
       chat.openThread(widget.partner.userId);
+      final nav = context.read<V3Nav?>();
+      final prefill = nav?.consumePrefilledChatText();
+      if (prefill != null && prefill.isNotEmpty) {
+        _ctrl.text = prefill;
+      }
     });
   }
 

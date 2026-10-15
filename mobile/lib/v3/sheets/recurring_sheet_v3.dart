@@ -8,6 +8,7 @@ import '../phosphor_icons.dart';
 import '../v3_design.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
+import '../../services/subscription_finder_service.dart';
 import 'calc_engine.dart';
 
 /// Sheet to view, manage, and create recurring transactions.
@@ -130,7 +131,81 @@ class _V3RecurringSheetState extends State<V3RecurringSheet> {
                 'expense'),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        Builder(builder: (ctx) {
+          final candidates = SubscriptionFinderService.findPotentialSubscriptions(
+            transactions: s.txns,
+            existingRecurring: s.recurring,
+          );
+          if (candidates.isEmpty) return const SizedBox.shrink();
+          final top = candidates.first;
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0x22A855F7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0x55A855F7)),
+            ),
+            child: Row(
+              children: [
+                const Icon(PhRegular.sparkle, color: Color(0xFFD946EF), size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Detected Subscription: ${top.title}',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: Nocturne.text,
+                        ),
+                      ),
+                      Text(
+                        'Charged ${V3Design.inr(top.amount)} ${top.cadence} (${top.occurrences}x detected). Add to recurring?',
+                        style: const TextStyle(fontSize: 11, color: Nocturne.neutral400),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () async {
+                    await s.addRecurring(
+                      title: top.title,
+                      amount: top.amount,
+                      cadence: top.cadence,
+                      nextDue: DateTime.now().add(const Duration(days: 30)),
+                      type: 'expense',
+                      categoryKey: top.categoryKey ?? 'bills',
+                      sourceId: top.sourceId,
+                      autoPost: false,
+                    );
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Added ${top.title} to recurring rules!')),
+                      );
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFFD946EF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Track', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          );
+        }),
+        const SizedBox(height: 2),
         if (items.isEmpty) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),

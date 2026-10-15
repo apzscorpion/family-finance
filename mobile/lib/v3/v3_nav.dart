@@ -12,6 +12,8 @@ enum V3Page {
   prayerSettings,
   aiSettings,
   chat,
+  askKinPurse,
+  monthlyRecap,
 }
 
 /// Shell navigation, kept separate from [V3State] so a screen can move the
@@ -22,12 +24,14 @@ class V3Nav extends ChangeNotifier {
   final List<V3Page> _pageStack = [];
   final List<bool Function()> _backHandlers = [];
   String? _chatPartnerId;
+  String? _prefilledChatText;
   bool _openedChatDirectlyToPartner = false;
 
   int get tab => _tab;
   V3Page? get page => _pageStack.isEmpty ? null : _pageStack.last;
   List<V3Page> get pageStack => List.unmodifiable(_pageStack);
   String? get chatPartnerId => _chatPartnerId;
+  String? get prefilledChatText => _prefilledChatText;
 
   /// Whether [V3Shell] should intercept the system back button/gesture instead
   /// of letting Android close the activity.
@@ -76,7 +80,7 @@ class V3Nav extends ChangeNotifier {
     notifyListeners();
   }
 
-  void openChat([String? partnerId]) {
+  void openChat([String? partnerId, String? initialText]) {
     final alreadyInChat = page == V3Page.chat;
     if (partnerId != null && !alreadyInChat) {
       _openedChatDirectlyToPartner = true;
@@ -84,6 +88,7 @@ class V3Nav extends ChangeNotifier {
       _openedChatDirectlyToPartner = false;
     }
     _chatPartnerId = partnerId;
+    _prefilledChatText = initialText;
     if (!alreadyInChat) {
       _pageStack.remove(V3Page.chat);
       _pageStack.add(V3Page.chat);
@@ -91,7 +96,14 @@ class V3Nav extends ChangeNotifier {
     notifyListeners();
   }
 
+  String? consumePrefilledChatText() {
+    final t = _prefilledChatText;
+    _prefilledChatText = null;
+    return t;
+  }
+
   void closeChatThread() {
+    _prefilledChatText = null;
     if (_openedChatDirectlyToPartner) {
       _chatPartnerId = null;
       _openedChatDirectlyToPartner = false;
@@ -160,5 +172,7 @@ class V3Nav extends ChangeNotifier {
         V3Page.prayerSettings => 'Prayer settings',
         V3Page.aiSettings => 'AI restructuring',
         V3Page.chat => 'Direct messages',
+        V3Page.askKinPurse => 'Ask KinPurse',
+        V3Page.monthlyRecap => 'Monthly Recap',
       };
 }

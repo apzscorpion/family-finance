@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-
+import '../../services/bank_statement_service.dart';
 import '../../theme/nocturne.dart';
 import '../data/data_export.dart';
 import '../data/expense_import.dart';
@@ -158,6 +158,77 @@ class _ImportV3State extends State<ImportV3> {
 
     setState(() {
       _rows = _routed(rows);
+      _source = doc.fileName;
+      _parsed = true;
+      _busy = false;
+    });
+  }
+
+  Future<void> _pickBankPdf() async {
+    final proceed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => const _BankStatementIntroSheet(),
+    );
+    if (proceed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    final doc = await ImportPicker.pick(type: 'pdf');
+    if (!mounted) return;
+
+    if (doc == null) {
+      setState(() => _busy = false);
+      return;
+    }
+
+    List<ImportedExpense> parsedExpenses = [];
+    if (doc.text.trim().isNotEmpty) {
+      final statementRows = BankStatementService.parseStatementText(doc.text);
+      if (statementRows.isNotEmpty) {
+        parsedExpenses = statementRows;
+      }
+    }
+
+    if (parsedExpenses.isEmpty) {
+      setState(() => _busy = false);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Nocturne.surface,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Password-Protected Statement?',
+              style: TextStyle(
+                  color: Nocturne.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Indian banks lock PDF statements with passwords.\n\n${BankStatementService.getPasswordHint(doc.fileName)}\n\nTip: You can print/export the unlocked PDF or paste your statement text into the box below.',
+                style: const TextStyle(
+                    color: Nocturne.neutral300, fontSize: 12.5, height: 1.45),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child:
+                  const Text('Got it', style: TextStyle(color: Nocturne.accent)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _rows = _routed(parsedExpenses);
       _source = doc.fileName;
       _parsed = true;
       _busy = false;
@@ -534,6 +605,13 @@ class _ImportV3State extends State<ImportV3> {
         ),
       ],
       const SizedBox(height: 14),
+      _SourceTile(
+        icon: PhRegular.bank,
+        title: 'Bank Statement PDF',
+        subtitle: 'Auto-unlock tips & 6 months of UPI spend in seconds',
+        busy: _busy,
+        onTap: _pickBankPdf,
+      ),
       _SourceTile(
         icon: PhRegular.floppyDisk,
         title: 'Choose a file',
@@ -1795,3 +1873,118 @@ Output ONLY the CSV block without any markdown chat or extra explanations. Here 
     );
   }
 }
+
+class _BankStatementIntroSheet extends StatelessWidget {
+  const _BankStatementIntroSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: Nocturne.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Nocturne.neutral700,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Row(
+            children: [
+              Icon(PhRegular.bank, size: 22, color: Nocturne.accent200),
+              SizedBox(width: 10),
+              Text(
+                'Import Bank Statement PDF',
+                style: TextStyle(
+                  color: Nocturne.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Load your last 6 months in 30 seconds without manual entry. All parsing runs 100% on your device.',
+            style: TextStyle(color: Nocturne.neutral300, fontSize: 12.5, height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Nocturne.bg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Nocturne.neutral800),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '🔑 Password format cheat-sheet:',
+                  style: TextStyle(
+                    color: Nocturne.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text('• SBI: Date of Birth (DDMMYYYY) + Last 5 digits of mobile',
+                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                SizedBox(height: 3),
+                Text('• HDFC: Customer ID or PAN number (lowercase)',
+                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                SizedBox(height: 3),
+                Text('• ICICI: First 4 letters of name + DDMM of birth',
+                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                SizedBox(height: 3),
+                Text('• Axis: First 4 letters of name (UPPERCASE) + last 4 of account',
+                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+                SizedBox(height: 3),
+                Text('• Kotak: Customer CRN number',
+                    style: TextStyle(fontSize: 11, color: Nocturne.neutral400)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel', style: TextStyle(color: Nocturne.neutral400)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Nocturne.accent,
+                    foregroundColor: Nocturne.bg,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Navigator.of(context).pop(true),
+                  icon: const Icon(PhRegular.downloadSimple, size: 16),
+                  label: const Text('Select Bank PDF', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+

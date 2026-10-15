@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import 'nocturne_palette.dart';
 
-/// Nocturne design-system tokens, transcribed exactly from the handoff's
-/// `_ds/nocturne-*/styles.css`. That file is the source of truth for the
-/// system's look; values here must match it literally.
+/// Nocturne design-system tokens, transcribed from `_ds/nocturne-*/styles.css`.
 ///
-/// Anything the v3 screens need that is *not* a Nocturne token (per-screen
-/// colours such as the income green, category hues, origin tints) lives in
-/// [NocturneSemantic] below so the two stay distinguishable.
+/// Default constants remain `const` to preserve compile-time evaluation across
+/// the codebase, while [NocturnePalette.current] provides runtime theme access.
 class Nocturne {
   Nocturne._();
 
-  // ── Core roles ──────────────────────────────────────────────────────────
+  static NocturnePalette get palette => NocturnePalette.current;
+
+  // ── Core roles (Default Nocturne Dark constants) ─────────────────────────
   static const Color bg = Color(0xFF161826);
   static const Color surface = Color(0xFF232532);
   static const Color text = Color(0xFFE9E9ED);
@@ -53,7 +53,7 @@ class Nocturne {
   static const Color accent2800 = Color(0xFF423E5D);
   static const Color accent2900 = Color(0xFF2B293A);
 
-  // ── Deck section grounds (deck-scale fills, not interface colours) ──────
+  // ── Deck section grounds ────────────────────────────────────────────────
   static const Color section = Color(0xFF262A60);
   static const Color sectionGlow = Color(0xFF353B80);
   static const Color sectionGhost = Color(0xFF4C5397);
@@ -76,13 +76,10 @@ class Nocturne {
   static const double radiusLg = 14;
 
   // ── Elevation ───────────────────────────────────────────────────────────
-  /// `0 0 0 1px #3f424d` — a hairline edge, drawn as a border rather than a
-  /// shadow because Flutter has no spread-only inset equivalent.
   static const Border edgeSm = Border.fromBorderSide(
     BorderSide(color: neutral800, width: 1),
   );
 
-  /// `0 0 0 1px #595d6c, 0 6px 18px rgba(0,0,0,0.55)`
   static const List<BoxShadow> shadowMd = [
     BoxShadow(color: Color(0x8C000000), blurRadius: 18, offset: Offset(0, 6)),
   ];
@@ -90,7 +87,6 @@ class Nocturne {
     BorderSide(color: neutral700, width: 1),
   );
 
-  /// `0 0 0 1px #9397ab, 0 16px 40px rgba(0,0,0,0.65)`
   static const List<BoxShadow> shadowLg = [
     BoxShadow(color: Color(0xA6000000), blurRadius: 40, offset: Offset(0, 16)),
   ];
@@ -99,35 +95,20 @@ class Nocturne {
   );
 
   // ── Helpers ─────────────────────────────────────────────────────────────
-
-  /// CSS `color-mix(in srgb|oklch, <color> <pct>%, transparent)`.
-  /// Mixing toward transparent is just an alpha scale on the source colour.
   static Color mix(Color c, double percent) =>
       c.withValues(alpha: (c.a) * (percent / 100));
 }
 
-/// Colours the v3 screens use that are not Nocturne roles. The design states
-/// these inline (e.g. `oklch(0.80 0.13 158)` for received amounts); they are
-/// converted to sRGB here once so the screens stay declarative.
+/// Colours the v3 screens use that are not Nocturne roles.
 class NocturneSemantic {
   NocturneSemantic._();
 
-  /// `oklch(0.80 0.13 158)` — the "Received" / income green used in Activity,
-  /// the toast tick and every income category. Converted from OKLCH, not eyeballed.
   static const Color income = Color(0xFF6CD79D);
-
-  /// Expense / negative delta / delete actions.
   static const Color expense = Color(0xFFF08A8A);
   static const Color danger = expense;
-
-  /// Warning, over-threshold budget bars, "due soon".
   static const Color warning = Color(0xFFE8B45E);
-
-  /// Budget bar fills by state.
   static const Color budgetOk = accentFill;
   static const Color accentFill = Nocturne.accent500;
 
-  /// Tint backgrounds: the design draws category chips as a ~22% wash of the
-  /// category hue over the surface.
   static Color tint(Color hue) => Nocturne.mix(hue, 22);
 }

@@ -52,6 +52,8 @@ class ImportPicker {
         kind = 'md';
       } else if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
         kind = 'xlsx';
+      } else if (lower.endsWith('.pdf')) {
+        kind = 'pdf';
       }
 
       Uint8List? bytes;

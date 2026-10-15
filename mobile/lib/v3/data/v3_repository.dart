@@ -52,7 +52,7 @@ class V3Repository {
     final rows = await _db
         .from('family_memberships')
         .select(
-            'user_id,role,status,relationship,avatar_hue,monthly_budget,is_allowance,profiles(full_name)')
+            'user_id,role,status,relationship,avatar_hue,monthly_budget,is_allowance,profiles(full_name,upi_id)')
         .eq('family_id', familyId);
     return (rows as List)
         .map((r) => MemberRow.fromJson(Map<String, dynamic>.from(r as Map)))
@@ -102,6 +102,17 @@ class V3Repository {
 
   Future<void> renameMe(String newName) async {
     await _db.rpc('rename_me', params: {'p_name': newName});
+  }
+
+  Future<void> setMyUpiId(String upiId) async {
+    try {
+      await _db.rpc('set_my_upi_id', params: {'p_upi': upiId});
+    } catch (_) {
+      // Direct update fallback if RPC has not been executed yet
+      await _db.from('profiles').update({
+        'upi_id': upiId.trim().isEmpty ? null : upiId.trim(),
+      }).eq('id', currentUserId!);
+    }
   }
 
   Future<void> renameFamily(String familyId, String newName) async {
@@ -573,6 +584,440 @@ class V3Repository {
       'period': period,
       'threshold_pct': thresholdPct,
     }, onConflict: 'family_id,category_id,period');
+  }
+
+  // ── Savings Goals ──────────────────────────────────────────────────────────
+
+  Future<List<GoalRow>> goals(String familyId) async {
+    try {
+      final rows = await _db
+          .from('savings_goals')
+          .select('id,family_id,created_by,name,target_amount,current_amount,target_date,icon,color,category_id,status,created_at')
+          .eq('family_id', familyId)
+          .order('created_at', ascending: false);
+      return (rows as List)
+          .map((r) => GoalRow.fromJson(Map<String, dynamic>.from(r as Map)))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> createGoal({
+    required String familyId,
+    required String name,
+    required double targetAmount,
+    double initialAmount = 0,
+    DateTime? targetDate,
+    String icon = 'target',
+    String color = '#9184D9',
+    String? categoryId,
+  }) async {
+    await _db.from('savings_goals').insert({
+      'family_id': familyId,
+      'created_by': currentUserId,
+      'name': name,
+      'target_amount': targetAmount,
+      'current_amount': initialAmount,
+      if (targetDate != null)
+        'target_date':
+            '${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}',
+      'icon': icon,
+      'color': color,
+      if (categoryId != null && categoryId.isNotEmpty) 'category_id': categoryId,
+      'status': 'active',
+    });
+  }
+
+  Future<void> contributeToGoal({
+    required String goalId,
+    required double newAmount,
+  }) async {
+    await _db.from('savings_goals').update({
+      'current_amount': newAmount,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', goalId);
+  }
+
+  Future<void> deleteGoal(String goalId) async {
+    await _db.from('savings_goals').delete().eq('id', goalId);
+  }
+
+  Future<List<GoldHoldingRow>> goldHoldings(String familyId) async {
+    try {
+      final rows = await _db
+          .from('gold_holdings')
+          .select('id,family_id,owner_id,item_name,metal_type,weight_grams,purity_karat,notes,created_at')
+          .eq('family_id', familyId)
+          .order('created_at', ascending: false);
+      return (rows as List)
+          .map((r) => GoldHoldingRow.fromJson(Map<String, dynamic>.from(r as Map)))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<GoldHoldingRow?> addGoldHolding({
+    required String familyId,
+    required String itemName,
+    String metalType = 'gold',
+    required double weightGrams,
+    int purityKarat = 24,
+    String? notes,
+  }) async {
+    try {
+      final row = await _db.from('gold_holdings').insert({
+        'family_id': familyId,
+        'owner_id': currentUserId,
+        'item_name': itemName,
+        'metal_type': metalType,
+        'weight_grams': weightGrams,
+        'purity_karat': purityKarat,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      }).select().single();
+      return GoldHoldingRow.fromJson(Map<String, dynamic>.from(row as Map));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> deleteGoldHolding(String id) async {
+    await _db.from('gold_holdings').delete().eq('id', id);
+  }
+
+  // ── Pending Refunds Watchdog ───────────────────────────────────────────────
+
+  Future<List<PendingRefundRow>> pendingRefunds(String familyId) async {
+    try {
+      final rows = await _db
+          .from('pending_refunds')
+          .select()
+          .eq('family_id', familyId)
+          .order('initiated_at', ascending: false);
+      return (rows as List)
+          .map((r) => PendingRefundRow.fromJson(Map<String, dynamic>.from(r as Map)))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<PendingRefundRow?> addPendingRefund({
+    required String familyId,
+    required String merchant,
+    required double amount,
+    String? utrRef,
+    String? sourceApp,
+    DateTime? expectedBy,
+    String? notes,
+  }) async {
+    try {
+      final row = await _db.from('pending_refunds').insert({
+        'family_id': familyId,
+        'user_id': currentUserId,
+        'merchant': merchant,
+        'amount': amount,
+        if (utrRef != null && utrRef.isNotEmpty) 'utr_ref': utrRef,
+        'source_app': ?sourceApp,
+        'status': 'pending',
+        'initiated_at': DateTime.now().toUtc().toIso8601String(),
+        if (expectedBy != null) 'expected_by': expectedBy.toUtc().toIso8601String(),
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      }).select().single();
+      return PendingRefundRow.fromJson(Map<String, dynamic>.from(row as Map));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> updateRefundStatus(String id, String status) async {
+    await _db.from('pending_refunds').update({
+      'status': status,
+      if (status == 'received') 'received_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', id);
+  }
+
+  // ── Daily Deliveries Diary (Milk, Newspaper, Water Cans) ───────────────────
+
+  Future<List<DeliverySubscriptionRow>> deliverySubscriptions(String familyId) async {
+    try {
+      final subs = await _db
+          .from('delivery_subscriptions')
+          .select()
+          .eq('family_id', familyId);
+      final subList = subs as List;
+      if (subList.isEmpty) return const [];
+
+      final skips = await _db
+          .from('delivery_skips')
+          .select('subscription_id,skip_date');
+      final skipMap = <String, List<String>>{};
+      for (final s in (skips as List)) {
+        final subId = s['subscription_id'].toString();
+        final date = s['skip_date']?.toString() ?? '';
+        if (date.isNotEmpty) {
+          skipMap.putIfAbsent(subId, () => []).add(date);
+        }
+      }
+
+      return subList
+          .map((r) => DeliverySubscriptionRow.fromJson(
+                Map<String, dynamic>.from(r as Map),
+                skipMap[r['id'].toString()] ?? const [],
+              ))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<DeliverySubscriptionRow?> addDeliverySubscription({
+    required String familyId,
+    required String name,
+    String itemType = 'milk',
+    required double unitPrice,
+    String? vendorName,
+    String? vendorPhone,
+  }) async {
+    try {
+      final row = await _db.from('delivery_subscriptions').insert({
+        'family_id': familyId,
+        'name': name,
+        'item_type': itemType,
+        'unit_price': unitPrice,
+        'vendor_name': ?vendorName,
+        'vendor_phone': ?vendorPhone,
+      }).select().single();
+      return DeliverySubscriptionRow.fromJson(Map<String, dynamic>.from(row as Map));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> toggleDeliverySkip(String subscriptionId, String skipDate) async {
+    try {
+      final existing = await _db
+          .from('delivery_skips')
+          .select('id')
+          .eq('subscription_id', subscriptionId)
+          .eq('skip_date', skipDate)
+          .maybeSingle();
+
+      if (existing != null) {
+        await _db.from('delivery_skips').delete().eq('id', existing['id']);
+      } else {
+        await _db.from('delivery_skips').insert({
+          'subscription_id': subscriptionId,
+          'skip_date': skipDate,
+        });
+      }
+    } catch (_) {}
+  }
+
+  // ── Domestic Staff & Helper Ledger ────────────────────────────────────────
+
+  Future<List<DomesticStaffRow>> domesticStaff(String familyId) async {
+    try {
+      final staffRows = await _db
+          .from('domestic_staff')
+          .select()
+          .eq('family_id', familyId);
+      final staffList = staffRows as List;
+      if (staffList.isEmpty) return const [];
+
+      // Calculate advances and leaves
+      final ledgerRows = await _db
+          .from('staff_ledger')
+          .select('staff_id,entry_type,amount,entry_date');
+      final advancesMap = <String, double>{};
+      final leavesMap = <String, int>{};
+
+      final currentMonthPrefix = DateTime.now().toIso8601String().substring(0, 7);
+
+      for (final l in (ledgerRows as List)) {
+        final sId = l['staff_id'].toString();
+        final type = l['entry_type']?.toString();
+        final rawAmt = l['amount'];
+        final amt = rawAmt is num ? rawAmt.toDouble() : (double.tryParse('$rawAmt') ?? 0.0);
+        final date = l['entry_date']?.toString() ?? '';
+
+        if (type == 'advance') {
+          advancesMap[sId] = (advancesMap[sId] ?? 0.0) + amt;
+        } else if (type == 'salary_paid') {
+          // salary clears advance
+          advancesMap[sId] = ((advancesMap[sId] ?? 0.0) - amt).clamp(0.0, double.infinity);
+        }
+
+        if (type == 'leave' && date.startsWith(currentMonthPrefix)) {
+          leavesMap[sId] = (leavesMap[sId] ?? 0) + 1;
+        }
+      }
+
+      return staffList
+          .map((r) => DomesticStaffRow.fromJson(
+                Map<String, dynamic>.from(r as Map),
+                advances: advancesMap[r['id'].toString()] ?? 0.0,
+                leaves: leavesMap[r['id'].toString()] ?? 0,
+              ))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<DomesticStaffRow?> addDomesticStaff({
+    required String familyId,
+    required String name,
+    String role = 'Maid',
+    String? phone,
+    required double monthlySalary,
+    int salaryDay = 1,
+  }) async {
+    try {
+      final row = await _db.from('domestic_staff').insert({
+        'family_id': familyId,
+        'name': name,
+        'role': role,
+        'phone': ?phone,
+        'monthly_salary': monthlySalary,
+        'salary_day': salaryDay,
+      }).select().single();
+      return DomesticStaffRow.fromJson(Map<String, dynamic>.from(row as Map));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> addStaffLedgerEntry({
+    required String staffId,
+    required String entryType, // 'salary_paid', 'advance', 'leave', 'bonus'
+    double amount = 0,
+    required DateTime date,
+    String? note,
+  }) async {
+    try {
+      await _db.from('staff_ledger').insert({
+        'staff_id': staffId,
+        'entry_type': entryType,
+        'amount': amount,
+        'entry_date': date.toIso8601String().substring(0, 10),
+        if (note != null && note.isNotEmpty) 'note': note,
+      });
+    } catch (_) {}
+  }
+
+  // ── Guardian Mode & Security Alerts ───────────────────────────────────────
+
+  Future<List<SecurityAlertRow>> securityAlerts(String familyId) async {
+    try {
+      final rows = await _db
+          .from('security_alerts')
+          .select()
+          .eq('family_id', familyId)
+          .order('created_at', ascending: false);
+      return (rows as List)
+          .map((r) => SecurityAlertRow.fromJson(Map<String, dynamic>.from(r as Map)))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<SecurityAlertRow?> createSecurityAlert({
+    required String familyId,
+    required String userId,
+    required String alertType,
+    required String title,
+    required String description,
+    String? snippet,
+    String severity = 'critical',
+  }) async {
+    try {
+      final row = await _db.from('security_alerts').insert({
+        'family_id': familyId,
+        'user_id': userId,
+        'alert_type': alertType,
+        'title': title,
+        'description': description,
+        'snippet': ?snippet,
+        'severity': severity,
+        'status': 'active',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      }).select().single();
+      return SecurityAlertRow.fromJson(Map<String, dynamic>.from(row as Map));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> updateSecurityAlertStatus(String id, String status) async {
+    try {
+      await _db.from('security_alerts').update({'status': status}).eq('id', id);
+    } catch (_) {}
+  }
+
+  Future<void> updateMemberProtection(String userId, bool isProtected) async {
+    try {
+      await _db.from('profiles').update({'is_protected_member': isProtected}).eq('id', userId);
+    } catch (_) {}
+  }
+
+  // ── Credit Cards & Cashback Optimizer ─────────────────────────────────────
+
+  Future<List<CreditCardRow>> creditCards(String familyId) async {
+    try {
+      final rows = await _db
+          .from('credit_cards')
+          .select()
+          .eq('family_id', familyId)
+          .order('created_at', ascending: false);
+      return (rows as List)
+          .map((r) => CreditCardRow.fromJson(Map<String, dynamic>.from(r as Map)))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<CreditCardRow?> addCreditCard({
+    required String familyId,
+    required String cardName,
+    required String bank,
+    String cardNetwork = 'Visa',
+    String? lastFour,
+    String? ownerUserId,
+    int rewardPointsBalance = 0,
+    DateTime? rewardPointsExpiry,
+    Map<String, double> cashbackRules = const {},
+  }) async {
+    try {
+      final row = await _db.from('credit_cards').insert({
+        'family_id': familyId,
+        'card_name': cardName,
+        'bank': bank,
+        'card_network': cardNetwork,
+        'last_four': ?lastFour,
+        'owner_user_id': ?ownerUserId,
+        'reward_points_balance': rewardPointsBalance,
+        if (rewardPointsExpiry != null)
+          'reward_points_expiry': rewardPointsExpiry.toUtc().toIso8601String(),
+        'cashback_rules': cashbackRules,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      }).select().single();
+      return CreditCardRow.fromJson(Map<String, dynamic>.from(row as Map));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> updateCreditCardPoints(String cardId, int points, DateTime? expiry) async {
+    try {
+      await _db.from('credit_cards').update({
+        'reward_points_balance': points,
+        if (expiry != null) 'reward_points_expiry': expiry.toUtc().toIso8601String(),
+      }).eq('id', cardId);
+    } catch (_) {}
   }
 
   static const _recurringCols =

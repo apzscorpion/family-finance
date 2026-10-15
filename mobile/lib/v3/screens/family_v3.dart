@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../services/upi_service.dart';
 import '../../theme/nocturne.dart';
 import '../data/chat_controller.dart';
 import '../data/v3_models.dart';
@@ -295,7 +296,11 @@ class FamilyV3 extends StatelessWidget {
           ],
 
           if (s.settlements.isNotEmpty) ...[
-            const V3SectionHeader(title: 'Who owes who'),
+            V3SectionHeader(
+              title: 'Who owes who',
+              actionLabel: 'Split receipt',
+              onAction: () => V3Sheets.openReceiptSplitter(context),
+            ),
             V3Panel(
               padding: EdgeInsets.zero,
               child: Column(
@@ -338,7 +343,56 @@ class FamilyV3 extends StatelessWidget {
                           V3Num(V3Design.inr(s.settlements[i].amount),
                               style: const TextStyle(
                                   fontSize: 13.5, color: Nocturne.text)),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
+                          if (s.settlements[i].fromUser == s.myId) ...[
+                            Builder(
+                              builder: (ctx) {
+                                final toMember = s.members.cast<MemberRow?>().firstWhere(
+                                      (m) => m?.userId == s.settlements[i].toUser,
+                                      orElse: () => null,
+                                    );
+                                final upi = toMember?.upiId;
+                                if (toMember == null || upi == null || upi.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 6),
+                                  child: GestureDetector(
+                                    onTap: () => UpiService.openUpiPayment(
+                                      upiId: upi,
+                                      payeeName: toMember.name,
+                                      amount: s.settlements[i].amount,
+                                      note: s.settlements[i].note,
+                                    ),
+                                    behavior: HitTestBehavior.opaque,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: NocturneSemantic.income.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                            color: NocturneSemantic.income, width: 1),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(PhRegular.lightning,
+                                              size: 11, color: NocturneSemantic.income),
+                                          SizedBox(width: 3),
+                                          Text('UPI',
+                                              style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: NocturneSemantic.income)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                           GestureDetector(
                             onTap: () => s.settleDebt(s.settlements[i].id),
                             behavior: HitTestBehavior.opaque,
@@ -794,7 +848,35 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                                         ? NocturneSemantic.income
                                         : NocturneSemantic.expense)),
                       ),
-                      if (b != null && !settled)
+                      if (b != null && !settled) ...[
+                        if (b < 0 && other != null && other.upiId != null && other.upiId!.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: NocturneSemantic.income,
+                                foregroundColor: Nocturne.bg,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () => UpiService.openUpiPayment(
+                                upiId: other.upiId!,
+                                payeeName: name,
+                                amount: -b,
+                                note: 'Settle balance with $name',
+                              ),
+                              icon: const Icon(PhRegular.lightning, size: 13),
+                              label: const Text('Pay UPI',
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
                         TextButton(
                           onPressed: () async {
                             final ok = await s.settleWith(widget.otherId, b);
@@ -805,6 +887,7 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
                           child: const Text('Settle up',
                               style: TextStyle(color: Nocturne.accent300)),
                         ),
+                      ],
                     ],
                   ),
                 );

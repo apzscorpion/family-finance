@@ -90,4 +90,5 @@ configurations.all {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 }

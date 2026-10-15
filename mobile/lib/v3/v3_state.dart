@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import 'data/expense_import.dart';
 import 'data/note_blocks.dart';
@@ -40,6 +40,13 @@ class V3State extends ChangeNotifier {
   List<NoteRow> notes = [];
   List<FolderRow> folders = [];
   List<SettlementRow> settlements = [];
+  List<GoalRow> goals = [];
+  List<GoldHoldingRow> goldHoldings = [];
+  List<PendingRefundRow> pendingRefunds = [];
+  List<DeliverySubscriptionRow> deliverySubscriptions = [];
+  List<DomesticStaffRow> domesticStaff = [];
+  List<SecurityAlertRow> securityAlerts = [];
+  List<CreditCardRow> creditCards = [];
   List<WalletMoveRow> walletMoves = [];
   List<ApprovalRow> approvals = [];
   List<DetectedRow> detected = [];
@@ -190,6 +197,13 @@ class V3State extends ChangeNotifier {
       V3Repository.guard('detected', () => _repo.detected(familyId)),
       V3Repository.guard('prefs', () => _repo.prefs(familyId)),
       V3Repository.guard('walletMoves', () => _repo.walletMoves(familyId)),
+      V3Repository.guard('goals', () => _repo.goals(familyId)),
+      V3Repository.guard('goldHoldings', () => _repo.goldHoldings(familyId)),
+      V3Repository.guard('pendingRefunds', () => _repo.pendingRefunds(familyId)),
+      V3Repository.guard('deliverySubscriptions', () => _repo.deliverySubscriptions(familyId)),
+      V3Repository.guard('domesticStaff', () => _repo.domesticStaff(familyId)),
+      V3Repository.guard('securityAlerts', () => _repo.securityAlerts(familyId)),
+      V3Repository.guard('creditCards', () => _repo.creditCards(familyId)),
     ]);
 
     members = (results[0] as List<MemberRow>?) ?? members;
@@ -206,6 +220,13 @@ class V3State extends ChangeNotifier {
     detected = (results[11] as List<DetectedRow>?) ?? detected;
     prefs = (results[12] as PrefsRow?) ?? prefs;
     walletMoves = (results[13] as List<WalletMoveRow>?) ?? walletMoves;
+    goals = (results[14] as List<GoalRow>?) ?? goals;
+    goldHoldings = (results[15] as List<GoldHoldingRow>?) ?? goldHoldings;
+    pendingRefunds = (results[16] as List<PendingRefundRow>?) ?? pendingRefunds;
+    deliverySubscriptions = (results[17] as List<DeliverySubscriptionRow>?) ?? deliverySubscriptions;
+    domesticStaff = (results[18] as List<DomesticStaffRow>?) ?? domesticStaff;
+    securityAlerts = (results[19] as List<SecurityAlertRow>?) ?? securityAlerts;
+    creditCards = (results[20] as List<CreditCardRow>?) ?? creditCards;
 
     final others = members.where((m) => m.userId != myId).toList();
     final bals = await Future.wait([
@@ -420,6 +441,17 @@ class V3State extends ChangeNotifier {
 
   double get totalSpent =>
       scoped.where((t) => t.isExpense).fold(0.0, (s, t) => s + t.amount);
+
+  /// Total spent across all family expenses today.
+  double get todaySpent {
+    final now = DateTime.now();
+    return txns.where((t) {
+      if (!t.isExpense) return false;
+      return t.occurredAt.year == now.year &&
+          t.occurredAt.month == now.month &&
+          t.occurredAt.day == now.day;
+    }).fold(0.0, (s, t) => s + t.amount);
+  }
 
   double get totalIncome =>
       scoped.where((t) => !t.isExpense).fold(0.0, (s, t) => s + t.amount);
@@ -932,6 +964,74 @@ class V3State extends ChangeNotifier {
     return false;
   }
 
+  Future<bool> setMyUpiId(String upiId) async {
+    final ok = await V3Repository.guard('setMyUpiId', () async {
+      await _repo.setMyUpiId(upiId);
+      return true;
+    });
+    if (ok == true) {
+      unawaited(refresh());
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> createGoal({
+    required String name,
+    required double targetAmount,
+    double initialAmount = 0,
+    DateTime? targetDate,
+    String icon = 'target',
+    String color = '#9184D9',
+    String? categoryId,
+  }) async {
+    final ok = await V3Repository.guard('createGoal', () async {
+      await _repo.createGoal(
+        familyId: familyId,
+        name: name,
+        targetAmount: targetAmount,
+        initialAmount: initialAmount,
+        targetDate: targetDate,
+        icon: icon,
+        color: color,
+        categoryId: categoryId,
+      );
+      return true;
+    });
+    if (ok == true) {
+      unawaited(refresh());
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> contributeGoal(String goalId, double addAmount) async {
+    final target = goals.firstWhere((g) => g.id == goalId, orElse: () => goals.first);
+    final newAmount = target.currentAmount + addAmount;
+    final ok = await V3Repository.guard('contributeGoal', () async {
+      await _repo.contributeToGoal(goalId: goalId, newAmount: newAmount);
+      return true;
+    });
+    if (ok == true) {
+      unawaited(refresh());
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> deleteGoal(String goalId) async {
+    final ok = await V3Repository.guard('deleteGoal', () async {
+      await _repo.deleteGoal(goalId);
+      return true;
+    });
+    if (ok == true) {
+      goals = goals.where((g) => g.id != goalId).toList();
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
   Future<bool> renameFamily(String newName) async {
     final ok = await V3Repository.guard('renameFamily', () async {
       await _repo.renameFamily(familyId, newName);
@@ -1208,6 +1308,26 @@ class V3State extends ChangeNotifier {
         () => _repo.reorderCategories([for (final c in ordered) c.id]));
   }
 
+  Future<bool> upsertBudget({
+    required String categoryId,
+    required double limitAmount,
+    String period = 'monthly',
+    int thresholdPct = 80,
+  }) async {
+    await V3Repository.guard(
+      'upsertBudget',
+      () => _repo.upsertBudget(
+        familyId: familyId,
+        categoryId: categoryId,
+        limitAmount: limitAmount,
+        period: period,
+        thresholdPct: thresholdPct,
+      ),
+    );
+    await refresh();
+    return true;
+  }
+
   Future<bool> addSource(String name, {String kind = 'income'}) async {
     final created = await V3Repository.guard(
       'addSource',
@@ -1348,6 +1468,369 @@ class V3State extends ChangeNotifier {
         () => _repo.createInvite(
             familyId: familyId, role: role, spendLimit: spendLimit),
       );
+
+  // ── Faith & Cultural Suite: Gold & Sadaqah ───────────────────────────────
+
+  double get totalGoldGrams => goldHoldings
+      .where((g) => g.metalType == 'gold')
+      .fold(0.0, (sum, g) => sum + g.pure24kGrams);
+
+  double get totalSilverGrams => goldHoldings
+      .where((g) => g.metalType == 'silver')
+      .fold(0.0, (sum, g) => sum + g.weightGrams);
+
+  /// Total Sadaqah / Charity contributed this year
+  double get totalCharityGiven {
+    final now = DateTime.now();
+    return txns
+        .where((t) =>
+            t.isExpense &&
+            (t.categoryKey.toLowerCase() == 'charity' ||
+                t.title.toLowerCase().contains('sadaqah') ||
+                t.title.toLowerCase().contains('charity') ||
+                t.title.toLowerCase().contains('zakat')) &&
+            t.occurredAt.year == now.year)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  Future<bool> addGoldHolding({
+    required String itemName,
+    String metalType = 'gold',
+    required double weightGrams,
+    int purityKarat = 24,
+    String? notes,
+  }) async {
+    final created = await V3Repository.guard(
+      'addGoldHolding',
+      () => _repo.addGoldHolding(
+        familyId: familyId,
+        itemName: itemName,
+        metalType: metalType,
+        weightGrams: weightGrams,
+        purityKarat: purityKarat,
+        notes: notes,
+      ),
+    );
+    if (created == null) return false;
+    goldHoldings = [created, ...goldHoldings];
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> deleteGoldHolding(String id) async {
+    await V3Repository.guard(
+      'deleteGoldHolding',
+      () => _repo.deleteGoldHolding(id),
+    );
+    goldHoldings = goldHoldings.where((g) => g.id != id).toList();
+    notifyListeners();
+  }
+
+  // ── Safe To Spend Today & Household Metrics ───────────────────────────────
+
+  /// Safe daily spending budget: (Remaining Monthly Budget - Upcoming Bills) / Remaining Days
+  double get safeToSpendToday {
+    final now = DateTime.now();
+    final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+    final daysLeft = (daysInMonth - now.day + 1).clamp(1, 31);
+
+    final limit = budgetLimit > 0 ? budgetLimit : (totalIncome > 0 ? totalIncome : 0.0);
+    final spent = totalSpent;
+    final remainingBudget = (limit - spent).clamp(0.0, double.infinity);
+
+    // Sum recurring bills still due this month
+    var upcomingBills = 0.0;
+    for (final r in recurring) {
+      if (r.isExpense && r.nextDue.month == now.month && r.nextDue.day >= now.day) {
+        upcomingBills += r.amount;
+      }
+    }
+
+    final netAvailable = (remainingBudget - upcomingBills).clamp(0.0, double.infinity);
+    return netAvailable / daysLeft;
+  }
+
+  // ── Tier 1 Mutations ───────────────────────────────────────────────────────
+
+  Future<bool> addPendingRefund({
+    required String merchant,
+    required double amount,
+    String? utrRef,
+    String? sourceApp,
+    DateTime? expectedBy,
+    String? notes,
+  }) async {
+    final created = await V3Repository.guard(
+      'addPendingRefund',
+      () => _repo.addPendingRefund(
+        familyId: familyId,
+        merchant: merchant,
+        amount: amount,
+        utrRef: utrRef,
+        sourceApp: sourceApp,
+        expectedBy: expectedBy,
+        notes: notes,
+      ),
+    );
+    if (created == null) return false;
+    pendingRefunds = [created, ...pendingRefunds];
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> updateRefundStatus(String id, String status) async {
+    await V3Repository.guard(
+      'updateRefundStatus',
+      () => _repo.updateRefundStatus(id, status),
+    );
+    pendingRefunds = [
+      for (final r in pendingRefunds)
+        if (r.id == id)
+          PendingRefundRow(
+            id: r.id,
+            familyId: r.familyId,
+            userId: r.userId,
+            merchant: r.merchant,
+            amount: r.amount,
+            utrRef: r.utrRef,
+            sourceApp: r.sourceApp,
+            status: status,
+            initiatedAt: r.initiatedAt,
+            expectedBy: r.expectedBy,
+            receivedAt: status == 'received' ? DateTime.now() : r.receivedAt,
+            notes: r.notes,
+          )
+        else
+          r,
+    ];
+    notifyListeners();
+  }
+
+  Future<bool> addDeliverySubscription({
+    required String name,
+    String itemType = 'milk',
+    required double unitPrice,
+    String? vendorName,
+    String? vendorPhone,
+  }) async {
+    final created = await V3Repository.guard(
+      'addDeliverySubscription',
+      () => _repo.addDeliverySubscription(
+        familyId: familyId,
+        name: name,
+        itemType: itemType,
+        unitPrice: unitPrice,
+        vendorName: vendorName,
+        vendorPhone: vendorPhone,
+      ),
+    );
+    if (created == null) return false;
+    deliverySubscriptions = [...deliverySubscriptions, created];
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> toggleDeliverySkip(String subscriptionId, String skipDate) async {
+    await V3Repository.guard(
+      'toggleDeliverySkip',
+      () => _repo.toggleDeliverySkip(subscriptionId, skipDate),
+    );
+    deliverySubscriptions = [
+      for (final sub in deliverySubscriptions)
+        if (sub.id == subscriptionId)
+          DeliverySubscriptionRow(
+            id: sub.id,
+            familyId: sub.familyId,
+            name: sub.name,
+            itemType: sub.itemType,
+            unitPrice: sub.unitPrice,
+            vendorName: sub.vendorName,
+            vendorPhone: sub.vendorPhone,
+            skippedDates: sub.skippedDates.contains(skipDate)
+                ? sub.skippedDates.where((d) => d != skipDate).toList()
+                : [...sub.skippedDates, skipDate],
+          )
+        else
+          sub,
+    ];
+    notifyListeners();
+  }
+
+  Future<bool> addDomesticStaff({
+    required String name,
+    String role = 'Maid',
+    String? phone,
+    required double monthlySalary,
+    int salaryDay = 1,
+  }) async {
+    final created = await V3Repository.guard(
+      'addDomesticStaff',
+      () => _repo.addDomesticStaff(
+        familyId: familyId,
+        name: name,
+        role: role,
+        phone: phone,
+        monthlySalary: monthlySalary,
+        salaryDay: salaryDay,
+      ),
+    );
+    if (created == null) return false;
+    domesticStaff = [...domesticStaff, created];
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> addStaffLedgerEntry({
+    required String staffId,
+    required String entryType,
+    double amount = 0,
+    required DateTime date,
+    String? note,
+  }) async {
+    await V3Repository.guard(
+      'addStaffLedgerEntry',
+      () => _repo.addStaffLedgerEntry(
+        staffId: staffId,
+        entryType: entryType,
+        amount: amount,
+        date: date,
+        note: note,
+      ),
+    );
+    // Refresh staff list to update advances/leaves
+    final refreshed = await _repo.domesticStaff(familyId);
+    if (refreshed.isNotEmpty) {
+      domesticStaff = refreshed;
+      notifyListeners();
+    }
+  }
+
+  // ── Guardian Mode & Security Alerts ───────────────────────────────────────
+
+  int get activeSecurityAlertsCount => securityAlerts.where((a) => a.isActive).length;
+  SecurityAlertRow? get criticalSecurityAlert =>
+      securityAlerts.where((a) => a.isActive && a.isCritical).firstOrNull;
+
+  Future<void> createSecurityAlert({
+    required String userId,
+    required String alertType,
+    required String title,
+    required String description,
+    String? snippet,
+    String severity = 'critical',
+  }) async {
+    final alert = await V3Repository.guard(
+      'createSecurityAlert',
+      () => _repo.createSecurityAlert(
+        familyId: familyId,
+        userId: userId,
+        alertType: alertType,
+        title: title,
+        description: description,
+        snippet: snippet,
+        severity: severity,
+      ),
+    );
+    if (alert != null) {
+      securityAlerts = [alert, ...securityAlerts];
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateSecurityAlertStatus(String id, String status) async {
+    await V3Repository.guard(
+      'updateSecurityAlertStatus',
+      () => _repo.updateSecurityAlertStatus(id, status),
+    );
+    securityAlerts = [
+      for (final a in securityAlerts)
+        if (a.id == id)
+          SecurityAlertRow(
+            id: a.id,
+            familyId: a.familyId,
+            userId: a.userId,
+            alertType: a.alertType,
+            title: a.title,
+            description: a.description,
+            snippet: a.snippet,
+            severity: a.severity,
+            status: status,
+            createdAt: a.createdAt,
+          )
+        else
+          a,
+    ];
+    notifyListeners();
+  }
+
+  Future<void> toggleMemberProtection(String userId, bool isProtected) async {
+    await V3Repository.guard(
+      'updateMemberProtection',
+      () => _repo.updateMemberProtection(userId, isProtected),
+    );
+    members = [
+      for (final m in members)
+        if (m.userId == userId)
+          MemberRow(
+            userId: m.userId,
+            name: m.name,
+            role: m.role,
+            status: m.status,
+            relationship: m.relationship,
+            hue: m.hue,
+            monthlyBudget: m.monthlyBudget,
+            isAllowance: m.isAllowance,
+            upiId: m.upiId,
+            isProtectedMember: isProtected,
+          )
+        else
+          m,
+    ];
+    notifyListeners();
+  }
+
+  // ── Credit Cards & Cashback Optimizer ─────────────────────────────────────
+
+  List<CreditCardRow> get cardsWithExpiringPoints =>
+      creditCards.where((c) => c.hasExpiringPoints).toList();
+
+  Future<bool> addCreditCard({
+    required String cardName,
+    required String bank,
+    String cardNetwork = 'Visa',
+    String? lastFour,
+    String? ownerUserId,
+    int rewardPointsBalance = 0,
+    DateTime? rewardPointsExpiry,
+    Map<String, double> cashbackRules = const {},
+  }) async {
+    final created = await V3Repository.guard(
+      'addCreditCard',
+      () => _repo.addCreditCard(
+        familyId: familyId,
+        cardName: cardName,
+        bank: bank,
+        cardNetwork: cardNetwork,
+        lastFour: lastFour,
+        ownerUserId: ownerUserId,
+        rewardPointsBalance: rewardPointsBalance,
+        rewardPointsExpiry: rewardPointsExpiry,
+        cashbackRules: cashbackRules,
+      ),
+    );
+    if (created == null) return false;
+    creditCards = [...creditCards, created];
+    notifyListeners();
+    return true;
+  }
+
+  // ── Refund Watchdog ("Never lose a refund again") ──────────────────────────
+
+  List<PendingRefundRow> get delayedRefunds =>
+      pendingRefunds.where((r) => r.isDelayed).toList();
+
+  int get pendingRefundsCount =>
+      pendingRefunds.where((r) => r.isPending).length;
 
   // ── Presentation helpers ──────────────────────────────────────────────────
 

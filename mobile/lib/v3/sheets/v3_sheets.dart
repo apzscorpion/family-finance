@@ -7,12 +7,24 @@ import '../data/bill_scan.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../v3_design.dart';
+import '../v3_nav.dart';
 import '../screens/categories_manager_v3.dart';
 import '../screens/sources_manager_v3.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
+import '../../services/category_memory_service.dart';
 import 'calc_engine.dart';
+import 'faith_suite_sheet.dart';
+import 'goals_sheet.dart';
+import 'guardian_sheet.dart';
+import 'household_suite_sheet.dart';
+import 'magic_ai_sheet.dart';
+import 'receipt_splitter_sheet.dart';
 import 'recurring_sheet_v3.dart';
+import 'refund_watchdog_sheet.dart';
+import 'spend_roast_sheet.dart';
+import 'spending_calendar_sheet.dart';
+import 'voice_quick_add_sheet.dart';
 
 /// Bottom sheets, matching the design's single sheet container:
 ///   `border-radius:28px 28px 0 0; background:var(--color-surface);
@@ -80,6 +92,44 @@ class V3Sheets {
   static Future<void> openRecurring(BuildContext context) => readOnly
       ? _notifyReadOnly(context)
       : _show(context, const V3RecurringSheet());
+
+  static Future<void> openGoals(BuildContext context) =>
+      GoalsSheet.open(context);
+
+  static Future<void> openVoiceAdd(BuildContext context) => readOnly
+      ? _notifyReadOnly(context)
+      : VoiceQuickAddSheet.show(context);
+
+  static Future<void> openSpendingCalendar(BuildContext context) =>
+      SpendingCalendarSheet.show(context);
+
+  static Future<void> openFaithSuite(BuildContext context) =>
+      FaithSuiteSheet.show(context);
+
+  static Future<void> openHouseholdSuite(
+    BuildContext context, {
+    int initialTab = 0,
+  }) =>
+      HouseholdSuiteSheet.show(context, initialTab: initialTab);
+
+  static Future<void> openGuardian(
+    BuildContext context, {
+    int initialTab = 0,
+  }) =>
+      GuardianSheet.show(context, initialTab: initialTab);
+
+  static Future<void> openReceiptSplitter(BuildContext context) => readOnly
+      ? _notifyReadOnly(context)
+      : ReceiptSplitterSheet.show(context);
+
+  static Future<void> openRefundWatchdog(BuildContext context) =>
+      RefundWatchdogSheet.show(context);
+
+  static Future<void> openSpendRoast(BuildContext context, {int initialTab = 0}) =>
+      SpendRoastSheet.show(context, initialTab: initialTab);
+
+  static Future<void> openMagicAi(BuildContext context, {int initialTab = 0}) =>
+      MagicAiSheet.show(context, initialTab: initialTab);
 }
 
 class _SheetShell extends StatelessWidget {
@@ -720,7 +770,15 @@ class _V3AddSheetState extends State<V3AddSheet> {
       }
       // The AI reader's category guess, if it fits the entry's type.
       final guess = p.category == null ? null : s.categoryByKey(p.category!);
-      if (guess != null && guess.kind == _type) _pickMain(s, guess.key);
+      if (guess != null && guess.kind == _type) {
+        _pickMain(s, guess.key);
+      } else if (_type == 'expense') {
+        final learned = CategoryMemoryService.predictCategorySync(_note.text);
+        if (learned != null) {
+          final cat = s.categoryByKey(learned);
+          if (cat != null && cat.kind == _type) _pickMain(s, cat.key);
+        }
+      }
     }
     final refine = widget.refine;
     if (e == null && p != null && refine != null) {
@@ -943,6 +1001,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
     if (!mounted) return;
     setState(() => _saving = false);
     if (ok) {
+      if (_type == 'expense' && title.isNotEmpty) {
+        CategoryMemoryService.remember(title, _catKey);
+      }
       Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1051,7 +1112,31 @@ class _V3AddSheetState extends State<V3AddSheet> {
                   _payer = null;
                 }),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
+              // Voice Entry Button
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).pop();
+                  V3Sheets.openVoiceAdd(context);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Nocturne.bg,
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: Nocturne.neutral800, width: 1),
+                  ),
+                  child: const Icon(
+                    PhRegular.sparkle,
+                    size: 18,
+                    color: Nocturne.accent300,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               // Header Save Checkmark (✓)
               GestureDetector(
                 onTap: (evaluated > 0 && !_saving) ? _save : null,
@@ -1257,6 +1342,20 @@ class _V3AddSheetState extends State<V3AddSheet> {
                       color: Nocturne.text,
                     ),
                     cursorColor: Nocturne.accent,
+                    onChanged: (text) {
+                      if (_type == 'expense' && widget.edit == null) {
+                        final predicted = CategoryMemoryService.predictCategorySync(text);
+                        if (predicted != null && predicted != _catKey) {
+                          final cat = s.categoryByKey(predicted);
+                          if (cat != null && cat.kind == _type) {
+                            setState(() {
+                              _catKey = predicted;
+                              _subKey = null;
+                            });
+                          }
+                        }
+                      }
+                    },
                     decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
@@ -1777,6 +1876,52 @@ class _V3AddSheetState extends State<V3AddSheet> {
                     ),
                   ),
                 ],
+                if (_type == 'expense' && evaluated > 0) ...[
+                  Builder(
+                    builder: (ctx) {
+                      final monthlyBase = s.totalIncome > 0
+                          ? s.totalIncome
+                          : (s.budgetLimit > 0 ? s.budgetLimit : 50000.0);
+                      final hourlyRate = monthlyBase / 160.0;
+                      final workHours = evaluated / hourlyRate;
+                      final workLabel = workHours >= 8.0
+                          ? '${(workHours / 8.0).toStringAsFixed(1)}d work'
+                          : (workHours >= 1.0
+                              ? '${workHours.toStringAsFixed(1)}h work'
+                              : '${(workHours * 60).round()}m work');
+                      return Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Nocturne.neutral800,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              PhRegular.clock,
+                              size: 11,
+                              color: Nocturne.neutral400,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '≈ $workLabel',
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                color: Nocturne.neutral300,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -2177,6 +2322,21 @@ class V3DetailSheet extends StatelessWidget {
                     V3Sheets.openAdd(context, edit: txn);
                   },
                 ),
+                if ((txn.paidBy ?? txn.userId) != s.myId)
+                  _DetailAction(
+                    icon: PhRegular.chatCircleDots,
+                    label: 'Ask',
+                    color: Nocturne.accent300,
+                    onTap: () {
+                      final payerId = txn.paidBy ?? txn.userId;
+                      final nav = context.read<V3Nav?>();
+                      Navigator.pop(context);
+                      if (nav != null && payerId != null) {
+                        final question = 'Hey! What was this expense for? "${txn.title}" (${V3Design.inr(txn.amount)}) on ${_dateLabel(txn.occurredAt)}';
+                        nav.openChat(payerId, question);
+                      }
+                    },
+                  ),
                 _DetailAction(
                   icon: PhRegular.copy,
                   label: 'Duplicate',

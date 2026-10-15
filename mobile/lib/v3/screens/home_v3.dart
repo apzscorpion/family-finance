@@ -54,6 +54,14 @@ class HomeV3 extends StatelessWidget {
             PrayerCard(
               onTap: () => context.read<V3Nav>().goPage(V3Page.prayer),
             ),
+            if (s.criticalSecurityAlert != null) ...[
+              const SizedBox(height: 12),
+              const _GuardianAlertBanner(),
+            ],
+            if (s.delayedRefunds.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const _RefundAlertBanner(),
+            ],
             const SizedBox(height: 4),
             const _QuickActions(),
             if (s.sources.isNotEmpty) ...[
@@ -84,6 +92,38 @@ class HomeV3 extends StatelessWidget {
               ),
               const _Budgets(),
             ],
+            V3SectionHeader(
+              title: 'Savings goals',
+              meta: s.goals.isNotEmpty ? '${s.goals.length} active' : null,
+              actionLabel: s.goals.isNotEmpty ? 'Manage' : '+ Set goal',
+              onAction: () => V3Sheets.openGoals(context),
+            ),
+            if (s.goals.isNotEmpty) const _HomeGoalsSummary() else const _EmptyGoalsBanner(),
+            V3SectionHeader(
+              title: 'Faith & Charity',
+              meta: 'Zakat · Gold · Sadaqah',
+              actionLabel: 'Calculate',
+              onAction: () => V3Sheets.openFaithSuite(context),
+            ),
+            const _FaithSuiteBanner(),
+            V3SectionHeader(
+              title: 'Install Magnets & Security',
+              meta: 'Guardian · Refunds · Cards · Roast',
+              actionLabel: 'Manage',
+              onAction: () => V3Sheets.openGuardian(context),
+            ),
+            const _GuardianBanner(),
+            const SizedBox(height: 8),
+            const _RefundWatchdogBanner(),
+            const SizedBox(height: 8),
+            const _SpendRoastBanner(),
+            V3SectionHeader(
+              title: 'AI That Feels Like Magic',
+              meta: 'What-If · Reminders · Subscriptions',
+              actionLabel: 'Explore',
+              onAction: () => V3Sheets.openMagicAi(context),
+            ),
+            const _MagicAiBanner(),
             if (s.recurring.isNotEmpty) ...[
               V3SectionHeader(
                 title: 'Coming up',
@@ -212,6 +252,11 @@ class _Header extends StatelessWidget {
           _HeaderButton(
             icon: s.hidden ? PhRegular.eyeSlash : PhRegular.eye,
             onTap: s.toggleHidden,
+          ),
+          const SizedBox(width: 8),
+          _HeaderButton(
+            icon: PhRegular.sparkle,
+            onTap: () => context.read<V3Nav>().goPage(V3Page.askKinPurse),
           ),
           const SizedBox(width: 8),
           _HeaderButton(
@@ -646,9 +691,12 @@ class _HeroCard extends StatelessWidget {
                       : NocturneSemantic.expense),
               const SizedBox(width: 8),
               _HeroStat(
-                  label: 'Per day',
-                  value: s.moneyShort(spent / s.maxDays),
-                  color: Nocturne.text),
+                  label: limit > 0 ? 'Safe / day' : 'Per day',
+                  value: limit > 0
+                      ? s.moneyShort(s.safeToSpendToday)
+                      : s.moneyShort(spent / s.maxDays),
+                  color: limit > 0 ? Nocturne.accent200 : Nocturne.text,
+                  onTap: () => V3Sheets.openMagicAi(context, initialTab: 0)),
             ],
           ),
                 ],
@@ -665,40 +713,63 @@ class _HeroStat extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final VoidCallback? onTap;
 
-  const _HeroStat(
-      {required this.label, required this.value, required this.color});
+  const _HeroStat({
+    required this.label,
+    required this.value,
+    required this.color,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-        decoration: BoxDecoration(
-          color: const Color(0x3D000000),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 10.5, color: Nocturne.neutral500)),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: V3Num(
-                value,
-                style: TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w500, color: color),
-              ),
+    final body = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0x3D000000),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 10.5, color: Nocturne.neutral500)),
+              if (onTap != null) ...[
+                const SizedBox(width: 3),
+                const Icon(PhBold.caretRight, size: 8, color: Nocturne.neutral500),
+              ],
+            ],
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: V3Num(
+              value,
+              style: TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w500, color: color),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+
+    if (onTap != null) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: body,
+        ),
+      );
+    }
+    return Expanded(child: body);
   }
 }
 
@@ -712,6 +783,12 @@ class _QuickActions extends StatelessWidget {
     final nav = context.read<V3Nav>();
     final actions = <(IconData, String, Color, VoidCallback)>[
       (PhRegular.plus, 'Add', Nocturne.accent, () => V3Sheets.openAdd(context)),
+      (
+        PhRegular.sparkle,
+        'Voice',
+        const Color(0xFFD946EF),
+        () => V3Sheets.openVoiceAdd(context),
+      ),
       (
         PhRegular.bellRinging,
         'Detected',
@@ -1235,6 +1312,605 @@ class _BudgetRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Savings Goals Summary ──────────────────────────────────────────────────
+
+class _HomeGoalsSummary extends StatelessWidget {
+  const _HomeGoalsSummary();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<V3State>();
+    final goals = s.goals;
+
+    return V3Panel(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        children: [
+          for (var i = 0; i < goals.length; i++) ...[
+            _HomeGoalRow(goal: goals[i]),
+            if (i < goals.length - 1) const V3RowDivider(),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeGoalRow extends StatelessWidget {
+  final GoalRow goal;
+  const _HomeGoalRow({required this.goal});
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = goal.progress;
+    final remaining = goal.remainingAmount;
+    final months = goal.remainingMonths;
+
+    return GestureDetector(
+      onTap: () => V3Sheets.openGoals(context),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  goal.isCompleted ? PhRegular.checkCircle : PhRegular.target,
+                  size: 16,
+                  color: goal.isCompleted
+                      ? NocturneSemantic.income
+                      : Nocturne.accent300,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    goal.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, color: Nocturne.text),
+                  ),
+                ),
+                V3Num(V3Design.inr(goal.currentAmount),
+                    style: const TextStyle(fontSize: 13, color: Nocturne.text)),
+                V3Num(' / ${V3Design.inrShort(goal.targetAmount)}',
+                    style: const TextStyle(
+                        fontSize: 13, color: Nocturne.neutral500)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            V3ProgressBar(
+              fraction: progress,
+              fill: goal.isCompleted ? NocturneSemantic.income : Nocturne.accent,
+              height: 5,
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  goal.isCompleted
+                      ? 'Goal reached! 🎉'
+                      : months != null && months > 0
+                          ? '${V3Design.inrShort(remaining)} left · ~$months mos'
+                          : '${V3Design.inrShort(remaining)} left',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: goal.isCompleted
+                        ? NocturneSemantic.income
+                        : Nocturne.neutral500,
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: goal.isCompleted
+                        ? NocturneSemantic.income
+                        : Nocturne.accent300,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyGoalsBanner extends StatelessWidget {
+  const _EmptyGoalsBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => V3Sheets.openGoals(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Nocturne.neutral800),
+        ),
+        child: const Row(
+          children: [
+            V3IconTile(
+              icon: PhRegular.target,
+              color: Nocturne.accent300,
+              size: 34,
+              radius: 10,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'No goals set yet',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                      color: Nocturne.text,
+                    ),
+                  ),
+                  Text(
+                    'Tap to set a target for Umrah, a holiday, or an emergency fund',
+                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                  ),
+                ],
+              ),
+            ),
+            Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FaithSuiteBanner extends StatelessWidget {
+  const _FaithSuiteBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<V3State>();
+    final goldGrams = s.totalGoldGrams;
+    final charity = s.totalCharityGiven;
+
+    return GestureDetector(
+      onTap: () => V3Sheets.openFaithSuite(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Nocturne.neutral800),
+        ),
+        child: Row(
+          children: [
+            const V3IconTile(
+              icon: PhRegular.coins,
+              color: Color(0xFFFBBF24),
+              size: 34,
+              radius: 10,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    goldGrams > 0
+                        ? '${goldGrams.toStringAsFixed(1)}g Gold · ${s.moneyShort(charity)} Sadaqah'
+                        : 'Faith & Islamic Finance Suite',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                      color: Nocturne.text,
+                    ),
+                  ),
+                  const Text(
+                    'Calculate 2.5% Zakat with Nisab, track precious metals, and log charity',
+                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuardianAlertBanner extends StatelessWidget {
+  const _GuardianAlertBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<V3State>();
+    final alert = s.criticalSecurityAlert;
+    if (alert == null) return const SizedBox.shrink();
+
+    MemberRow? targetMember;
+    for (final m in s.members) {
+      if (m.userId == alert.userId) {
+        targetMember = m;
+        break;
+      }
+    }
+    final targetName = targetMember?.name ?? 'Parent';
+
+    return GestureDetector(
+      onTap: () => V3Sheets.openGuardian(context, initialTab: 0),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: NocturneSemantic.expense.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: NocturneSemantic.expense, width: 1.4),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: NocturneSemantic.expense,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(PhFill.warning, size: 20, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '🚨 Guardian Alert: $targetName',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                      color: NocturneSemantic.expense,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    alert.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Nocturne.text),
+                  ),
+                  Text(
+                    'Potential scam detected. Tap to inspect & call $targetName.',
+                    style: const TextStyle(fontSize: 11, color: Nocturne.neutral300),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(PhRegular.caretRight, size: 16, color: NocturneSemantic.expense),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuardianBanner extends StatelessWidget {
+  const _GuardianBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<V3State>();
+    final protectedCount = s.members.where((m) => m.isProtectedMember).length;
+    final cardCount = s.creditCards.length;
+    final expiringCount = s.cardsWithExpiringPoints.length;
+
+    final summary = protectedCount > 0
+        ? '$protectedCount Protected · $cardCount Cards${expiringCount > 0 ? " · ⚠️ $expiringCount Points Expiring" : ""}'
+        : 'Protect parents from UPI scams & find highest cashback card';
+
+    return GestureDetector(
+      onTap: () => V3Sheets.openGuardian(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: expiringCount > 0 ? NocturneSemantic.warning : Nocturne.neutral800,
+            width: expiringCount > 0 ? 1.2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            V3IconTile(
+              icon: expiringCount > 0 ? PhRegular.warning : PhRegular.lockSimple,
+              color: expiringCount > 0 ? NocturneSemantic.warning : NocturneSemantic.income,
+              size: 34,
+              radius: 10,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Guardian Mode & Card Optimizer',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Nocturne.text,
+                    ),
+                  ),
+                  Text(
+                    summary,
+                    style: const TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RefundAlertBanner extends StatelessWidget {
+  const _RefundAlertBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<V3State>();
+    final delayed = s.delayedRefunds;
+    if (delayed.isEmpty) return const SizedBox.shrink();
+
+    final first = delayed.first;
+
+    return GestureDetector(
+      onTap: () => V3Sheets.openRefundWatchdog(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: NocturneSemantic.warning.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: NocturneSemantic.warning, width: 1.4),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: NocturneSemantic.warning,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(PhRegular.arrowCounterClockwise, size: 20, color: Colors.black),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '⚠️ ${delayed.length} Refund${delayed.length == 1 ? '' : 's'} Overdue (>5 Days)',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                      color: NocturneSemantic.warning,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${first.merchant} ${V3Design.inr(first.amount)} not credited. Tap to draft RBI complaint.',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Nocturne.text),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(PhRegular.caretRight, size: 16, color: NocturneSemantic.warning),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RefundWatchdogBanner extends StatelessWidget {
+  const _RefundWatchdogBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<V3State>();
+    final pendingCount = s.pendingRefundsCount;
+    final delayedCount = s.delayedRefunds.length;
+
+    final summary = pendingCount > 0
+        ? '$pendingCount Watching${delayedCount > 0 ? " · ⚠️ $delayedCount Overdue" : " · Under 5-day SLA"}'
+        : 'Track failed UPI & merchant refunds with automatic RBI dispute alerts';
+
+    return GestureDetector(
+      onTap: () => V3Sheets.openRefundWatchdog(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: delayedCount > 0 ? NocturneSemantic.warning : Nocturne.neutral800,
+            width: delayedCount > 0 ? 1.2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            V3IconTile(
+              icon: delayedCount > 0 ? PhRegular.warning : PhRegular.arrowCounterClockwise,
+              color: delayedCount > 0 ? NocturneSemantic.warning : Nocturne.accent200,
+              size: 34,
+              radius: 10,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Never Lose A Refund Again',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Nocturne.text,
+                    ),
+                  ),
+                  Text(
+                    summary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SpendRoastBanner extends StatelessWidget {
+  const _SpendRoastBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => V3Sheets.openSpendRoast(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Nocturne.neutral800),
+        ),
+        child: const Row(
+          children: [
+            V3IconTile(
+              icon: PhRegular.sparkle,
+              color: Color(0xFFFF8A80),
+              size: 34,
+              radius: 10,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'AI Spend Roast & Family Inflation',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Nocturne.text,
+                    ),
+                  ),
+                  Text(
+                    'Shareable monthly roast · Personal grocery inflation · Universal UPI split',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                  ),
+                ],
+              ),
+            ),
+            Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MagicAiBanner extends StatelessWidget {
+  const _MagicAiBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => V3Sheets.openMagicAi(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Nocturne.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Nocturne.neutral800),
+        ),
+        child: const Row(
+          children: [
+            V3IconTile(
+              icon: PhRegular.sparkle,
+              color: Color(0xFFC084FC),
+              size: 34,
+              radius: 10,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'AI That Feels Like Magic',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Nocturne.text,
+                    ),
+                  ),
+                  Text(
+                    'What-if goal slider · Duplicate subscriptions · Polite reminders',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11.5, color: Nocturne.neutral500),
+                  ),
+                ],
+              ),
+            ),
+            Icon(PhRegular.caretRight, size: 14, color: Nocturne.neutral600),
+          ],
+        ),
       ),
     );
   }

@@ -7,15 +7,20 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/nocturne.dart';
+import '../theme/nocturne_palette.dart';
 import 'data/bill_scan.dart';
 import 'data/card_scan.dart';
 import 'data/chat_controller.dart';
 import 'data/notes_presence.dart';
 import 'data/prayer/prayer_controller.dart';
 import 'data/v3_repository.dart';
+import '../services/widget_service.dart';
+import '../services/biometric_service.dart';
+import 'v3_design.dart';
 import 'phosphor_icons.dart';
 import 'screens/activity_v3.dart';
 import 'screens/ai_settings_v3.dart';
+import 'screens/ask_kinpurse_v3.dart';
 import 'screens/auth_v3.dart';
 import 'screens/cards_v3.dart';
 import 'screens/chat_list_v3.dart';
@@ -23,6 +28,7 @@ import 'screens/detected_v3.dart';
 import 'screens/family_v3.dart';
 import 'screens/home_v3.dart';
 import 'screens/insights_v3.dart';
+import 'screens/monthly_recap_v3.dart';
 import 'screens/notes_v3.dart';
 import 'screens/notifications_v3.dart';
 import 'data/prayer/prayer_platform_io.dart'
@@ -73,35 +79,48 @@ class V3App extends StatelessWidget {
         // Loads its own device-local config. Builds nothing and runs no timer
         // until the feature is switched on.
         ChangeNotifierProvider(create: (_) => PrayerController()..load()),
+        ChangeNotifierProvider.value(value: ThemeController.instance..load()),
       ],
-      child: MaterialApp(
-        title: 'KinPurse',
-        navigatorKey: navigatorKey,
-        debugShowCheckedModeBanner: false,
-        theme: v3Theme,
-        home: const V3Root(),
+      child: Consumer<ThemeController>(
+        builder: (context, themeCtrl, _) => MaterialApp(
+          title: 'KinPurse',
+          navigatorKey: navigatorKey,
+          debugShowCheckedModeBanner: false,
+          theme: getV3Theme(themeCtrl.palette),
+          home: const V3Root(),
+        ),
       ),
     );
   }
 }
 
-ThemeData get v3Theme => ThemeData(
+ThemeData get v3Theme => getV3Theme(ThemeController.instance.palette);
+
+ThemeData getV3Theme(NocturnePalette p) => ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: Nocturne.bg,
+      scaffoldBackgroundColor: p.bg,
       fontFamily: Nocturne.fontFamily,
-      colorScheme: const ColorScheme.dark(
-        surface: Nocturne.surface,
-        primary: Nocturne.accent,
-        onPrimary: Nocturne.bg,
-        onSurface: Nocturne.text,
-      ),
+      brightness: p.isDark ? Brightness.dark : Brightness.light,
+      colorScheme: p.isDark
+          ? ColorScheme.dark(
+              surface: p.surface,
+              primary: p.accent,
+              onPrimary: p.bg,
+              onSurface: p.text,
+            )
+          : ColorScheme.light(
+              surface: p.surface,
+              primary: p.accent,
+              onPrimary: Colors.white,
+              onSurface: p.text,
+            ),
       textTheme: const TextTheme().apply(
-        bodyColor: Nocturne.text,
-        displayColor: Nocturne.text,
+        bodyColor: p.text,
+        displayColor: p.text,
       ),
-      snackBarTheme: const SnackBarThemeData(
-        backgroundColor: Nocturne.neutral800,
-        contentTextStyle: TextStyle(color: Nocturne.text, fontSize: 13),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: p.edge,
+        contentTextStyle: TextStyle(color: p.text, fontSize: 13),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -162,14 +181,157 @@ class V3Root extends StatelessWidget {
   }
 }
 
-class V3Shell extends StatelessWidget {
+class V3Shell extends StatefulWidget {
   const V3Shell({super.key});
+
+  @override
+  State<V3Shell> createState() => _V3ShellState();
+}
+
+class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
+  bool _unlocked = false;
+  bool _authenticating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkBiometricAuth();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_unlocked && !_authenticating) {
+      _checkBiometricAuth();
+    }
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    super.didChangePlatformBrightness();
+    ThemeController.instance.updatePlatformBrightness(
+      WidgetsBinding.instance.platformDispatcher.platformBrightness,
+    );
+  }
+
+  Future<void> _checkBiometricAuth() async {
+    final s = context.read<V3State>();
+    final lockEnabled = s.prefs.lockApp;
+
+    if (!lockEnabled) {
+      if (mounted) setState(() => _unlocked = true);
+      return;
+    }
+
+    if (kIsWeb) {
+      if (mounted) setState(() => _unlocked = true);
+      return;
+    }
+
+    setState(() => _authenticating = true);
+    final ok = await BiometricService.authenticate();
+    if (mounted) {
+      setState(() {
+        _authenticating = false;
+        _unlocked = ok;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final nav = context.watch<V3Nav>();
     final s = context.watch<V3State>();
     final chat = context.read<ChatController?>();
+    final palette = Nocturne.palette;
+
+    if (!_unlocked && s.prefs.lockApp && !kIsWeb) {
+      return Scaffold(
+        backgroundColor: palette.bg,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: palette.surface,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: palette.switchOn, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: palette.glow,
+                        blurRadius: 36,
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    PhBold.lock,
+                    size: 36,
+                    color: palette.accentMuted,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'KinPurse is locked',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    color: palette.text,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Unlock with fingerprint or device screen lock',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: palette.subtle),
+                ),
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: _checkBiometricAuth,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    decoration: BoxDecoration(
+                      color: palette.accent.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: palette.accent, width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(PhRegular.lockKey,
+                            size: 18, color: palette.accentLight),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Unlock',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: palette.accentLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     if (chat != null && s.family != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -279,14 +441,32 @@ class _SharedBillListenerState extends State<_SharedBillListener>
     );
     if (!mounted) return;
     messenger.hideCurrentSnackBar();
-    if (shared == null) return;
-    final bill = shared.bill;
-    if (bill.amount == null && bill.payee == null && shared.refined == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Couldn't read a payment from that image. "
-              'Fill in the details below.')));
+    if (shared != null) {
+      final bill = shared.bill;
+      if (bill.amount == null && bill.payee == null && shared.refined == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Couldn't read a payment from that image. "
+                'Fill in the details below.')));
+      }
+      await V3Sheets.openAdd(context, prefill: bill, refine: shared.refined);
     }
-    await V3Sheets.openAdd(context, prefill: bill, refine: shared.refined);
+
+    // Keep home-screen widget updated with today's spend & next prayer time
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && mounted) {
+      try {
+        final prayerCtrl = context.read<PrayerController?>();
+        final nextP = prayerCtrl?.next;
+        final prayerName = nextP?.next.label ?? 'Prayer';
+        final prayerTime = nextP != null
+            ? '${nextP.next.time.hour.toString().padLeft(2, '0')}:${nextP.next.time.minute.toString().padLeft(2, '0')}'
+            : '--:--';
+        await KinPurseWidgetService.updateWidget(
+          todaySpent: V3Design.inr(s.todaySpent),
+          prayerName: prayerName,
+          prayerTime: prayerTime,
+        );
+      } catch (_) {}
+    }
   }
 
   @override
@@ -300,7 +480,9 @@ class _PageOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nav = context.watch<V3Nav>();
-    final hideOuterBar = page == V3Page.chat && nav.chatPartnerId != null;
+    final hideOuterBar =
+        (page == V3Page.chat && nav.chatPartnerId != null) ||
+            page == V3Page.settings;
 
     // The design slides pages in over the tab content rather than pushing a
     // route: `animation:ftIn .24s cubic-bezier(.2,.8,.2,1)`.
@@ -363,6 +545,8 @@ class _PageOverlay extends StatelessWidget {
         V3Page.prayerSettings => const PrayerSettingsV3(),
         V3Page.aiSettings => const AiSettingsV3(),
         V3Page.chat => const ChatListV3(),
+        V3Page.askKinPurse => const AskKinPurseScreen(),
+        V3Page.monthlyRecap => const MonthlyRecapScreen(),
       };
 }
 
@@ -476,22 +660,28 @@ class _AddButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Center(
-        child: V3Press(
-          onTap: () => V3Sheets.openAdd(context),
-          child: Container(
-            width: 56,
-            height: 56,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Nocturne.accent700,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Nocturne.accent400, width: 1),
-              boxShadow: [
-                BoxShadow(
-                    color: Nocturne.mix(Nocturne.accent, 45), blurRadius: 22),
-              ],
+        child: GestureDetector(
+          onLongPress: () {
+            HapticFeedback.heavyImpact();
+            V3Sheets.openVoiceAdd(context);
+          },
+          child: V3Press(
+            onTap: () => V3Sheets.openAdd(context),
+            child: Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Nocturne.accent700,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Nocturne.accent400, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                      color: Nocturne.mix(Nocturne.accent, 45), blurRadius: 22),
+                ],
+              ),
+              child: Icon(PhBold.plus, size: 24, color: Nocturne.accent100),
             ),
-            child: const Icon(PhBold.plus, size: 24, color: Nocturne.accent100),
           ),
         ),
       ),

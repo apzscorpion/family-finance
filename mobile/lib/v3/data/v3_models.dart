@@ -46,6 +46,8 @@ class MemberRow {
   final int hue;
   final double? monthlyBudget;
   final bool isAllowance;
+  final String? upiId;
+  final bool isProtectedMember;
 
   const MemberRow({
     required this.userId,
@@ -56,6 +58,8 @@ class MemberRow {
     required this.hue,
     this.monthlyBudget,
     this.isAllowance = false,
+    this.upiId,
+    this.isProtectedMember = false,
   });
 
   factory MemberRow.fromJson(Map<String, dynamic> j) {
@@ -63,6 +67,12 @@ class MemberRow {
     final name = profile is Map
         ? (profile['full_name']?.toString() ?? '')
         : (j['full_name']?.toString() ?? '');
+    final upi = profile is Map
+        ? profile['upi_id']?.toString()
+        : j['upi_id']?.toString();
+    final isProtected = profile is Map
+        ? (profile['is_protected_member'] as bool?)
+        : (j['is_protected_member'] as bool?);
     return MemberRow(
       userId: j['user_id'].toString(),
       name: name.isEmpty ? 'Member' : name,
@@ -74,6 +84,8 @@ class MemberRow {
           ? null
           : _num(j['monthly_budget']),
       isAllowance: (j['is_allowance'] as bool?) ?? false,
+      upiId: (upi == null || upi.trim().isEmpty) ? null : upi.trim(),
+      isProtectedMember: isProtected ?? false,
     );
   }
 
@@ -326,6 +338,7 @@ class TxnRow {
   }
 
   bool get isExpense => type == 'expense';
+  bool get isIncome => type == 'income';
 
   /// Same entry filed under main category [main] with sub-category [subId].
   TxnRow refiled(CategoryRow main, String subId) => TxnRow(
@@ -397,6 +410,352 @@ class BudgetRow {
         period: j['period']?.toString() ?? 'monthly',
         thresholdPct: (j['threshold_pct'] as num?)?.toInt() ?? 80,
       );
+}
+
+class GoalRow {
+  final String id;
+  final String familyId;
+  final String? createdBy;
+  final String name;
+  final double targetAmount;
+  final double currentAmount;
+  final DateTime? targetDate;
+  final String icon;
+  final String color;
+  final String? categoryId;
+  final String status;
+  final DateTime createdAt;
+
+  const GoalRow({
+    required this.id,
+    required this.familyId,
+    this.createdBy,
+    required this.name,
+    required this.targetAmount,
+    this.currentAmount = 0,
+    this.targetDate,
+    this.icon = 'target',
+    this.color = '#9184D9',
+    this.categoryId,
+    this.status = 'active',
+    required this.createdAt,
+  });
+
+  factory GoalRow.fromJson(Map<String, dynamic> j) {
+    DateTime? parseDate(dynamic v) {
+      if (v == null) return null;
+      try {
+        return DateTime.parse(v.toString()).toLocal();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return GoalRow(
+      id: j['id'].toString(),
+      familyId: j['family_id']?.toString() ?? '',
+      createdBy: j['created_by']?.toString(),
+      name: j['name']?.toString() ?? 'Savings Goal',
+      targetAmount: _num(j['target_amount']),
+      currentAmount: _num(j['current_amount']),
+      targetDate: parseDate(j['target_date']),
+      icon: j['icon']?.toString() ?? 'target',
+      color: j['color']?.toString() ?? '#9184D9',
+      categoryId: j['category_id']?.toString(),
+      status: j['status']?.toString() ?? 'active',
+      createdAt: _ts(j['created_at']),
+    );
+  }
+
+  double get progress => targetAmount <= 0
+      ? 0.0
+      : (currentAmount / targetAmount).clamp(0.0, 1.0);
+
+  bool get isCompleted => currentAmount >= targetAmount;
+
+  double get remainingAmount => (targetAmount - currentAmount).clamp(0, targetAmount);
+
+  /// Estimate remaining months based on target date
+  int? get remainingMonths {
+    if (targetDate == null) return null;
+    final now = DateTime.now();
+    final diffDays = targetDate!.difference(now).inDays;
+    if (diffDays <= 0) return 0;
+    return (diffDays / 30).ceil();
+  }
+}
+
+class GoldHoldingRow {
+  final String id;
+  final String familyId;
+  final String? ownerId;
+  final String itemName;
+  final String metalType; // 'gold' or 'silver'
+  final double weightGrams;
+  final int purityKarat; // 18, 21, 22, 24
+  final String? notes;
+  final DateTime createdAt;
+
+  const GoldHoldingRow({
+    required this.id,
+    required this.familyId,
+    this.ownerId,
+    required this.itemName,
+    this.metalType = 'gold',
+    required this.weightGrams,
+    this.purityKarat = 24,
+    this.notes,
+    required this.createdAt,
+  });
+
+  factory GoldHoldingRow.fromJson(Map<String, dynamic> j) => GoldHoldingRow(
+        id: j['id'].toString(),
+        familyId: j['family_id']?.toString() ?? '',
+        ownerId: j['owner_id']?.toString(),
+        itemName: j['item_name']?.toString() ?? 'Gold item',
+        metalType: j['metal_type']?.toString() ?? 'gold',
+        weightGrams: _num(j['weight_grams']),
+        purityKarat: (j['purity_karat'] as num?)?.toInt() ?? 24,
+        notes: j['notes']?.toString(),
+        createdAt: _ts(j['created_at']),
+      );
+
+  /// 24k equivalent weight in grams
+  double get pure24kGrams => (weightGrams * purityKarat) / 24.0;
+}
+
+class PendingRefundRow {
+  final String id;
+  final String familyId;
+  final String? userId;
+  final String merchant;
+  final double amount;
+  final String? utrRef;
+  final String? sourceApp;
+  final String status; // 'pending', 'received', 'disputed'
+  final DateTime initiatedAt;
+  final DateTime? expectedBy;
+  final DateTime? receivedAt;
+  final String? notes;
+
+  const PendingRefundRow({
+    required this.id,
+    required this.familyId,
+    this.userId,
+    required this.merchant,
+    required this.amount,
+    this.utrRef,
+    this.sourceApp,
+    this.status = 'pending',
+    required this.initiatedAt,
+    this.expectedBy,
+    this.receivedAt,
+    this.notes,
+  });
+
+  factory PendingRefundRow.fromJson(Map<String, dynamic> j) => PendingRefundRow(
+        id: j['id'].toString(),
+        familyId: j['family_id']?.toString() ?? '',
+        userId: j['user_id']?.toString(),
+        merchant: j['merchant']?.toString() ?? 'Merchant Refund',
+        amount: _num(j['amount']),
+        utrRef: j['utr_ref']?.toString(),
+        sourceApp: j['source_app']?.toString() ?? 'UPI',
+        status: j['status']?.toString() ?? 'pending',
+        initiatedAt: _ts(j['initiated_at']),
+        expectedBy: j['expected_by'] != null ? _ts(j['expected_by']) : null,
+        receivedAt: j['received_at'] != null ? _ts(j['received_at']) : null,
+        notes: j['notes']?.toString(),
+      );
+
+  bool get isPending => status == 'pending';
+  bool get isDelayed => isPending && DateTime.now().difference(initiatedAt).inDays >= 4;
+}
+
+class DeliverySubscriptionRow {
+  final String id;
+  final String familyId;
+  final String name;
+  final String itemType; // 'milk', 'newspaper', 'water', 'other'
+  final double unitPrice;
+  final String? vendorName;
+  final String? vendorPhone;
+  final List<String> skippedDates; // YYYY-MM-DD strings
+
+  const DeliverySubscriptionRow({
+    required this.id,
+    required this.familyId,
+    required this.name,
+    this.itemType = 'milk',
+    required this.unitPrice,
+    this.vendorName,
+    this.vendorPhone,
+    this.skippedDates = const [],
+  });
+
+  factory DeliverySubscriptionRow.fromJson(Map<String, dynamic> j, [List<String> skips = const []]) =>
+      DeliverySubscriptionRow(
+        id: j['id'].toString(),
+        familyId: j['family_id']?.toString() ?? '',
+        name: j['name']?.toString() ?? 'Milk / Newspaper',
+        itemType: j['item_type']?.toString() ?? 'milk',
+        unitPrice: _num(j['unit_price']),
+        vendorName: j['vendor_name']?.toString(),
+        vendorPhone: j['vendor_phone']?.toString(),
+        skippedDates: skips,
+      );
+
+  /// Compute bill for a given month
+  double computeMonthlyBill(int year, int month) {
+    final daysInMonth = DateUtils.getDaysInMonth(year, month);
+    final prefix = '$year-${month.toString().padLeft(2, '0')}';
+    final monthSkips = skippedDates.where((d) => d.startsWith(prefix)).length;
+    final activeDays = (daysInMonth - monthSkips).clamp(0, daysInMonth);
+    return activeDays * unitPrice;
+  }
+}
+
+class DomesticStaffRow {
+  final String id;
+  final String familyId;
+  final String name;
+  final String role; // 'Maid', 'Driver', 'Cook', 'Nanny'
+  final String? phone;
+  final double monthlySalary;
+  final int salaryDay;
+  final double advancesBalance;
+  final int leavesThisMonth;
+
+  const DomesticStaffRow({
+    required this.id,
+    required this.familyId,
+    required this.name,
+    this.role = 'Maid',
+    this.phone,
+    required this.monthlySalary,
+    this.salaryDay = 1,
+    this.advancesBalance = 0.0,
+    this.leavesThisMonth = 0,
+  });
+
+  factory DomesticStaffRow.fromJson(Map<String, dynamic> j, {double advances = 0.0, int leaves = 0}) =>
+      DomesticStaffRow(
+        id: j['id'].toString(),
+        familyId: j['family_id']?.toString() ?? '',
+        name: j['name']?.toString() ?? 'Helper',
+        role: j['role']?.toString() ?? 'Maid',
+        phone: j['phone']?.toString(),
+        monthlySalary: _num(j['monthly_salary']),
+        salaryDay: (j['salary_day'] as num?)?.toInt() ?? 1,
+        advancesBalance: advances,
+        leavesThisMonth: leaves,
+      );
+}
+
+class SecurityAlertRow {
+  final String id;
+  final String familyId;
+  final String userId;
+  final String alertType; // 'scam_sms', 'unusual_debit', 'suspicious_payee', 'phishing_link'
+  final String title;
+  final String description;
+  final String? snippet;
+  final String severity; // 'warning', 'critical'
+  final String status; // 'active', 'dismissed', 'resolved'
+  final DateTime createdAt;
+
+  const SecurityAlertRow({
+    required this.id,
+    required this.familyId,
+    required this.userId,
+    required this.alertType,
+    required this.title,
+    required this.description,
+    this.snippet,
+    this.severity = 'critical',
+    this.status = 'active',
+    required this.createdAt,
+  });
+
+  factory SecurityAlertRow.fromJson(Map<String, dynamic> j) => SecurityAlertRow(
+        id: j['id'].toString(),
+        familyId: j['family_id']?.toString() ?? '',
+        userId: j['user_id']?.toString() ?? '',
+        alertType: j['alert_type']?.toString() ?? 'scam_sms',
+        title: j['title']?.toString() ?? 'Security Warning',
+        description: j['description']?.toString() ?? '',
+        snippet: j['snippet']?.toString(),
+        severity: j['severity']?.toString() ?? 'critical',
+        status: j['status']?.toString() ?? 'active',
+        createdAt: _ts(j['created_at']),
+      );
+
+  bool get isActive => status == 'active';
+  bool get isCritical => severity == 'critical';
+}
+
+class CreditCardRow {
+  final String id;
+  final String familyId;
+  final String cardName;
+  final String bank;
+  final String cardNetwork;
+  final String? lastFour;
+  final String? ownerUserId;
+  final int rewardPointsBalance;
+  final DateTime? rewardPointsExpiry;
+  final Map<String, double> cashbackRules;
+  final DateTime createdAt;
+
+  const CreditCardRow({
+    required this.id,
+    required this.familyId,
+    required this.cardName,
+    required this.bank,
+    this.cardNetwork = 'Visa',
+    this.lastFour,
+    this.ownerUserId,
+    this.rewardPointsBalance = 0,
+    this.rewardPointsExpiry,
+    this.cashbackRules = const {},
+    required this.createdAt,
+  });
+
+  factory CreditCardRow.fromJson(Map<String, dynamic> j) {
+    final rules = <String, double>{};
+    if (j['cashback_rules'] is Map) {
+      (j['cashback_rules'] as Map).forEach((k, v) {
+        rules[k.toString().toLowerCase()] = _num(v);
+      });
+    }
+    return CreditCardRow(
+      id: j['id'].toString(),
+      familyId: j['family_id']?.toString() ?? '',
+      cardName: j['card_name']?.toString() ?? 'Credit Card',
+      bank: j['bank']?.toString() ?? 'Bank',
+      cardNetwork: j['card_network']?.toString() ?? 'Visa',
+      lastFour: j['last_four']?.toString(),
+      ownerUserId: j['owner_user_id']?.toString(),
+      rewardPointsBalance: (j['reward_points_balance'] as num?)?.toInt() ?? 0,
+      rewardPointsExpiry: j['reward_points_expiry'] != null ? _ts(j['reward_points_expiry']) : null,
+      cashbackRules: rules,
+      createdAt: _ts(j['created_at']),
+    );
+  }
+
+  double cashbackFor(String merchantOrCategory) {
+    final key = merchantOrCategory.toLowerCase();
+    for (final e in cashbackRules.entries) {
+      if (key.contains(e.key)) return e.value;
+    }
+    return cashbackRules['general'] ?? cashbackRules['online'] ?? 1.0;
+  }
+
+  bool get hasExpiringPoints {
+    if (rewardPointsBalance <= 0 || rewardPointsExpiry == null) return false;
+    final days = rewardPointsExpiry!.difference(DateTime.now()).inDays;
+    return days >= 0 && days <= 30;
+  }
 }
 
 class RecurringRow {

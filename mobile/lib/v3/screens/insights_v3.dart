@@ -7,6 +7,7 @@ import '../../theme/nocturne.dart';
 import '../phosphor_icons.dart';
 import '../sheets/v3_sheets.dart';
 import '../v3_design.dart';
+import '../v3_nav.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
 import 'family_v3.dart';
@@ -122,6 +123,62 @@ class _InsightsV3State extends State<InsightsV3> {
                     ],
                   ),
                 ),
+                GestureDetector(
+                  onTap: () => V3Sheets.openSpendingCalendar(context),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Nocturne.surface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Nocturne.neutral800, width: 1),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(PhRegular.calendar, size: 12, color: Nocturne.accent300),
+                        SizedBox(width: 4),
+                        Text(
+                          'Calendar',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Nocturne.text,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => context.read<V3Nav>().goPage(V3Page.monthlyRecap),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Nocturne.surface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Nocturne.accent700, width: 1),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(PhRegular.sparkle, size: 12, color: Nocturne.accent300),
+                        SizedBox(width: 4),
+                        Text(
+                          'Recap',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Nocturne.accent300,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 V3Segmented(
                   labels: const ['7D', '30D'],
                   selected: s.period == '7d' ? 0 : 1,

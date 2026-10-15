@@ -15,19 +15,24 @@ import com.google.android.gms.common.moduleinstall.ModuleInstall
 import com.google.android.gms.common.moduleinstall.ModuleInstallRequest
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
 import java.util.zip.Inflater
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     private val CHANNEL = "com.familyfinance/file_import"
     private val NOTIF_CHANNEL = "com.familyfinance/notifications"
     private val NOWBAR_CHANNEL = "com.familyfinance/prayer_nowbar"
+    private val WIDGET_CHANNEL = "com.familyfinance/widget"
+    private val VOICE_CHANNEL = "com.familyfinance/voice"
+    private val BIOMETRIC_CHANNEL = "com.familyfinance/biometrics"
     private val PICK_FILE_REQ = 4091
+    private val VOICE_REQ = 4092
     private var pendingResult: MethodChannel.Result? = null
+    private var pendingVoiceResult: MethodChannel.Result? = null
     private var sharedTextFromIntent: String? = null
     private var sharedImagePath: String? = null
 
@@ -165,6 +170,98 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "updateWidget" -> {
+                        val spent = call.argument<String>("todaySpent") ?: "₹0"
+                        val prayerName = call.argument<String>("prayerName") ?: "Prayer"
+                        val prayerTime = call.argument<String>("prayerTime") ?: "--:--"
+                        KinPurseWidgetProvider.updateData(this, spent, prayerName, prayerTime)
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, VOICE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "listen" -> {
+                        if (pendingVoiceResult != null) {
+                            result.error("BUSY", "Voice recognition already listening", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(
+                                    android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                                    android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                                )
+                                putExtra(
+                                    android.speech.RecognizerIntent.EXTRA_PROMPT,
+                                    "Speak expense (e.g. '450 petrol HDFC')"
+                                )
+                                putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+                            }
+                            pendingVoiceResult = result
+                            startActivityForResult(intent, VOICE_REQ)
+                        } catch (e: Exception) {
+                            pendingVoiceResult = null
+                            result.error("VOICE_UNAVAILABLE", e.localizedMessage ?: "Voice recognition not available", null)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BIOMETRIC_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "canAuthenticate" -> {
+                        val biometricManager = androidx.biometric.BiometricManager.from(this)
+                        val can = biometricManager.canAuthenticate(
+                            androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                            androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                        )
+                        result.success(can == androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS)
+                    }
+                    "authenticate" -> {
+                        val title = call.argument<String>("title") ?: "Unlock KinPurse"
+                        val subtitle = call.argument<String>("subtitle") ?: "Confirm your biometric or screen lock"
+                        val executor = androidx.core.content.ContextCompat.getMainExecutor(this)
+                        val promptInfo = androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+                            .setTitle(title)
+                            .setSubtitle(subtitle)
+                            .setAllowedAuthenticators(
+                                androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                                androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                            )
+                            .build()
+
+                        val prompt = androidx.biometric.BiometricPrompt(
+                            this,
+                            executor,
+                            object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
+                                override fun onAuthenticationSucceeded(authResult: androidx.biometric.BiometricPrompt.AuthenticationResult) {
+                                    super.onAuthenticationSucceeded(authResult)
+                                    result.success(true)
+                                }
+                                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                                    super.onAuthenticationError(errorCode, errString)
+                                    result.success(false)
+                                }
+                                override fun onAuthenticationFailed() {
+                                    super.onAuthenticationFailed()
+                                }
+                            }
+                        )
+                        prompt.authenticate(promptInfo)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -235,6 +332,20 @@ class MainActivity : FlutterActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == VOICE_REQ) {
+            val vRes = pendingVoiceResult
+            pendingVoiceResult = null
+            if (vRes == null) return
+            if (resultCode != Activity.RESULT_OK || data == null) {
+                vRes.success(null)
+                return
+            }
+            val matches = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            val recognized = matches?.firstOrNull() ?: ""
+            vRes.success(recognized)
+            return
+        }
+
         if (requestCode != PICK_FILE_REQ) return
 
         val res = pendingResult

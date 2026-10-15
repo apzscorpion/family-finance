@@ -129,6 +129,14 @@ class PhRegular {
   static const IconData compass = IconData(0xe1c8, fontFamily: 'Phosphor');
   static const IconData image = IconData(0xe2ca, fontFamily: 'Phosphor');
   static const IconData sparkle = IconData(0xe6a2, fontFamily: 'Phosphor');
+  static const IconData palette = IconData(0xe6c8, fontFamily: 'Phosphor');
+  static const IconData chartPieSlice = IconData(0xe4e2, fontFamily: 'Phosphor');
+  static const IconData chatCircleText = IconData(0xe63a, fontFamily: 'Phosphor');
+  static const IconData shieldCheck = IconData(0xe40c, fontFamily: 'Phosphor');
+  static const IconData lockKey = IconData(0xe23e, fontFamily: 'Phosphor');
+  static const IconData bellSimpleRinging = IconData(0xe5e8, fontFamily: 'Phosphor');
+  static const IconData database = IconData(0xe1de, fontFamily: 'Phosphor');
+  static const IconData appUpdates = IconData(0xe1ae, fontFamily: 'Phosphor');
 }
 
 /// Phosphor bold weight.
