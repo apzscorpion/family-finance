@@ -48,6 +48,7 @@ class V3State extends ChangeNotifier {
   List<SecurityAlertRow> securityAlerts = [];
   List<CreditCardRow> creditCards = [];
   List<WalletMoveRow> walletMoves = [];
+  List<SourceOpeningRow> openings = [];
   List<ApprovalRow> approvals = [];
   List<DetectedRow> detected = [];
 
@@ -204,6 +205,7 @@ class V3State extends ChangeNotifier {
       V3Repository.guard('domesticStaff', () => _repo.domesticStaff(familyId)),
       V3Repository.guard('securityAlerts', () => _repo.securityAlerts(familyId)),
       V3Repository.guard('creditCards', () => _repo.creditCards(familyId)),
+      V3Repository.guard('openings', () => _repo.sourceOpenings(familyId)),
     ]);
 
     members = (results[0] as List<MemberRow>?) ?? members;
@@ -227,6 +229,7 @@ class V3State extends ChangeNotifier {
     domesticStaff = (results[18] as List<DomesticStaffRow>?) ?? domesticStaff;
     securityAlerts = (results[19] as List<SecurityAlertRow>?) ?? securityAlerts;
     creditCards = (results[20] as List<CreditCardRow>?) ?? creditCards;
+    openings = (results[21] as List<SourceOpeningRow>?) ?? openings;
 
     final others = members.where((m) => m.userId != myId).toList();
     final bals = await Future.wait([
@@ -532,19 +535,22 @@ class V3State extends ChangeNotifier {
   /// shortcut: accounts have no owner, so "own" means the member in view;
   /// add an owner column if members start keeping separate main accounts.
   bool _inAccount(TxnRow t, String sourceId) =>
-      t.sourceId == sourceId ||
-      (t.sourceId == null &&
-          sourceId == mainSourceId &&
-          (isFamily || t.userId == scope));
+      (isFamily || t.userId == scope) &&
+      (t.sourceId == sourceId ||
+          (t.sourceId == null && sourceId == mainSourceId));
 
   /// What [sourceId] holds right now, split into cash and bank. Cash-method
   /// entries move the cash part, every other method (UPI, bank, card) the bank
   /// part; withdrawals and deposits move money between the two. All-time and
-  /// for the whole family: it is the account's money, not one member's.
+  /// per person: the member in view's opening, entries and moves, or
+  /// everyone's summed in the family view.
   ({double cash, double bank}) wallet(String sourceId) {
-    final src = sourceById(sourceId);
-    var cash = src?.openingCash ?? 0.0;
-    var bank = (src?.openingBalance ?? 0.0) - cash;
+    var cash = 0.0, bank = 0.0;
+    for (final o in openings) {
+      if (o.sourceId != sourceId || !(isFamily || o.userId == scope)) continue;
+      cash += o.openingCash;
+      bank += o.openingBalance - o.openingCash;
+    }
     for (final t in txns) {
       if (!_inAccount(t, sourceId)) continue;
       final v = t.isExpense ? -t.amount : t.amount;
@@ -556,6 +562,7 @@ class V3State extends ChangeNotifier {
     }
     for (final m in walletMoves) {
       if (m.sourceId != sourceId) continue;
+      if (!isFamily && m.createdBy != scope) continue;
       final v = m.toCash ? m.amount : -m.amount;
       cash += v;
       bank -= v;
@@ -563,19 +570,30 @@ class V3State extends ChangeNotifier {
     return (cash: cash, bank: bank);
   }
 
-  /// Sets what the source holds now; the opening amounts are back-calculated
-  /// so every past entry stays as it is.
+  /// Sets what I hold in [sourceId] now; my opening amounts are
+  /// back-calculated so every past entry stays as it is. Only from my own
+  /// view, so the figure being corrected is mine.
   Future<void> setWalletBalance(
       String sourceId, double cash, double bank) async {
-    final src = sourceById(sourceId);
-    if (src == null) return;
+    final me = myId;
+    if (sourceById(sourceId) == null || me == null || scope != me) return;
     final now = wallet(sourceId);
-    final openingCash = src.openingCash + (cash - now.cash);
-    final openingBank = (src.openingBalance - src.openingCash) + (bank - now.bank);
+    var oCash = 0.0, oAll = 0.0;
+    for (final o in openings) {
+      if (o.sourceId == sourceId && o.userId == me) {
+        oCash = o.openingCash;
+        oAll = o.openingBalance;
+      }
+    }
+    final openingCash = oCash + (cash - now.cash);
+    final openingBank = (oAll - oCash) + (bank - now.bank);
     await V3Repository.guard(
       'setWalletBalance',
-      () => _repo.updateSource(sourceId,
-          openingBalance: openingCash + openingBank, openingCash: openingCash),
+      () => _repo.setMyOpening(
+          familyId: familyId,
+          sourceId: sourceId,
+          openingBalance: openingCash + openingBank,
+          openingCash: openingCash),
     );
     await refresh();
   }
@@ -597,6 +615,12 @@ class V3State extends ChangeNotifier {
     notifyListeners();
     return true;
   }
+
+  /// Opening balance of [sourceId] for the member in view (everyone's in
+  /// the family view).
+  double openingOf(String sourceId) => openings
+      .where((o) => o.sourceId == sourceId && (isFamily || o.userId == scope))
+      .fold(0.0, (a, o) => a + o.openingBalance);
 
   ({double inAmt, double outAmt}) sourceTotals(String sourceId) {
     var inAmt = 0.0, outAmt = 0.0;

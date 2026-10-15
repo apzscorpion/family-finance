@@ -131,10 +131,37 @@ class SourceRow {
 }
 
 /// Money moved between bank and cash inside one source: not spending.
+/// One member's opening balance for an account: balances are per person.
+class SourceOpeningRow {
+  final String sourceId;
+  final String userId;
+  final double openingBalance;
+
+  /// Part of [openingBalance] held as cash.
+  final double openingCash;
+
+  const SourceOpeningRow({
+    required this.sourceId,
+    required this.userId,
+    required this.openingBalance,
+    this.openingCash = 0,
+  });
+
+  factory SourceOpeningRow.fromJson(Map<String, dynamic> j) => SourceOpeningRow(
+        sourceId: j['source_id'].toString(),
+        userId: j['user_id'].toString(),
+        openingBalance: _num(j['opening_balance']),
+        openingCash: _num(j['opening_cash']),
+      );
+}
+
 class WalletMoveRow {
   final String id;
   final String sourceId;
   final double amount;
+
+  /// Who moved it; the move counts in their balance only.
+  final String? createdBy;
 
   /// true: withdrawn from the bank as cash; false: cash deposited.
   final bool toCash;
@@ -146,6 +173,7 @@ class WalletMoveRow {
     required this.amount,
     required this.toCash,
     required this.occurredAt,
+    this.createdBy,
   });
 
   factory WalletMoveRow.fromJson(Map<String, dynamic> j) => WalletMoveRow(
@@ -153,6 +181,7 @@ class WalletMoveRow {
         sourceId: j['source_id'].toString(),
         amount: _num(j['amount']),
         toCash: j['to_cash'] == true,
+        createdBy: j['created_by']?.toString(),
         occurredAt:
             DateTime.tryParse(j['occurred_at']?.toString() ?? '')?.toLocal() ??
                 DateTime.now(),

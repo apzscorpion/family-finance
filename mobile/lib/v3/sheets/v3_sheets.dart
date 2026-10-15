@@ -444,13 +444,13 @@ class V3SourceSheet extends StatelessWidget {
             Builder(
               builder: (_) {
                 final t = s.sourceTotals(src.id);
-                final denom = src.openingBalance + t.inAmt;
+                final denom = s.openingOf(src.id) + t.inAmt;
                 final frac = denom <= 0
                     ? 0.0
                     : (t.outAmt / denom).clamp(0.0, 1.0);
                 return _SourceOption(
                   name: src.name,
-                  left: s.moneyShort(src.openingBalance + t.inAmt - t.outAmt),
+                  left: s.moneyShort(s.openingOf(src.id) + t.inAmt - t.outAmt),
                   inText: s.moneyShort(t.inAmt),
                   outText: s.moneyShort(t.outAmt),
                   fraction: frac,

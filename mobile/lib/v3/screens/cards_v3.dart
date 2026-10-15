@@ -83,7 +83,7 @@ class CardsV3 extends StatelessWidget {
                 Builder(builder: (_) {
                   final src = s.sources[i];
                   final t = s.sourceTotals(src.id);
-                  final bal = src.openingBalance + t.inAmt - t.outAmt;
+                  final bal = s.openingOf(src.id) + t.inAmt - t.outAmt;
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Row(

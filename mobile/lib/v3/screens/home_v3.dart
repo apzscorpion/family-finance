@@ -981,7 +981,7 @@ class _MoneySources extends StatelessWidget {
           final w = s.wallet(src.id);
           // What the account holds now (all-time), not just this period.
           final left = w.cash + w.bank;
-          final denom = src.openingBalance + t.inAmt;
+          final denom = s.openingOf(src.id) + t.inAmt;
           final frac = denom <= 0 ? 0.0 : (t.outAmt / denom).clamp(0.0, 1.0);
           final selected = s.srcFilter == src.id;
           final design = src.design;

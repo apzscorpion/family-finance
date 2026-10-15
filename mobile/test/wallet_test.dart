@@ -35,6 +35,13 @@ void main() {
             openingCash: 10000,
             sortOrder: 1),
       ]
+      ..openings = const [
+        SourceOpeningRow(
+            sourceId: 'loan',
+            userId: 'user-asif',
+            openingBalance: 100000,
+            openingCash: 10000),
+      ]
       ..txns = [
         _txn(500, 'Cash'),
         _txn(2000, 'UPI'),

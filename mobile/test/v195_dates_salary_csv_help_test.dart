@@ -142,6 +142,10 @@ void main() {
           sortOrder: 1,
         ),
       ];
+      state.openings = const [
+        SourceOpeningRow(sourceId: 'src-sal', userId: 'user-asif', openingBalance: 50000),
+        SourceOpeningRow(sourceId: 'src-loan', userId: 'user-asif', openingBalance: 20000),
+      ];
       state.txns = [
         TxnRow(
           id: 't-1',
