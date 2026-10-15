@@ -104,6 +104,12 @@ class SourceRow {
   /// Part of [openingBalance] held as cash; the rest was in the bank.
   final double openingCash;
 
+  /// Whose money this is. Null only for rows from before accounts had owners.
+  final String? ownerId;
+
+  /// Co-owners of a joint account (not offered in the app yet).
+  final List<String> memberIds;
+
   const SourceRow({
     required this.id,
     required this.name,
@@ -111,7 +117,13 @@ class SourceRow {
     required this.openingBalance,
     required this.sortOrder,
     this.openingCash = 0,
+    this.ownerId,
+    this.memberIds = const [],
   });
+
+  /// Whether [userId] owns this account (or co-owns a joint one).
+  bool isOf(String? userId) =>
+      ownerId == null || ownerId == userId || memberIds.contains(userId);
 
   factory SourceRow.fromJson(Map<String, dynamic> j) => SourceRow(
         id: j['id'].toString(),
@@ -120,6 +132,10 @@ class SourceRow {
         openingBalance: _num(j['opening_balance']),
         sortOrder: (j['sort_order'] as num?)?.toInt() ?? 0,
         openingCash: _num(j['opening_cash']),
+        ownerId: j['owner_id']?.toString(),
+        memberIds: [
+          for (final m in (j['member_ids'] as List?) ?? const []) m.toString()
+        ],
       );
 
   /// Falls back to the design's icon/hue for the seeded source names.

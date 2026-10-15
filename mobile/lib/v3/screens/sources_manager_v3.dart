@@ -67,7 +67,7 @@ class SourcesManagerV3 extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  if (s.sources.isEmpty)
+                  if (s.manageableSources.isEmpty)
                     Padding(
                       padding:
                           EdgeInsets.symmetric(vertical: 40, horizontal: 16),
@@ -87,9 +87,9 @@ class SourcesManagerV3 extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Column(
                         children: [
-                          for (var i = 0; i < s.sources.length; i++) ...[
+                          for (var i = 0; i < s.manageableSources.length; i++) ...[
                             _SourceRowTile(index: i),
-                            if (i < s.sources.length - 1)
+                            if (i < s.manageableSources.length - 1)
                               const V3RowDivider(),
                           ],
                         ],
@@ -259,7 +259,7 @@ class _SourceRowTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<V3State>();
-    final src = s.sources[index];
+    final src = s.manageableSources[index];
     final design = src.design;
     final totals = s.sourceTotals(src.id);
     final w = s.wallet(src.id);
@@ -323,7 +323,7 @@ class _SourceRowTile extends StatelessWidget {
       };
 
   void _menu(BuildContext context, V3State s, int i) {
-    final src = s.sources[i];
+    final src = s.manageableSources[i];
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Nocturne.palette.surface,
@@ -516,7 +516,7 @@ class _SourceRowTile extends StatelessWidget {
 
   static Future<void> _rename(
       BuildContext context, V3State s, int i) async {
-    final src = s.sources[i];
+    final src = s.manageableSources[i];
     final name = TextEditingController(text: src.name);
     final ok = await showDialog<bool>(
       context: context,
@@ -694,6 +694,8 @@ class _WalletCard extends StatelessWidget {
           const SizedBox(width: 8),
           amount('Bank', w.bank, PhRegular.bank),
         ]),
+        // Only the account's owner (or the family owner) moves its money.
+        if (s.canManage(src)) ...[
         const SizedBox(height: 8),
         Row(children: [
           action('Withdraw', PhRegular.arrowCircleDown,
@@ -703,14 +705,11 @@ class _WalletCard extends StatelessWidget {
           action('Deposit', PhRegular.bank,
               () => _SourceRowTile.moveMoney(context, s, sourceId,
                   toCash: false)),
-          // Only on your own view: from someone else's, the figure shown
-          // isn't yours, and saving it rewrote the shared opening balance.
-          if (s.scope == s.myId) ...[
-            const SizedBox(width: 6),
-            action('Set balance', PhRegular.pencilSimple,
-                () => _SourceRowTile.setBalances(context, s, sourceId)),
-          ],
+          const SizedBox(width: 6),
+          action('Set balance', PhRegular.pencilSimple,
+              () => _SourceRowTile.setBalances(context, s, sourceId)),
         ]),
+        ],
       ],
     );
   }

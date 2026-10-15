@@ -225,7 +225,7 @@ class V3Repository {
   Future<List<SourceRow>> sources(String familyId) async {
     final rows = await _db
         .from('money_sources')
-        .select('id,name,kind,opening_balance,opening_cash,sort_order')
+        .select('id,name,kind,opening_balance,opening_cash,sort_order,owner_id,member_ids')
         .eq('family_id', familyId)
         .eq('archived', false)
         .order('sort_order');
@@ -249,7 +249,7 @@ class V3Repository {
           'opening_balance': openingBalance,
           'sort_order': 99,
         })
-        .select('id,name,kind,opening_balance,opening_cash,sort_order')
+        .select('id,name,kind,opening_balance,opening_cash,sort_order,owner_id,member_ids')
         .single();
     return SourceRow.fromJson(Map<String, dynamic>.from(row));
   }

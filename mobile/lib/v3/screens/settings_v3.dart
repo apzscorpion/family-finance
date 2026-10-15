@@ -256,9 +256,20 @@ class _SettingsV3State extends State<SettingsV3> {
           _SettingsRowDef(
             icon: PhRegular.wallet,
             label: 'Money sources',
-            value: '${s.sources.length}',
+            value: '${s.manageableSources.length}',
             keywords: 'accounts bank cash wallet money sources',
             onTap: () => SourcesManagerV3.open(context),
+          ),
+          _SettingsRowDef(
+            icon: PhRegular.users,
+            label: 'Joint accounts',
+            value: '',
+            badge: 'Coming soon',
+            keywords: 'joint shared account together',
+            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text(
+                        'Joint accounts are coming soon: one account shared by two or more people.'))),
           ),
           _SettingsRowDef(
             icon: PhRegular.listBullets,

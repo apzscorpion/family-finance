@@ -89,7 +89,7 @@ class _ImportV3State extends State<ImportV3> {
     final id = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AccountPicker(sources: s.sources, current: row.sourceId),
+      builder: (_) => _AccountPicker(sources: s.mySources, current: row.sourceId),
     );
     if (id == null || !mounted) return;
     setState(() {
@@ -784,7 +784,7 @@ class _ImportV3State extends State<ImportV3> {
           ),
         ),
       ),
-      if (s.sources.isNotEmpty) _intoCard(s),
+      if (s.mySources.isNotEmpty) _intoCard(s),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
         child: Row(
@@ -868,7 +868,7 @@ class _ImportV3State extends State<ImportV3> {
                       : s.catStyle(_rows[i].categoryKey!).name,
                   onToggle: () => setState(
                       () => _rows[i].selected = !_rows[i].selected),
-                  onAccount: s.sources.isEmpty
+                  onAccount: s.mySources.isEmpty
                       ? null
                       : () => _pickRowAccount(_rows[i]),
                 ),
@@ -908,7 +908,7 @@ extension on _ImportV3State {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                for (final src in s.sources)
+                for (final src in s.mySources)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: GestureDetector(

@@ -79,9 +79,9 @@ class CardsV3 extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Column(
             children: [
-              for (var i = 0; i < s.sources.length; i++) ...[
+              for (var i = 0; i < s.scopeSources.length; i++) ...[
                 Builder(builder: (_) {
-                  final src = s.sources[i];
+                  final src = s.scopeSources[i];
                   final t = s.sourceTotals(src.id);
                   final bal = src.openingBalance + t.inAmt - t.outAmt;
                   return Padding(
@@ -126,7 +126,7 @@ class CardsV3 extends StatelessWidget {
                     ),
                   );
                 }),
-                if (i < s.sources.length - 1) const V3RowDivider(),
+                if (i < s.scopeSources.length - 1) const V3RowDivider(),
               ],
             ],
           ),

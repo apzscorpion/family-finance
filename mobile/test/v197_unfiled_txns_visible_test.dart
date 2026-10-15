@@ -68,7 +68,7 @@ void main() {
     V3State view(String viewer) {
       final state = V3State(_Repo(viewer));
       state.sources = const [
-        SourceRow(id: 'sal', name: 'Salary', kind: 'income', openingBalance: 0, sortOrder: 0),
+        SourceRow(id: 'sal', name: 'Salary', kind: 'income', openingBalance: 0, sortOrder: 0, ownerId: 'user-asif'),
       ];
       state.txns = [
         TxnRow(id: 'mine', familyId: 'fam-1', userId: 'user-asif', title: 'Pay',
@@ -90,8 +90,18 @@ void main() {
     expect(mine.balance, 7893);
     // The reported bug: Sinu viewing Asif saw his account-less pay vanish.
     expect(view('user-sinu').balance, 7893);
-    // The family view holds everyone's.
-    expect((view('user-sinu')..scope = 'family').balance, 9793);
+    // Accounts are a person's: Sinu's account-less gift isn't in his Salary.
+    expect((view('user-sinu')..scope = 'family').balance, 7893);
+    // Sinu has no accounts yet: her own view shows her own money only.
+    final hers = view('user-sinu')
+      ..setScope('user-sinu');
+    expect(hers.srcFilter, isNull);
+    expect(hers.balance, 1900);
+    // The family total across all accounts holds everyone's.
+    expect((view('user-sinu')
+          ..scope = 'family'
+          ..srcFilter = null)
+        .balance, 9793);
   });
 
 }

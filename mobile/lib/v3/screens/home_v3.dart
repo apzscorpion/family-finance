@@ -66,7 +66,7 @@ class HomeV3 extends StatelessWidget {
             ],
             const SizedBox(height: 4),
             const _QuickActions(),
-            if (s.sources.isNotEmpty) ...[
+            if (s.scopeSources.isNotEmpty) ...[
               V3SectionHeader(
                 title: 'Money sources',
                 meta: 'Tap to filter · ${s.periodLabel}',
@@ -547,7 +547,7 @@ class _HeroCard extends StatelessWidget {
                         s.balance >= 0 ? palette.income : palette.expense;
                     final ids = source != null
                         ? [source.id]
-                        : [for (final src in s.sources) src.id];
+                        : [for (final src in s.scopeSources) src.id];
                     var cash = 0.0, bank = 0.0;
                     for (final id in ids) {
                       final w = s.wallet(id);
@@ -973,10 +973,10 @@ class _MoneySources extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: s.sources.length,
+        itemCount: s.scopeSources.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
-          final src = s.sources[i];
+          final src = s.scopeSources[i];
           final t = s.sourceTotals(src.id);
           final w = s.wallet(src.id);
           // What the account holds now (all-time), not just this period.

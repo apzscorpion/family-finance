@@ -68,7 +68,7 @@ class _ImportReviewSheetState extends State<ImportReviewSheet> {
     final result = await ImportAi.ask(
       widget.rows,
       config: config,
-      accounts: [for (final src in s.sources) (id: src.id, name: src.name)],
+      accounts: [for (final src in s.mySources) (id: src.id, name: src.name)],
       categories: [
         for (final c in s.categories)
           (
@@ -149,7 +149,7 @@ class _ImportReviewSheetState extends State<ImportReviewSheet> {
                       count: e.value,
                       value: r.wallets[e.key],
                       options: [
-                        for (final src in s.sources) (src.id, src.name),
+                        for (final src in s.mySources) (src.id, src.name),
                       ],
                       onChanged: (v) => setState(() => r.wallets[e.key] = v),
                     ),

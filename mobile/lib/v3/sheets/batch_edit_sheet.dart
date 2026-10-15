@@ -84,7 +84,7 @@ class _BatchEditSheetState extends State<BatchEditSheet> {
                   children: [
                     const _Label('ACCOUNT'),
                     _Wrap([
-                      for (final src in s.sources)
+                      for (final src in s.mySources)
                         _Chip(
                           label: src.name,
                           icon: src.design.icon,

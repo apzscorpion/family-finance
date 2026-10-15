@@ -249,11 +249,10 @@ class V3State extends ChangeNotifier {
     }
 
     if (!_srcFilterChosen && sources.isNotEmpty) {
-      final salary = sources.where((s) => s.name.toLowerCase() == 'salary');
-      if (salary.isNotEmpty) {
-        srcFilter = salary.first.id;
-      }
+      srcFilter = mainSourceIdOf(isFamily ? myId : scope);
       _srcFilterChosen = true;
+    } else {
+      _fitSrcFilter();
     }
 
     loading = false;
@@ -337,6 +336,7 @@ class V3State extends ChangeNotifier {
   void setScope(String s) {
     scope = s;
     _scopeChosen = true;
+    _fitSrcFilter();
     notifyListeners();
   }
 
@@ -373,16 +373,40 @@ class V3State extends ChangeNotifier {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   /// The account a transaction counts under. One saved with no account
-  /// (older imports, quick adds) belongs to the main account, so it is never
-  /// hidden by the account filter.
-  String? sourceOf(TxnRow t) => t.sourceId ?? mainSourceId;
+  /// (older imports, quick adds) belongs to its author's main account, so it
+  /// is never hidden by the account filter.
+  String? sourceOf(TxnRow t) => t.sourceId ?? mainSourceIdOf(t.userId);
 
-  /// Salary if there is one, else the first account.
-  String? get mainSourceId {
-    for (final src in sources) {
+  /// Accounts are a person's own: the member in view's, or everyone's in the
+  /// family view.
+  List<SourceRow> get scopeSources =>
+      isFamily ? sources : [for (final s in sources) if (s.isOf(scope)) s];
+
+  List<SourceRow> get mySources =>
+      [for (final s in sources) if (s.isOf(myId)) s];
+
+  /// Accounts I may change: my own, or all of them for the family owner.
+  List<SourceRow> get manageableSources => isOwner ? sources : mySources;
+
+  bool canManage(SourceRow s) => isOwner || s.isOf(myId);
+
+  /// [userId]'s Salary if they have one, else their first account.
+  String? mainSourceIdOf(String? userId) {
+    final own = [for (final s in sources) if (s.isOf(userId)) s];
+    for (final src in own) {
       if (ExpenseImport.accountGroupOf(src.name) == 'salary') return src.id;
     }
-    return sources.isEmpty ? null : sources.first.id;
+    return own.isEmpty ? null : own.first.id;
+  }
+
+  /// My main account: where my entries without an account land.
+  String? get mainSourceId => mainSourceIdOf(myId);
+
+  /// Keeps the account filter on one of the shown person's accounts:
+  /// their Salary (or first account), or all of them if they have none.
+  void _fitSrcFilter() {
+    if (srcFilter != null && scopeSources.any((s) => s.id == srcFilter)) return;
+    srcFilter = mainSourceIdOf(isFamily ? myId : scope);
   }
 
   /// Transactions inside the selected period, scope and money source.
@@ -463,20 +487,19 @@ class V3State extends ChangeNotifier {
   /// Same numbers as the Cash & bank sheet: an account's money doesn't
   /// depend on whose view is open.
   double get balance {
-    if (sources.isNotEmpty) {
-      final ids = srcFilter != null
-          ? [srcFilter!]
-          : [for (final src in sources) src.id];
-      return ids.fold(0.0, (a, id) {
-        final w = wallet(id);
-        return a + w.cash + w.bank;
-      });
-    }
-    final opening = sources.fold(0.0, (s, m) => s + m.openingBalance);
-    final net = txns
-        .where((t) => isFamily || t.userId == scope)
-        .fold(0.0, (s, t) => s + (t.isExpense ? -t.amount : t.amount));
-    return opening + net;
+    final ids = srcFilter != null
+        ? [srcFilter!]
+        : [for (final src in scopeSources) src.id];
+    final inAccounts = ids.fold(0.0, (a, id) {
+      final w = wallet(id);
+      return a + w.cash + w.bank;
+    });
+    if (srcFilter != null) return inAccounts;
+    // Entries of someone with no accounts yet still count in the total.
+    return txns
+        .where((t) => (isFamily || t.userId == scope) && sourceOf(t) == null)
+        .fold(inAccounts,
+            (s, t) => s + (t.isExpense ? -t.amount : t.amount));
   }
 
   /// The ceiling the hero bar measures against: the member's own budget in
@@ -524,23 +547,14 @@ class V3State extends ChangeNotifier {
     return list;
   }
 
-  /// Whether [t] moves money in account [sourceId]. Entries without an
-  /// account fall to the main account, but only those of the member in view
-  /// (everyone's in the family view): another member's account-less income
-  /// is not money in this account. Never depends on who is looking, so a
-  /// member's balance reads the same on every phone.
-  /// shortcut: accounts have no owner, so "own" means the member in view;
-  /// add an owner column if members start keeping separate main accounts.
-  bool _inAccount(TxnRow t, String sourceId) =>
-      t.sourceId == sourceId ||
-      (t.sourceId == null &&
-          sourceId == mainSourceId &&
-          (isFamily || t.userId == scope));
+  /// Whether [t] moves money in account [sourceId]. Accounts are one
+  /// person's, so this never depends on who is looking.
+  bool _inAccount(TxnRow t, String sourceId) => sourceOf(t) == sourceId;
 
   /// What [sourceId] holds right now, split into cash and bank. Cash-method
   /// entries move the cash part, every other method (UPI, bank, card) the bank
-  /// part; withdrawals and deposits move money between the two. All-time and
-  /// for the whole family: it is the account's money, not one member's.
+  /// part; withdrawals and deposits move money between the two. All-time:
+  /// the account owner's money.
   ({double cash, double bank}) wallet(String sourceId) {
     final src = sourceById(sourceId);
     var cash = src?.openingCash ?? 0.0;
@@ -568,7 +582,7 @@ class V3State extends ChangeNotifier {
   Future<void> setWalletBalance(
       String sourceId, double cash, double bank) async {
     final src = sourceById(sourceId);
-    if (src == null) return;
+    if (src == null || !canManage(src)) return;
     final now = wallet(sourceId);
     final openingCash = src.openingCash + (cash - now.cash);
     final openingBank = (src.openingBalance - src.openingCash) + (bank - now.bank);

@@ -439,7 +439,7 @@ class V3SourceSheet extends StatelessWidget {
               Navigator.pop(context);
             },
           ),
-          for (final src in s.sources) ...[
+          for (final src in s.scopeSources) ...[
             const SizedBox(height: 6),
             Builder(
               builder: (_) {
@@ -1473,7 +1473,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
             ),
           ],
           // ── From / Into Source chips with explanation ─────────────────────
-          if (s.sources.isNotEmpty) ...[
+          if (s.mySources.isNotEmpty) ...[
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1482,7 +1482,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                 _ChipRow(
                   label: _type == 'income' ? 'Into' : 'From',
                   children: [
-                    for (final src in s.sources)
+                    for (final src in s.mySources)
                       V3Chip(
                         label: src.name,
                         height: 28,
