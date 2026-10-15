@@ -722,7 +722,8 @@ class _BuiltInCardState extends State<_BuiltInCard> {
   }
 
   Future<void> _load() async {
-    final info = await context.read<V3State>().aiInfo();
+    final state = context.read<V3State?>();
+    final info = state == null ? null : await state.aiInfo();
     if (!mounted) return;
     setState(() {
       _info = info;
