@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
 import '../data/ai/ai_config.dart';
 import '../data/ai/ai_structurer.dart';
 import '../phosphor_icons.dart';
+import '../v3_state.dart';
 
 /// Device-local AI settings screen for "Restructure with AI" in Notes.
 ///
@@ -155,7 +157,9 @@ class _AiSettingsV3State extends State<AiSettingsV3> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
       children: [
-        const _Kicker('Provider'),
+        const _Kicker('KinPurse AI (free)'),
+        const _BuiltInCard(),
+        const _Kicker('Your own key (unlimited)'),
         _Card(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -690,6 +694,95 @@ class _KeyRow extends StatelessWidget {
               icon: Icon(PhRegular.trash,
                   size: 17, color: Nocturne.palette.subtle),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The free built-in AI: today's allowance and, if an owner or admin
+/// approved more than the default, which model to use. Used whenever the
+/// member hasn't added a key of their own below.
+class _BuiltInCard extends StatefulWidget {
+  const _BuiltInCard();
+
+  @override
+  State<_BuiltInCard> createState() => _BuiltInCardState();
+}
+
+class _BuiltInCardState extends State<_BuiltInCard> {
+  Map<String, dynamic>? _info;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final info = await context.read<V3State>().aiInfo();
+    if (!mounted) return;
+    setState(() {
+      _info = info;
+      _failed = info == null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Nocturne.palette;
+    final info = _info;
+    final models = [
+      for (final m in (info?['models'] as List?) ?? const [])
+        if (m is Map) (id: '${m['id']}', label: '${m['label']}'),
+    ];
+    final allowed = {
+      for (final a in (info?['allowed'] as List?) ?? const []) '$a'
+    };
+    final choices = [for (final m in models) if (allowed.contains(m.id)) m];
+    return _Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              info == null
+                  ? (_failed ? "Couldn't load your allowance" : 'Loading…')
+                  : (info['limit'] as num? ?? 0) <= 0
+                      ? 'Turned off for you by the family owner'
+                      : '${info['remaining']} of ${info['limit']} requests left today',
+              style: TextStyle(fontSize: 14, color: p.text),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Used when you have no key of your own. The family owner sets '
+              'the daily limit; an owner or admin can approve other models.',
+              style: TextStyle(fontSize: 12, color: p.muted),
+            ),
+            if (choices.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              DropdownButton<String?>(
+                value: choices.any((c) => c.id == KinPurseAi.model)
+                    ? KinPurseAi.model
+                    : null,
+                isExpanded: true,
+                dropdownColor: p.surface,
+                style: TextStyle(fontSize: 13.5, color: p.text),
+                items: [
+                  const DropdownMenuItem(
+                      value: null, child: Text('Best available (default)')),
+                  for (final c in choices)
+                    DropdownMenuItem(value: c.id, child: Text(c.label)),
+                ],
+                onChanged: (v) async {
+                  await KinPurseAi.setModel(v);
+                  if (mounted) setState(() {});
+                },
+              ),
+            ],
           ],
         ),
       ),

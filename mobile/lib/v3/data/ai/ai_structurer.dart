@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../services/app_log.dart';
 import '../note_blocks.dart';
@@ -274,7 +275,9 @@ Return only JSON matching the schema.''';
     required Map<String, dynamic> example,
     AiImage? image,
   }) async {
-    Future<String?> once() => switch (config.provider) {
+    Future<String?> once() => config.usesBuiltIn
+        ? _builtIn(input, system, schema, image)
+        : switch (config.provider) {
           AiProvider.gemini => _gemini(input, config, system, schema, image),
           AiProvider.claude => _claude(input, config, system, schema, image),
           AiProvider.openai || AiProvider.compatible =>
@@ -288,6 +291,35 @@ Return only JSON matching the schema.''';
       return once();
     } on TimeoutException {
       return once();
+    }
+  }
+
+  /// KinPurse's free AI: the server holds the key and the daily limit.
+  static Future<String?> _builtIn(
+    String input,
+    String system,
+    _SchemaFn schema,
+    AiImage? image,
+  ) async {
+    try {
+      final res = await Supabase.instance.client.functions
+          .invoke('ai-proxy', body: {
+        'family_id': KinPurseAi.familyId,
+        'system': system,
+        'input': input,
+        'schema': forGemini(schema(strict: false)),
+        'model': ?KinPurseAi.model,
+        if (image != null)
+          'image': {'mime': image.mime, 'base64': image.base64},
+      }).timeout(_timeout);
+      final data = res.data;
+      return data is Map ? data['text']?.toString() : null;
+    } on FunctionException catch (e) {
+      final details = e.details;
+      throw _BuiltInError(e.status,
+          details is Map && details['error'] is String
+              ? details['error'] as String
+              : 'KinPurse AI is unavailable right now');
     }
   }
 
@@ -695,6 +727,14 @@ typedef _SchemaFn = Map<String, dynamic> Function({required bool strict});
 typedef AiImage = ({String mime, String base64});
 
 /// A non-2xx reply from the provider, carrying the provider's own message.
+/// The built-in service's own message (limit reached, busy), shown as is.
+class _BuiltInError extends _ApiError {
+  const _BuiltInError(super.status, super.message);
+
+  @override
+  String toString() => message;
+}
+
 class _ApiError implements Exception {
   final int status;
   final String message;

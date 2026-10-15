@@ -52,6 +52,11 @@ class MemberRow {
   /// People this member hides their money from (owners still see it).
   final List<String> hiddenFrom;
 
+  /// Built-in AI requests a day (null = the default) and the models an
+  /// owner or admin approved for them to pick.
+  final int? aiDailyLimit;
+  final List<String> aiModels;
+
   const MemberRow({
     required this.userId,
     required this.name,
@@ -64,6 +69,8 @@ class MemberRow {
     this.upiId,
     this.isProtectedMember = false,
     this.hiddenFrom = const [],
+    this.aiDailyLimit,
+    this.aiModels = const [],
   });
 
   factory MemberRow.fromJson(Map<String, dynamic> j) {
@@ -92,6 +99,10 @@ class MemberRow {
       isProtectedMember: isProtected ?? false,
       hiddenFrom: [
         for (final u in (j['hidden_from'] as List?) ?? const []) u.toString()
+      ],
+      aiDailyLimit: (j['ai_daily_limit'] as num?)?.toInt(),
+      aiModels: [
+        for (final m in (j['ai_models'] as List?) ?? const []) m.toString()
       ],
     );
   }

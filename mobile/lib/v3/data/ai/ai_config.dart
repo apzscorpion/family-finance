@@ -28,7 +28,7 @@ extension AiProviderInfo on AiProvider {
 
   /// A sensible current model per provider. Always editable.
   String get defaultModel => switch (this) {
-    AiProvider.gemini => 'gemini-2.5-flash',
+    AiProvider.gemini => 'gemini-3.8-flash',
     AiProvider.claude => 'claude-opus-5-5',
     AiProvider.openai => 'gpt-4o-mini',
     AiProvider.compatible => 'llama3.1',
@@ -140,12 +140,19 @@ class AiConfig {
   String get effectiveModel =>
       model.trim().isEmpty ? provider.defaultModel : model.trim();
 
-  /// AI actions are only offered when there is something to call.
-  bool get isConfigured {
+  /// The user's own key is set up.
+  bool get hasOwnKey {
     if (apiKey.trim().isEmpty) return false;
     if (provider.needsBaseUrl && baseUrl.trim().isEmpty) return false;
     return true;
   }
+
+  /// No key of their own: AI goes through KinPurse's free, daily-limited
+  /// service for the signed-in workspace.
+  bool get usesBuiltIn => !hasOwnKey && KinPurseAi.familyId != null;
+
+  /// AI actions are only offered when there is something to call.
+  bool get isConfigured => hasOwnKey || usesBuiltIn;
 
   AiConfig copyWith({
     AiProvider? provider,
@@ -264,5 +271,34 @@ class AiConfigStore {
   static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);
+  }
+}
+
+/// KinPurse's built-in AI (the ai-proxy Edge Function): free for every
+/// member up to a daily limit the family owner sets.
+class KinPurseAi {
+  KinPurseAi._();
+
+  /// The workspace in use; its owner's limits apply. Set when it loads.
+  static String? familyId;
+
+  /// The built-in model this member picked, if an owner or admin approved
+  /// it; null = the default order.
+  static String? model;
+
+  static const _modelKey = 'kp_ai_model';
+
+  static Future<void> load() async {
+    try {
+      model = (await SharedPreferences.getInstance()).getString(_modelKey);
+    } catch (_) {}
+  }
+
+  static Future<void> setModel(String? id) async {
+    model = id;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      id == null ? await prefs.remove(_modelKey) : await prefs.setString(_modelKey, id);
+    } catch (_) {}
   }
 }

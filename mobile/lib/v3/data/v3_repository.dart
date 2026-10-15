@@ -52,11 +52,32 @@ class V3Repository {
     final rows = await _db
         .from('family_memberships')
         .select(
-            'user_id,role,status,relationship,avatar_hue,monthly_budget,is_allowance,hidden_from,profiles(full_name,upi_id)')
+            'user_id,role,status,relationship,avatar_hue,monthly_budget,is_allowance,hidden_from,ai_daily_limit,ai_models,profiles(full_name,upi_id)')
         .eq('family_id', familyId);
     return (rows as List)
         .map((r) => MemberRow.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
+  }
+
+  /// My built-in AI allowance today, the models on offer and the ones I may
+  /// pick: {limit, used, remaining, models: [{id,label,vision}], allowed}.
+  Future<Map<String, dynamic>> aiInfo(String familyId) async {
+    final res = await _db.functions
+        .invoke('ai-proxy', body: {'op': 'info', 'family_id': familyId});
+    return res.data is Map
+        ? Map<String, dynamic>.from(res.data as Map)
+        : <String, dynamic>{};
+  }
+
+  /// Owner: daily limit (null = default); owner or admin: approved models.
+  Future<void> setMemberAi(
+      String familyId, String userId, int? limit, List<String> models) async {
+    await _db.rpc('set_member_ai', params: {
+      'p_family': familyId,
+      'p_user': userId,
+      'p_limit': limit,
+      'p_models': models,
+    });
   }
 
   /// Who may not see my money in this family.

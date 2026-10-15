@@ -501,6 +501,83 @@ class FamilyV3 extends StatelessWidget {
   }
 }
 
+/// Owner: a member's daily built-in AI limit. Owner or admin: which
+/// built-in models they may pick.
+Future<void> _aiAccess(BuildContext context, V3State s, MemberRow m) async {
+  final info = await s.aiInfo();
+  if (!context.mounted) return;
+  final models = [
+    for (final x in (info?['models'] as List?) ?? const [])
+      if (x is Map) (id: '${x['id']}', label: '${x['label']}'),
+  ];
+  final limit = TextEditingController(text: m.aiDailyLimit?.toString() ?? '');
+  final chosen = {...m.aiModels};
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, setLocal) => AlertDialog(
+        backgroundColor: Nocturne.palette.surface,
+        title: Text('AI access · ${m.name}',
+            style: TextStyle(color: Nocturne.palette.text, fontSize: 17)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: limit,
+                enabled: s.isOwner,
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: Nocturne.palette.text),
+                decoration: InputDecoration(
+                  labelText: 'Requests per day',
+                  hintText: 'Default (${info?['limit'] ?? 30})',
+                  helperText: s.isOwner
+                      ? '0 turns it off. Empty uses the default.'
+                      : 'Only an owner changes the limit.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('Models they may choose',
+                  style: TextStyle(
+                      fontSize: 12.5, color: Nocturne.palette.muted)),
+              if (models.isEmpty)
+                Text('No models available',
+                    style: TextStyle(color: Nocturne.palette.faint)),
+              for (final x in models)
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: chosen.contains(x.id),
+                  onChanged: (v) => setLocal(
+                      () => v == true ? chosen.add(x.id) : chosen.remove(x.id)),
+                  title: Text(x.label,
+                      style: TextStyle(color: Nocturne.palette.text)),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: Text('Cancel',
+                  style: TextStyle(color: Nocturne.palette.muted))),
+          TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: Text('Save',
+                  style: TextStyle(color: Nocturne.palette.accentMuted))),
+        ],
+      ),
+    ),
+  );
+  if (ok != true) return;
+  final n = int.tryParse(limit.text.trim());
+  final saved = await s.setMemberAi(
+      m.userId, s.isOwner ? n : m.aiDailyLimit, chosen.toList());
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(saved ? 'AI access saved' : 'Could not save AI access')));
+}
+
 class _MemberRowTile extends StatelessWidget {
   final int index;
   final double spent;
@@ -718,6 +795,22 @@ class _MemberRowTile extends StatelessWidget {
                   await s.setMemberRole(m.userId, role);
                 },
               ),
+            ListTile(
+              leading: Icon(PhRegular.sparkle,
+                  size: 18, color: Nocturne.palette.accentMuted),
+              title: Text('AI access',
+                  style: TextStyle(
+                      fontSize: 14, color: Nocturne.palette.text)),
+              subtitle: Text(
+                  '${m.aiDailyLimit ?? 'Default'} requests a day'
+                  '${m.aiModels.isEmpty ? '' : ' · ${m.aiModels.length} models approved'}',
+                  style: TextStyle(
+                      fontSize: 11.5, color: Nocturne.palette.muted)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _aiAccess(context, s, m);
+              },
+            ),
             if (s.isPrimaryOwner)
               ListTile(
                 leading: Icon(PhRegular.shieldCheck,

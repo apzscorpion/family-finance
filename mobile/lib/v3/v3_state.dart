@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'data/ai/ai_config.dart';
 import 'data/expense_import.dart';
 import 'data/note_blocks.dart';
 import 'data/notification_bridge.dart';
@@ -195,6 +196,8 @@ class V3State extends ChangeNotifier {
 
   Future<void> _refreshOnce() async {
     if (familyId.isEmpty) return;
+    if (KinPurseAi.familyId == null) await KinPurseAi.load();
+    KinPurseAi.familyId = familyId;
     loading = true;
     notifyListeners();
 
@@ -1052,6 +1055,18 @@ class V3State extends ChangeNotifier {
       () => _repo.setMemberRole(familyId, userId, role),
     );
     unawaited(refresh());
+  }
+
+  Future<Map<String, dynamic>?> aiInfo() =>
+      V3Repository.guard('aiInfo', () => _repo.aiInfo(familyId));
+
+  Future<bool> setMemberAi(String userId, int? limit, List<String> models) async {
+    final ok = await V3Repository.guard('setMemberAi', () async {
+      await _repo.setMemberAi(familyId, userId, limit, models);
+      return true;
+    });
+    await refresh();
+    return ok == true;
   }
 
   Future<void> setHiddenFrom(List<String> userIds) async {
