@@ -70,19 +70,18 @@ class V3Repository {
 
   Future<void> setMemberRole(
       String familyId, String userId, String role) async {
-    try {
-      await _db.rpc('set_member_role', params: {
-        'p_family': familyId,
-        'p_user': userId,
-        'p_role': role,
-      });
-    } catch (_) {
-      await _db
-          .from('family_memberships')
-          .update({'role': role})
-          .eq('family_id', familyId)
-          .eq('user_id', userId);
-    }
+    // No direct-update fallback: the server's owner rules live in the RPC.
+    await _db.rpc('set_member_role', params: {
+      'p_family': familyId,
+      'p_user': userId,
+      'p_role': role,
+    });
+  }
+
+  /// Makes [userId] the primary owner; I stay an owner.
+  Future<void> transferOwnership(String familyId, String userId) async {
+    await _db.rpc('transfer_ownership',
+        params: {'p_family': familyId, 'p_user': userId});
   }
 
   Future<void> removeMember(String familyId, String userId) async {

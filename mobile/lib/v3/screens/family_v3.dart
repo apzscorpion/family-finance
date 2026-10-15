@@ -514,7 +514,11 @@ class _MemberRowTile extends StatelessWidget {
         context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
     final m = s.members[index];
     final isMe = m.userId == s.myId;
-    final canManage = (s.isOwner || s.me?.role == 'admin') && !isMe;
+    // Owners are managed by the primary owner only; the primary by nobody.
+    final canManage = (s.isOwner || s.me?.role == 'admin') &&
+        !isMe &&
+        m.userId != s.family?.ownerId &&
+        (m.role != 'owner' || s.isPrimaryOwner);
     final pairBal = s.balanceWith(m.userId);
     final hasDebt = pairBal.abs() >= 0.5;
 
@@ -556,7 +560,7 @@ class _MemberRowTile extends StatelessWidget {
                         color: palette.isDark ? Nocturne.palette.edge : palette.edge,
                         borderRadius: BorderRadius.circular(5),
                       ),
-                      child: Text(m.role,
+                      child: Text(m.userId == s.family?.ownerId ? 'primary owner' : m.role,
                           style: TextStyle(
                               fontSize: 10, color: palette.subtle)),
                     ),
@@ -692,7 +696,12 @@ class _MemberRowTile extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                     color: Nocturne.palette.text)),
             const SizedBox(height: 8),
-            for (final role in const ['admin', 'member', 'viewer'])
+            for (final role in [
+              if (s.isPrimaryOwner) 'owner',
+              'admin',
+              'member',
+              'viewer',
+            ])
               ListTile(
                 leading: Icon(
                   m.role == role ? PhFill.checkCircle : PhRegular.circle,
@@ -706,8 +715,46 @@ class _MemberRowTile extends StatelessWidget {
                         fontSize: 14, color: Nocturne.palette.text)),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await s.repo.setMemberRole(s.familyId, m.userId, role);
-                  await s.refresh();
+                  await s.setMemberRole(m.userId, role);
+                },
+              ),
+            if (s.isPrimaryOwner)
+              ListTile(
+                leading: Icon(PhRegular.shieldCheck,
+                    size: 18, color: Nocturne.palette.accentMuted),
+                title: Text('Make primary owner',
+                    style: TextStyle(
+                        fontSize: 14, color: Nocturne.palette.text)),
+                subtitle: Text(
+                    'They can then grant or remove owners. You stay an owner.',
+                    style: TextStyle(
+                        fontSize: 11.5, color: Nocturne.palette.muted)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (c) => AlertDialog(
+                      backgroundColor: Nocturne.palette.surface,
+                      title: Text('Make ${m.name} the primary owner?',
+                          style: TextStyle(color: Nocturne.palette.text)),
+                      content: Text(
+                          'Only they will be able to add or remove owners after this.',
+                          style: TextStyle(color: Nocturne.palette.subtle)),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(c, false),
+                            child: Text('Cancel',
+                                style: TextStyle(
+                                    color: Nocturne.palette.muted))),
+                        TextButton(
+                            onPressed: () => Navigator.pop(c, true),
+                            child: Text('Make primary',
+                                style: TextStyle(
+                                    color: Nocturne.palette.accentMuted))),
+                      ],
+                    ),
+                  );
+                  if (ok == true) await s.transferOwnership(m.userId);
                 },
               ),
             ListTile(

@@ -105,6 +105,10 @@ class V3State extends ChangeNotifier {
 
   bool get isOwner => (me?.role ?? '') == 'owner';
 
+  /// The workspace's primary owner (its creator unless handed on): the only
+  /// one who grants or removes the owner role.
+  bool get isPrimaryOwner => myId != null && family?.ownerId == myId;
+
   // ── Loading ───────────────────────────────────────────────────────────────
 
   Future<void> bootstrap() async {
@@ -997,6 +1001,19 @@ class V3State extends ChangeNotifier {
       () => _repo.setMemberRole(familyId, userId, role),
     );
     unawaited(refresh());
+  }
+
+  Future<void> transferOwnership(String userId) async {
+    await V3Repository.guard(
+      'transferOwnership',
+      () => _repo.transferOwnership(familyId, userId),
+    );
+    final fams = await V3Repository.guard('V3State.myFamilies', _repo.myFamilies);
+    if (fams != null && fams.isNotEmpty) {
+      families = fams;
+      family = fams.firstWhere((f) => f.id == familyId, orElse: () => fams.first);
+    }
+    await refresh();
   }
 
   Future<void> setMemberStatus(String userId, String status) async {
