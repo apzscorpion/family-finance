@@ -804,21 +804,6 @@ class V3State extends ChangeNotifier {
   double balanceWith(String otherUserId) =>
       balances[otherUserId] ?? pairBalanceSync(otherUserId);
 
-  /// Totals for a specific member across all their recorded transactions.
-  ({double income, double spent, double net}) memberTotals(String userId) {
-    var inAmt = 0.0;
-    var outAmt = 0.0;
-    for (final t in txns) {
-      if (t.userId != userId) continue;
-      if (t.isExpense) {
-        outAmt += t.amount;
-      } else {
-        inAmt += t.amount;
-      }
-    }
-    return (income: inAmt, spent: outAmt, net: inAmt - outAmt);
-  }
-
   Future<bool> settleWith(String otherUserId, double amount) async {
     final me = myId;
     if (me == null || amount == 0) return false;

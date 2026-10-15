@@ -543,135 +543,6 @@ class _HeroCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Builder(builder: (_) {
-                    if (!s.isFamily) {
-                      // Viewing an individual member
-                      final memberId = s.scope;
-                      final isMe = memberId == s.myId;
-                      final totals = s.memberTotals(memberId);
-                      final netSavings = totals.net;
-                      final netColor =
-                          netSavings >= 0 ? palette.income : palette.expense;
-                      final pairBal = s.balanceWith(memberId);
-                      final settled = pairBal.abs() < 0.5;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  isMe
-                                      ? 'MY NET SAVINGS'
-                                      : '${s.scopeName.toUpperCase()} NET SAVINGS',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: netColor,
-                                    letterSpacing: 0.88,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              V3Num(
-                                s.money(netSavings),
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: netColor,
-                                  letterSpacing: -0.3,
-                                  height: 1.1,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Earned ${s.moneyShort(totals.income)}  ·  Spent ${s.moneyShort(totals.spent)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, color: palette.muted),
-                          ),
-                          if (!isMe) ...[
-                            const SizedBox(height: 8),
-                            GestureDetector(
-                              onTap: () =>
-                                  SharedWithSheet.open(context, memberId),
-                              behavior: HitTestBehavior.opaque,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: settled
-                                      ? (palette.isDark
-                                          ? const Color(0x30FFFFFF)
-                                          : palette.edge)
-                                      : (pairBal > 0
-                                          ? palette.income.withValues(alpha: 0.15)
-                                          : palette.expense
-                                              .withValues(alpha: 0.15)),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: settled
-                                        ? palette.edge
-                                        : (pairBal > 0
-                                            ? palette.income
-                                            : palette.expense),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      settled
-                                          ? PhRegular.checkCircle
-                                          : PhRegular.handCoins,
-                                      size: 13,
-                                      color: settled
-                                          ? palette.subtle
-                                          : (pairBal > 0
-                                              ? palette.income
-                                              : palette.expense),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      settled
-                                          ? 'Settled up with ${s.scopeName}'
-                                          : (pairBal > 0
-                                              ? '${s.scopeName} owes you ${s.money(pairBal)}'
-                                              : 'You owe ${s.scopeName} ${s.money(-pairBal)}'),
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: settled
-                                            ? palette.subtle
-                                            : (pairBal > 0
-                                                ? palette.income
-                                                : palette.expense),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Icon(
-                                      PhBold.caretRight,
-                                      size: 10,
-                                      color: settled
-                                          ? palette.muted
-                                          : (pairBal > 0
-                                              ? palette.income
-                                              : palette.expense),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      );
-                    }
-
                     final balColor =
                         s.balance >= 0 ? palette.income : palette.expense;
                     final ids = source != null
@@ -746,6 +617,87 @@ class _HeroCard extends StatelessWidget {
                       ),
                     );
                   }),
+                  // Who owes whom, when looking at someone else.
+                  if (!s.isFamily && s.scope != s.myId)
+                    Builder(builder: (_) {
+                      final memberId = s.scope;
+                      final pairBal = s.balanceWith(memberId);
+                      final settled = pairBal.abs() < 0.5;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: GestureDetector(
+                          onTap: () =>
+                              SharedWithSheet.open(context, memberId),
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: settled
+                                  ? (palette.isDark
+                                      ? const Color(0x30FFFFFF)
+                                      : palette.edge)
+                                  : (pairBal > 0
+                                      ? palette.income.withValues(alpha: 0.15)
+                                      : palette.expense
+                                          .withValues(alpha: 0.15)),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: settled
+                                    ? palette.edge
+                                    : (pairBal > 0
+                                        ? palette.income
+                                        : palette.expense),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  settled
+                                      ? PhRegular.checkCircle
+                                      : PhRegular.handCoins,
+                                  size: 13,
+                                  color: settled
+                                      ? palette.subtle
+                                      : (pairBal > 0
+                                          ? palette.income
+                                          : palette.expense),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  settled
+                                      ? 'Settled up with ${s.scopeName}'
+                                      : (pairBal > 0
+                                          ? '${s.scopeName} owes you ${s.money(pairBal)}'
+                                          : 'You owe ${s.scopeName} ${s.money(-pairBal)}'),
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: settled
+                                        ? palette.subtle
+                                        : (pairBal > 0
+                                            ? palette.income
+                                            : palette.expense),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  PhBold.caretRight,
+                                  size: 10,
+                                  color: settled
+                                      ? palette.muted
+                                      : (pairBal > 0
+                                          ? palette.income
+                                          : palette.expense),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                   const SizedBox(height: 8),
                   if (limit > 0)
                     Row(
