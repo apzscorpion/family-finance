@@ -880,6 +880,7 @@ class _ActivityV3State extends State<ActivityV3> {
                             onTap: () => setState(() =>
                                 _memberId = on ? null : m.userId),
                             child: V3Avatar(
+                              imageUrl: m.avatarUrl,
                               initial: m.initial,
                               color: m.color,
                               size: 30,
@@ -918,6 +919,7 @@ class _ActivityV3State extends State<ActivityV3> {
                             onTap: () =>
                                 setState(() => _forId = on ? null : m.userId),
                             child: V3Avatar(
+                              imageUrl: m.avatarUrl,
                               initial: m.initial,
                               color: m.color,
                               size: 30,

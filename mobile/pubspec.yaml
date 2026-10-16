@@ -72,6 +72,9 @@ dependencies:
   # Android 10+ needs no storage permission.
   gal: ^2.3.3
 
+  # Profile photos: centre-crop to a square and re-encode as a small JPEG.
+  image: ^4.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

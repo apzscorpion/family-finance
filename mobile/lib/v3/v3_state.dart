@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -1132,6 +1133,24 @@ class V3State extends ChangeNotifier {
     return false;
   }
 
+  Future<bool> setMyAvatar(Uint8List? jpeg) async {
+    final ok = await V3Repository.guard('setMyAvatar', () async {
+      await _repo.setMyAvatar(jpeg);
+      return true;
+    });
+    if (ok == true) unawaited(refresh());
+    return ok == true;
+  }
+
+  Future<bool> setMyAbout(String about) async {
+    final ok = await V3Repository.guard('setMyAbout', () async {
+      await _repo.setMyAbout(about);
+      return true;
+    });
+    if (ok == true) unawaited(refresh());
+    return ok == true;
+  }
+
   Future<bool> setMyUpiId(String upiId) async {
     final ok = await V3Repository.guard('setMyUpiId', () async {
       await _repo.setMyUpiId(upiId);
@@ -1953,6 +1972,12 @@ class V3State extends ChangeNotifier {
             isAllowance: m.isAllowance,
             upiId: m.upiId,
             isProtectedMember: isProtected,
+            hiddenFrom: m.hiddenFrom,
+            aiDailyLimit: m.aiDailyLimit,
+            aiModels: m.aiModels,
+            avatarPath: m.avatarPath,
+            avatarUpdatedAt: m.avatarUpdatedAt,
+            about: m.about,
           )
         else
           m,

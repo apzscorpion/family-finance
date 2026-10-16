@@ -267,6 +267,7 @@ class V3ScopeSheet extends StatelessWidget {
               amount: s.moneyShort(spentFor(m.userId)),
               color: m.color,
               initial: m.initial,
+              imageUrl: m.avatarUrl,
               selected: s.scope == m.userId,
               onTap: () {
                 s.setScope(m.userId);
@@ -290,6 +291,7 @@ class _ScopeOption extends StatelessWidget {
   final Color color;
   final String? initial;
   final IconData? icon;
+  final String? imageUrl;
   final bool selected;
   final VoidCallback onTap;
 
@@ -300,6 +302,7 @@ class _ScopeOption extends StatelessWidget {
     required this.color,
     this.initial,
     this.icon,
+    this.imageUrl,
     required this.selected,
     required this.onTap,
   });
@@ -323,6 +326,7 @@ class _ScopeOption extends StatelessWidget {
         child: Row(
           children: [
             V3Avatar(
+              imageUrl: imageUrl,
               initial: initial ?? '',
               color: color,
               icon: icon,
@@ -1628,6 +1632,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 V3Avatar(
+                                  imageUrl: m.avatarUrl,
                                   initial: m.initial,
                                   color: m.color,
                                   size: 22,
@@ -2343,6 +2348,7 @@ class V3DetailSheet extends StatelessWidget {
                     Transform.translate(
                       offset: const Offset(-6, 0),
                       child: V3Avatar(
+                        imageUrl: s.memberById(id)?.avatarUrl,
                         initial: s.memberById(id)?.initial ?? '?',
                         color: s.memberById(id)?.color ?? p.faint,
                         size: 26,

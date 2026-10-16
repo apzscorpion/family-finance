@@ -327,6 +327,7 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                   ),
                   const SizedBox(width: 4),
                   AvatarWithOnlineDot(
+                    imageUrl: widget.partner.avatarUrl,
                     initial: widget.partner.initial,
                     color: widget.partner.color,
                     size: 36,
@@ -358,6 +359,16 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                             ),
                           ],
                         ),
+                        if (widget.partner.about != null)
+                          Text(
+                            widget.partner.about!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Nocturne.palette.subtle,
+                            ),
+                          ),
                         const SizedBox(height: 1),
                         Text(
                           statusText,
@@ -429,6 +440,7 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             AvatarWithOnlineDot(
+                              imageUrl: widget.partner.avatarUrl,
                               initial: widget.partner.initial,
                               color: widget.partner.color,
                               size: 52,

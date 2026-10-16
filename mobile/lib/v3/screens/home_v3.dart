@@ -205,6 +205,7 @@ class _Header extends StatelessWidget {
               child: Row(
                 children: [
                   V3Avatar(
+                    imageUrl: member?.avatarUrl,
                     initial: member?.initial ?? '',
                     color: member?.color ?? palette.accent,
                     icon: s.isFamily ? PhRegular.users : null,
@@ -365,6 +366,7 @@ class _ScopeChips extends StatelessWidget {
               selected: s.scope == m.userId,
               onTap: () => s.setScope(m.userId),
               leading: V3Avatar(
+                  imageUrl: m.avatarUrl,
                   initial: m.initial, color: m.color, size: 26, fontSize: 11.5),
             ),
           ],
@@ -2320,6 +2322,7 @@ class _WhoSpent extends StatelessWidget {
                 child: Row(
                   children: [
                     V3Avatar(
+                        imageUrl: e.key.avatarUrl,
                         initial: e.key.initial,
                         color: e.key.color,
                         size: 28,

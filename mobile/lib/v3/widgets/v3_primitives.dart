@@ -158,6 +158,9 @@ class V3Avatar extends StatelessWidget {
   final double opacity;
   final IconData? icon;
 
+  /// Profile photo; the initials circle shows while it loads or if it fails.
+  final String? imageUrl;
+
   const V3Avatar({
     super.key,
     required this.initial,
@@ -168,12 +171,13 @@ class V3Avatar extends StatelessWidget {
     this.ringGround,
     this.opacity = 1,
     this.icon,
+    this.imageUrl,
   });
 
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
-    final inner = Container(
+    final initials = Container(
       width: size,
       height: size,
       alignment: Alignment.center,
@@ -186,6 +190,20 @@ class V3Avatar extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: p.text)),
     );
+    final inner = imageUrl == null || icon != null
+        ? initials
+        : ClipOval(
+            child: Image.network(
+              imageUrl!,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              cacheWidth: (size * 3).round(),
+              frameBuilder: (_, child, frame, sync) =>
+                  frame == null && !sync ? initials : child,
+              errorBuilder: (_, _, _) => initials,
+            ),
+          );
 
     final avatar = ringColor == null
         ? inner

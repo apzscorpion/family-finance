@@ -49,11 +49,19 @@ class V3Repository {
   }
 
   Future<List<MemberRow>> members(String familyId) async {
-    final rows = await _db
+    const base =
+        'user_id,role,status,relationship,avatar_hue,monthly_budget,is_allowance,hidden_from,ai_daily_limit,ai_models';
+    Future<dynamic> load(String profile) => _db
         .from('family_memberships')
-        .select(
-            'user_id,role,status,relationship,avatar_hue,monthly_budget,is_allowance,hidden_from,ai_daily_limit,ai_models,profiles(full_name,upi_id)')
+        .select('$base,profiles($profile)')
         .eq('family_id', familyId);
+    dynamic rows;
+    try {
+      rows = await load('full_name,upi_id,avatar_path,about,avatar_updated_at');
+    } on PostgrestException {
+      // shortcut: profile photo columns missing until the migration is applied; drop once it is live.
+      rows = await load('full_name,upi_id');
+    }
     return (rows as List)
         .map((r) => MemberRow.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
@@ -167,6 +175,31 @@ class V3Repository {
 
   Future<void> renameMe(String newName) async {
     await _db.rpc('rename_me', params: {'p_name': newName});
+  }
+
+  /// Uploads [jpeg] as my photo (replacing any old one), or removes it when null.
+  Future<void> setMyAvatar(Uint8List? jpeg) async {
+    final uid = currentUserId!;
+    final path = '$uid/avatar.jpg';
+    final bucket = _db.storage.from('avatars');
+    if (jpeg == null) {
+      await bucket.remove([path]);
+    } else {
+      await bucket.uploadBinary(path, jpeg,
+          fileOptions:
+              const FileOptions(contentType: 'image/jpeg', upsert: true));
+    }
+    await _db.from('profiles').update({
+      'avatar_path': jpeg == null ? null : path,
+      'avatar_updated_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', uid);
+  }
+
+  Future<void> setMyAbout(String about) async {
+    final v = about.trim();
+    await _db
+        .from('profiles')
+        .update({'about': v.isEmpty ? null : v}).eq('id', currentUserId!);
   }
 
   Future<void> setMyUpiId(String upiId) async {
