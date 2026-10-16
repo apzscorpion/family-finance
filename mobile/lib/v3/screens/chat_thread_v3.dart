@@ -1092,10 +1092,11 @@ class _MessageBubble extends StatelessWidget {
                     Icon(
                       isTemp
                           ? PhRegular.clock
-                          : (message.isRead
+                          // ✓ sent, ✓✓ grey reached their phone, ✓✓ green read.
+                          : (message.isDelivered
                               ? PhBold.checks
                               : PhRegular.check),
-                      size: 12,
+                      size: 13,
                       color: isTemp
                           ? Nocturne.palette.subtle
                           : (message.isRead

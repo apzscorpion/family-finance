@@ -1406,7 +1406,7 @@ class V3Repository {
 
   static const _dmColumns =
       'id,family_id,sender_id,recipient_id,body,kind,image_data,created_at,'
-      'read_at,media_path,media_name,media_mime,media_size,media_kind,'
+      'read_at,delivered_at,media_path,media_name,media_mime,media_size,media_kind,'
       'media_duration_ms,view_once,viewed_at';
 
   Future<List<DirectMessageRow>> directMessages(
@@ -1502,6 +1502,18 @@ class V3Repository {
           .eq('family_id', familyId)
           .or('and(sender_id.eq.$uid,recipient_id.eq.$partnerId),and(sender_id.eq.$partnerId,recipient_id.eq.$uid)');
     }
+  }
+
+  /// Marks every message to me that hasn't reached me yet as delivered.
+  Future<void> markDirectMessagesDelivered(String familyId) async {
+    final uid = currentUserId;
+    if (uid == null) return;
+    await _db
+        .from('direct_messages')
+        .update({'delivered_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('family_id', familyId)
+        .eq('recipient_id', uid)
+        .isFilter('delivered_at', null);
   }
 
   Future<void> markDirectMessagesRead({

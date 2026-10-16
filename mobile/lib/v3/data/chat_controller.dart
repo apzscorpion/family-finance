@@ -326,6 +326,7 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
       );
       _loading = false;
       if (list != null) {
+        scheduleMicrotask(_ackDelivered);
         final me = _myId;
         if (!notifyNew || !_initialLoadDone) {
           for (final m in list) {
@@ -419,6 +420,10 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
         .onBroadcast(
           event: 'dm_read',
           callback: _onReadBroadcast,
+        )
+        .onBroadcast(
+          event: 'dm_delivered',
+          callback: _onDeliveredBroadcast,
         )
         .onBroadcast(
           event: 'dm_fast',
@@ -696,6 +701,59 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
     } catch (_) {}
   }
 
+  Timer? _deliveredTimer;
+
+  /// Tells senders their messages reached this phone (two grey ticks).
+  /// Batched: a burst of incoming messages makes one update.
+  void _ackDelivered() {
+    final me = _myId;
+    if (me == null ||
+        !_messages.any((m) => m.recipientId == me && !m.isDelivered)) {
+      return;
+    }
+    _deliveredTimer?.cancel();
+    _deliveredTimer = Timer(const Duration(milliseconds: 300), () {
+      final fid = _familyId;
+      final now = DateTime.now();
+      final senders = <String>{};
+      for (var i = 0; i < _messages.length; i++) {
+        final m = _messages[i];
+        if (m.recipientId == me && !m.isDelivered) {
+          _messages[i] = m.copyWith(deliveredAt: now);
+          senders.add(m.senderId);
+        }
+      }
+      if (fid == null || fid.isEmpty || senders.isEmpty) return;
+      unawaited(V3Repository.guard('markDelivered',
+          () => repo.markDirectMessagesDelivered(fid)));
+      try {
+        unawaited(_channel?.sendBroadcastMessage(
+          event: 'dm_delivered',
+          payload: {
+            'recipient_id': me,
+            'delivered_at': now.toUtc().toIso8601String(),
+          },
+        ));
+      } catch (_) {}
+    });
+  }
+
+  void _onDeliveredBroadcast(Map<String, dynamic> payload) {
+    final recipient = payload['recipient_id']?.toString();
+    if (recipient == null) return;
+    final at = DateTime.tryParse(payload['delivered_at']?.toString() ?? '') ??
+        DateTime.now();
+    var changed = false;
+    for (var i = 0; i < _messages.length; i++) {
+      final m = _messages[i];
+      if (m.senderId == _myId && m.recipientId == recipient && !m.isDelivered) {
+        _messages[i] = m.copyWith(deliveredAt: at);
+        changed = true;
+      }
+    }
+    if (changed) notifyListeners();
+  }
+
   void _onReadBroadcast(Map<String, dynamic> payload) {
     final readerId = payload['reader_id']?.toString();
     final senderId = payload['sender_id']?.toString();
@@ -761,6 +819,9 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
     final me = _myId;
     if (me != null && row.senderId != me && row.recipientId != me) {
       return;
+    }
+    if (row.recipientId == me && !row.isDelivered) {
+      scheduleMicrotask(_ackDelivered);
     }
 
     // Remove matching optimistic placeholder if present.

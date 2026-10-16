@@ -1037,6 +1037,9 @@ class DirectMessageRow {
   final DateTime createdAt;
   final DateTime? readAt;
 
+  /// Reached the recipient's phone (two grey ticks).
+  final DateTime? deliveredAt;
+
   /// Storage object in the chat-media bucket; null for text, pokes and the
   /// older base64 photos.
   final String? mediaPath;
@@ -1060,6 +1063,7 @@ class DirectMessageRow {
     this.kind = 'text',
     this.imageData,
     this.readAt,
+    this.deliveredAt,
     this.mediaPath,
     this.mediaName,
     this.mediaMime,
@@ -1071,6 +1075,7 @@ class DirectMessageRow {
   });
 
   bool get isRead => readAt != null;
+  bool get isDelivered => deliveredAt != null || readAt != null;
   bool get hasMedia => mediaPath != null && mediaPath!.isNotEmpty;
   bool get isPoke => kind == 'poke';
   bool get isCall => kind == 'call';
@@ -1087,6 +1092,7 @@ class DirectMessageRow {
         imageData: j['image_data']?.toString(),
         createdAt: _ts(j['created_at']),
         readAt: j['read_at'] == null ? null : _ts(j['read_at']),
+        deliveredAt: j['delivered_at'] == null ? null : _ts(j['delivered_at']),
         mediaPath: j['media_path']?.toString(),
         mediaName: j['media_name']?.toString(),
         mediaMime: j['media_mime']?.toString(),
@@ -1107,6 +1113,7 @@ class DirectMessageRow {
         if (imageData != null) 'image_data': imageData,
         'created_at': createdAt.toUtc().toIso8601String(),
         'read_at': readAt?.toUtc().toIso8601String(),
+        'delivered_at': deliveredAt?.toUtc().toIso8601String(),
         if (mediaPath != null) 'media_path': mediaPath,
         if (mediaName != null) 'media_name': mediaName,
         if (mediaMime != null) 'media_mime': mediaMime,
@@ -1117,7 +1124,8 @@ class DirectMessageRow {
         'viewed_at': viewedAt?.toUtc().toIso8601String(),
       };
 
-  DirectMessageRow copyWith({DateTime? readAt, DateTime? viewedAt}) =>
+  DirectMessageRow copyWith(
+          {DateTime? readAt, DateTime? viewedAt, DateTime? deliveredAt}) =>
       DirectMessageRow(
         id: id,
         familyId: familyId,
@@ -1128,6 +1136,7 @@ class DirectMessageRow {
         imageData: imageData,
         createdAt: createdAt,
         readAt: readAt ?? this.readAt,
+        deliveredAt: deliveredAt ?? this.deliveredAt,
         mediaPath: mediaPath,
         mediaName: mediaName,
         mediaMime: mediaMime,

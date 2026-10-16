@@ -553,7 +553,7 @@ class _ThreadTile extends StatelessWidget {
                     children: [
                       if (!typing && last != null && last.senderId == myId) ...[
                         Icon(
-                          last.isRead ? PhBold.checks : PhRegular.check,
+                          last.isDelivered ? PhBold.checks : PhRegular.check,
                           size: 13,
                           color: last.isRead
                               ? Nocturne.palette.income

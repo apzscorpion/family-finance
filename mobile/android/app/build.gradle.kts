@@ -25,11 +25,20 @@ android {
 
     // flutter_webrtc's native library ships every ABI (~35 MB). Flutter's
     // --target-platform only trims its own libraries (and resets abiFilters),
-    // so drop the other ABIs for an arm64-only build.
-    if (project.findProperty("target-platform") == "android-arm64") {
+    // so drop every ABI the build isn't targeting (release builds arm and
+    // arm64; emulator builds x64).
+    val targets = (project.findProperty("target-platform") as String?)?.split(",")
+    if (targets != null) {
+        val abis = mapOf(
+            "android-arm" to "armeabi-v7a",
+            "android-arm64" to "arm64-v8a",
+            "android-x64" to "x86_64",
+            "android-x86" to "x86",
+        )
+        val keep = targets.mapNotNull { abis[it.trim()] }.toSet()
         packaging {
             jniLibs {
-                excludes += listOf("lib/armeabi-v7a/**", "lib/x86_64/**", "lib/x86/**")
+                excludes += abis.values.filter { it !in keep }.map { "lib/$it/**" }
             }
         }
     }
