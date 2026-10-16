@@ -195,3 +195,5 @@ Future<void> notifyIncomingChat({
 Future<void> startChatBackgroundLink() async {}
 
 Future<void> stopChatBackgroundLink() async {}
+
+Future<void> clearChatAlertsFrom(String senderId) async {}

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/services.dart';
 
 import 'notifications_core.dart';
@@ -35,7 +36,8 @@ Future<bool> requestChatNotificationPermission({
 }
 
 void updateChatUnreadBadge(int unreadCount, {String? latestSender}) {
-  // Android unread counts are surfaced via system notifications and in-app badges.
+  // The launcher badge counts tray alerts: all read means none should stay.
+  if (unreadCount == 0) unawaited(AppNotifications.clearDirectMessages());
 }
 
 Future<void> notifyIncomingChat({
@@ -71,3 +73,7 @@ Future<void> notifyIncomingChat({
 Future<void> startChatBackgroundLink() => AppNotifications.startChatLink();
 
 Future<void> stopChatBackgroundLink() => AppNotifications.stopChatLink();
+
+/// Clears [senderId]'s chat alerts from the tray once their thread is open.
+Future<void> clearChatAlertsFrom(String senderId) =>
+    AppNotifications.clearDirectMessages(senderId: senderId);

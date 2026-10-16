@@ -900,6 +900,7 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
     final fid = _familyId;
     final changed = _markActivePartnerReadLocally(partnerId);
     _syncUnreadBadge();
+    unawaited(clearChatAlertsFrom(partnerId));
     notifyListeners();
     unawaited(_trackPresence());
 

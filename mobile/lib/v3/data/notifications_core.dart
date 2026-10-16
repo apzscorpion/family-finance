@@ -510,6 +510,25 @@ class AppNotifications {
     );
   }
 
+  /// Removes chat alerts from the tray (and so from the launcher badge):
+  /// one sender's, or every chat alert when [senderId] is null.
+  static Future<void> clearDirectMessages({String? senderId}) async {
+    if (kIsWeb) return;
+    await ensureInit();
+    if (!_ready) return;
+    try {
+      final active = await _android?.getActiveNotifications() ?? const [];
+      for (final n in active) {
+        final id = n.id;
+        if (id == null || id < dmBase || id >= dmBase + 90000) continue;
+        if (senderId != null && n.payload != 'dm:$senderId') continue;
+        await plugin.cancel(id);
+      }
+    } catch (err, stack) {
+      AppLog.error('AppNotifications.clearDirectMessages', err, stack);
+    }
+  }
+
   /// Cancels a contiguous block of ids.
   static Future<void> cancelRange(int base, int count) async {
     for (var i = 0; i < count; i++) {
