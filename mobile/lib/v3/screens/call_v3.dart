@@ -34,6 +34,16 @@ class _CallScreenV3State extends State<CallScreenV3> {
 
   CallSession get s => widget.session;
 
+  double _zoom = 1, _zoomStart = 1;
+
+  /// Pinch on your own camera zooms it (the other side sees the zoom too).
+  void _setZoom(double z) {
+    final next = z.clamp(1.0, 5.0);
+    if ((next - _zoom).abs() < 0.05) return;
+    _zoom = next;
+    unawaited(s.setZoom(next));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -89,7 +99,10 @@ class _CallScreenV3State extends State<CallScreenV3> {
       canPop: s.phase == CallPhase.ended,
       child: Scaffold(
         backgroundColor: p.bg,
+        // expand: a loose Stack shrinks the controls column to its content
+        // and pins it left (the "half screen" call).
         body: Stack(
+          fit: StackFit.expand,
           children: [
             if (showVideo && live && hasRemote)
               Positioned.fill(
@@ -102,10 +115,14 @@ class _CallScreenV3State extends State<CallScreenV3> {
               // Before the other side connects, your own camera fills the
               // screen, as on a phone's own video call.
               Positioned.fill(
-                child: RTCVideoView(
-                  s.localRenderer,
-                  mirror: true,
-                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                child: GestureDetector(
+                  onScaleStart: (_) => _zoomStart = _zoom,
+                  onScaleUpdate: (d) => _setZoom(_zoomStart * d.scale),
+                  child: RTCVideoView(
+                    s.localRenderer,
+                    mirror: true,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  ),
                 ),
               ),
             if (showVideo)
@@ -177,11 +194,16 @@ class _CallScreenV3State extends State<CallScreenV3> {
                     ),
                     child: !hasLocal
                         ? Icon(_icon('video-camera-slash'), color: p.muted)
-                        : RTCVideoView(
-                            s.localRenderer,
-                            mirror: true,
-                            objectFit: RTCVideoViewObjectFit
-                                .RTCVideoViewObjectFitCover,
+                        : GestureDetector(
+                            onScaleStart: (_) => _zoomStart = _zoom,
+                            onScaleUpdate: (d) =>
+                                _setZoom(_zoomStart * d.scale),
+                            child: RTCVideoView(
+                              s.localRenderer,
+                              mirror: true,
+                              objectFit: RTCVideoViewObjectFit
+                                  .RTCVideoViewObjectFitCover,
+                            ),
                           ),
                   ),
                 ),

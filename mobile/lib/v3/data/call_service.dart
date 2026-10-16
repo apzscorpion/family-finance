@@ -38,6 +38,7 @@ class CallService extends ChangeNotifier {
   void Function(CallSession session)? present;
 
   CallSession? get current => _current;
+  String? _lastIceError;
 
   /// Listens for calls ringing this member. Safe to call on every build.
   void bind({required String familyId, required String? myId}) {
@@ -58,7 +59,10 @@ class CallService extends ChangeNotifier {
             column: 'callee',
             value: myId,
           ),
-          callback: (p) => _onRing(p.newRecord),
+          callback: (p) {
+            trace(p.newRecord['id'].toString(), 'ring_realtime');
+            _onRing(p.newRecord);
+          },
         )
         // Status changes made outside the call channel (Decline on the
         // notification, answered on another phone) end the call here too.
@@ -105,6 +109,7 @@ class CallService extends ChangeNotifier {
       try {
         final row = await _db.from('calls').select().eq('id', callId).maybeSingle();
         if (row == null || row['callee'] != me) return;
+        trace(callId, 'push_open', 'answer=$answer status=${row['status']}');
         if (row['status'] != 'ringing') {
           unawaited(AppNotifications.cancelCall(callId));
           return;
@@ -196,6 +201,21 @@ class CallService extends ChangeNotifier {
     }
   }
 
+  /// One step of a call into `call_debug`, read server-side to diagnose a
+  /// call that failed on someone's phone. Never throws, never waits.
+  void trace(String callId, String event, [String? detail]) {
+    final uid = _db.auth.currentUser?.id;
+    if (uid == null) return;
+    unawaited(_db.from('call_debug').insert({
+      'call_id': callId,
+      'user_id': uid,
+      'event': event,
+      'detail': ?(detail == null
+          ? null
+          : detail.length > 500 ? detail.substring(0, 500) : detail),
+    }).then((_) {}, onError: (_) {}));
+  }
+
   /// Google STUN plus the TURN relay from the turn-credentials function, if
   /// it is deployed and configured. Never blocks a call for long.
   Future<List<Map<String, dynamic>>> _iceServers() async {
@@ -205,7 +225,8 @@ class CallService extends ChangeNotifier {
           .timeout(const Duration(seconds: 4));
       final data = res.data;
       return iceServers(data is Map ? data['turn'] : null);
-    } catch (_) {
+    } catch (e) {
+      _lastIceError = e.toString();
       return iceServers(null);
     }
   }
@@ -263,6 +284,10 @@ class CallSession extends ChangeNotifier {
   Timer? _ringBuzz;
   bool _closing = false;
 
+  void _t(String event, [String? detail]) => service.trace(id, event, detail);
+  final _candTypes = <String>{};
+  int _iceIn = 0;
+
   // ---- signaling ---------------------------------------------------------
 
   Future<void> _joinSignaling() async {
@@ -271,7 +296,8 @@ class CallSession extends ChangeNotifier {
       opts: const RealtimeChannelConfig(self: false, ack: true),
     );
     _ch = ch;
-    ch.onBroadcast(event: 'sig', callback: _onSignal).subscribe((status, _) {
+    ch.onBroadcast(event: 'sig', callback: _onSignal).subscribe((status, err) {
+      _t('channel', '${status.name} ${err ?? ''}');
       if (status == RealtimeSubscribeStatus.subscribed &&
           !_subscribed.isCompleted) {
         _subscribed.complete();
@@ -295,6 +321,11 @@ class CallSession extends ChangeNotifier {
   }
 
   Future<void> _onSignal(Map<String, dynamic> m) async {
+    if (m['type'] == 'ice') {
+      if (++_iceIn == 1) _t('rx_ice_first');
+    } else {
+      _t('rx_${m['type']}', 'pc=${_pc != null}');
+    }
     try {
       switch (m['type']) {
         case 'ready': // callee answered: caller makes the offer
@@ -306,6 +337,7 @@ class CallSession extends ChangeNotifier {
           final offer = await _pc!.createOffer();
           await _pc!.setLocalDescription(offer);
           await _send('offer', {'sdp': offer.sdp, 'sdp_type': offer.type});
+          _t('tx_offer');
         case 'offer':
           if (isCaller || _pc == null) return;
           await _pc!.setRemoteDescription(
@@ -315,6 +347,7 @@ class CallSession extends ChangeNotifier {
           final answer = await _pc!.createAnswer();
           await _pc!.setLocalDescription(answer);
           await _send('answer', {'sdp': answer.sdp, 'sdp_type': answer.type});
+          _t('tx_answer');
         case 'answer':
           if (!isCaller || _pc == null) return;
           await _pc!.setRemoteDescription(
@@ -339,6 +372,7 @@ class CallSession extends ChangeNotifier {
           );
       }
     } catch (e) {
+      _t('signal_error', '${m['type']}: $e');
       AppLog.error('CallSession.onSignal', e);
     }
   }
@@ -366,11 +400,13 @@ class CallSession extends ChangeNotifier {
         'callee': peerId,
         'kind': kind.name,
       });
+      _t('dial_inserted', kind.name);
       // Rings the callee's phone even when their app is closed.
       PushService.send(service._db, {'type': 'call', 'call_id': id});
       _ringPushed = true;
       _timeout = Timer(ringTimeout, () => _end(CallEvent.timeout));
     } catch (e) {
+      _t('dial_error', e.toString());
       AppLog.error('CallSession.dial', e);
       endReason = _mediaError(e) ?? 'Could not place the call';
       await _end(CallEvent.failed);
@@ -380,6 +416,7 @@ class CallSession extends ChangeNotifier {
   /// Callee: answer.
   Future<void> accept() async {
     if (phase != CallPhase.incoming) return;
+    _t('accept');
     unawaited(AppNotifications.cancelCall(id));
     _ringBuzz?.cancel();
     _timeout?.cancel();
@@ -390,8 +427,10 @@ class CallSession extends ChangeNotifier {
       await service._setStatus(id, 'accepted');
       await _subscribed.future.timeout(const Duration(seconds: 10));
       await _send('ready');
+      _t('tx_ready');
       _timeout = Timer(connectTimeout, () => _end(CallEvent.timeout));
     } catch (e) {
+      _t('accept_error', e.toString());
       AppLog.error('CallSession.accept', e);
       endReason = _mediaError(e) ?? 'Could not answer';
       await _end(CallEvent.failed);
@@ -436,26 +475,34 @@ class CallSession extends ChangeNotifier {
     speakerOn = isVideo;
     await _route();
 
+    final servers = await service._iceServers();
+    _t('ice_servers',
+        '${servers.length} turn=${servers.any((x) => x.containsKey('username'))} ${service._lastIceError ?? ''}');
     final pc = await createPeerConnection({
-      'iceServers': await service._iceServers(),
+      'iceServers': servers,
       'sdpSemantics': 'unified-plan',
     });
     _pc = pc;
     pc.onIceCandidate = (c) {
       if (c.candidate == null) return;
+      final typ = RegExp(r' typ (\w+)').firstMatch(c.candidate!)?.group(1) ?? '?';
+      if (_candTypes.add(typ)) _t('local_cand', typ);
       unawaited(_send('ice', {
         'candidate': c.candidate,
         'sdp_mid': c.sdpMid,
         'sdp_mline_index': c.sdpMLineIndex,
       }));
     };
+    pc.onIceConnectionState = (st) => _t('ice_state', st.name);
     pc.onTrack = (e) {
+      _t('track', '${e.track.kind} streams=${e.streams.length}');
       if (e.streams.isNotEmpty) {
         remoteRenderer.srcObject = e.streams.first;
         notifyListeners();
       }
     };
     pc.onConnectionState = (s) {
+      _t('pc_state', s.name);
       switch (s) {
         case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
           _timeout?.cancel();
@@ -516,6 +563,14 @@ class CallSession extends ChangeNotifier {
     cameraOff = !cameraOff;
     _cam?.enabled = !cameraOff;
     notifyListeners();
+  }
+
+  Future<void> setZoom(double level) async {
+    final cam = _cam;
+    if (cam == null || kIsWeb) return;
+    try {
+      await Helper.setZoom(cam, level);
+    } catch (_) {} // camera without zoom
   }
 
   Future<void> switchCamera() async {
@@ -600,6 +655,7 @@ class CallSession extends ChangeNotifier {
     } else {
       unawaited(AppNotifications.cancelCall(id));
     }
+    _t('end', '${reason.name} phase=${phase.name}');
     endReason ??= switch (reason) {
       CallEvent.declined => isCaller ? '$peerName declined' : 'Declined',
       CallEvent.timeout => wasConnected || phase == CallPhase.connecting

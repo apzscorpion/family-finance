@@ -110,6 +110,8 @@ Future<void> pushBackgroundHandler(RemoteMessage message) async {
   final p = PushData.parse(message.data);
   if (p == null) return;
   if (p.isCall) {
+    await _traceInBackground(p.id, 'push_rx_bg',
+        'stale=${p.isStale(DateTime.now(), ringTimeout)}');
     if (p.isStale(DateTime.now(), ringTimeout)) return;
     await AppNotifications.showIncomingCall(
         callId: p.id, callerName: p.title, video: p.video);
@@ -124,6 +126,38 @@ Future<void> pushBackgroundHandler(RemoteMessage message) async {
       isPoke: p.poke,
     );
   }
+}
+
+/// Records that a ring push reached this phone (see call_debug). Uses the
+/// saved session only; skipped when its token has expired.
+Future<void> _traceInBackground(String callId, String event, String detail) async {
+  const url = SupabaseService.supabaseUrl;
+  const key = SupabaseService.supabaseAnonKey;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    final raw = prefs.getString('sb-${Uri.parse(url).host.split('.').first}-auth-token');
+    if (raw == null) return;
+    final session = jsonDecode(raw) as Map<String, dynamic>;
+    final token = session['access_token']?.toString();
+    final uid = (session['user'] as Map?)?['id']?.toString();
+    final expiresAt = (session['expires_at'] as num?)?.toInt() ?? 0;
+    if (token == null || uid == null ||
+        expiresAt < DateTime.now().millisecondsSinceEpoch ~/ 1000) {
+      return;
+    }
+    await http.post(
+      Uri.parse('$url/rest/v1/call_debug'),
+      headers: {
+        'apikey': key,
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: jsonEncode(
+          {'call_id': callId, 'user_id': uid, 'event': event, 'detail': detail}),
+    ).timeout(const Duration(seconds: 5));
+  } catch (_) {}
 }
 
 /// Decline from the notification, in the notification plugin's background

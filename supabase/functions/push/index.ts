@@ -89,10 +89,11 @@ async function send(
   tokens: string[],
   data: Record<string, string>,
   android: Record<string, unknown>,
-): Promise<{ sent: number; dead: string[] }> {
+): Promise<{ sent: number; dead: string[]; errors: string[] }> {
   const bearer = await accessToken(sa);
   const url = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
   const dead: string[] = [];
+  const errors: string[] = [];
   let sent = 0;
   await Promise.all(tokens.map(async (token) => {
     const res = await fetch(url, {
@@ -112,8 +113,9 @@ async function send(
       (err.status === "INVALID_ARGUMENT" && /registration token/i.test(err.message ?? ""));
     if (badToken) dead.push(token);
     else console.error("fcm", res.status, JSON.stringify(err));
+    errors.push(`${res.status} ${err.status ?? ""} ${err.message ?? ""}`.slice(0, 200));
   }));
-  return { sent, dead };
+  return { sent, dead, errors };
 }
 
 // ---- notification text ----------------------------------------------------
@@ -225,14 +227,29 @@ Deno.serve(async (req) => {
 
   const { data: rows } = await db.from("push_tokens").select("token").eq("user_id", to);
   const tokens = (rows ?? []).map((r) => r.token as string);
-  if (tokens.length === 0) return json({ sent: 0 });
+  // Call trace (see call_debug); chat pushes are not traced.
+  const trace = (detail: string) =>
+    input.call_id
+      ? db.from("call_debug").insert({
+        call_id: input.call_id,
+        user_id: user.id,
+        event: `server_${input.type}`,
+        detail: detail.slice(0, 500),
+      }).then(() => {}, () => {})
+      : Promise.resolve();
+  if (tokens.length === 0) {
+    await trace("no tokens for callee");
+    return json({ sent: 0 });
+  }
 
   try {
-    const { sent, dead } = await send(sa, tokens, data, android);
+    const { sent, dead, errors } = await send(sa, tokens, data, android);
     if (dead.length) await db.from("push_tokens").delete().in("token", dead);
+    await trace(`tokens=${tokens.length} sent=${sent} dead=${dead.length} ${errors.join(" | ")}`);
     return json({ sent, removed: dead.length });
   } catch (e) {
     console.error("push", e);
+    await trace(`failed: ${e}`);
     return json({ error: "push failed" }, 502);
   }
 });
