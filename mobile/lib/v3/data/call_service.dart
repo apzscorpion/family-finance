@@ -313,7 +313,9 @@ class CallSession extends ChangeNotifier {
     try {
       await _ch?.sendBroadcastMessage(
         event: 'sig',
-        payload: {'type': type, ...?data},
+        // Not 'type': the realtime client overwrites payload['type'] with
+        // 'broadcast' (and 'event' with the event name) on every send.
+        payload: {'sig': type, ...?data},
       );
     } catch (e) {
       AppLog.error('CallSession.send', e);
@@ -321,13 +323,13 @@ class CallSession extends ChangeNotifier {
   }
 
   Future<void> _onSignal(Map<String, dynamic> m) async {
-    if (m['type'] == 'ice') {
+    if (m['sig'] == 'ice') {
       if (++_iceIn == 1) _t('rx_ice_first');
     } else {
-      _t('rx_${m['type']}', 'pc=${_pc != null}');
+      _t('rx_${m['sig']}', 'pc=${_pc != null}');
     }
     try {
-      switch (m['type']) {
+      switch (m['sig']) {
         case 'ready': // callee answered: caller makes the offer
           if (!isCaller || _pc == null) return;
           _stopRingPush(); // the callee's other phones stop ringing
@@ -372,7 +374,7 @@ class CallSession extends ChangeNotifier {
           );
       }
     } catch (e) {
-      _t('signal_error', '${m['type']}: $e');
+      _t('signal_error', '${m['sig']}: $e');
       AppLog.error('CallSession.onSignal', e);
     }
   }
