@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/app_log.dart';
@@ -1437,20 +1438,42 @@ class V3Repository {
     Map<String, dynamic> media = const {},
   }) async {
     final uid = currentUserId!;
-    final row = await _db
-        .from('direct_messages')
-        .insert({
-          'family_id': familyId,
-          'sender_id': uid,
-          'recipient_id': recipientId,
-          'body': body.trim(),
-          'kind': kind,
-          'image_data': ?imageData,
-          ...media,
-        })
-        .select(_dmColumns)
-        .single();
-    return DirectMessageRow.fromJson(Map<String, dynamic>.from(row));
+    // The id is made here, so a retry after a lost reply cannot duplicate
+    // the message: the second insert hits the key and the row is read back.
+    final id = media['id']?.toString() ?? const Uuid().v4();
+    final insert = {
+      'family_id': familyId,
+      'sender_id': uid,
+      'recipient_id': recipientId,
+      'body': body.trim(),
+      'kind': kind,
+      'image_data': ?imageData,
+      ...media,
+      'id': id,
+    };
+    // A dead connection (network switch) hangs instead of failing, so each
+    // try is short and a fresh one follows.
+    for (var attempt = 1;; attempt++) {
+      try {
+        final row = await _db
+            .from('direct_messages')
+            .insert(insert)
+            .select(_dmColumns)
+            .single()
+            .timeout(const Duration(seconds: 6)); // 3 tries fit in guard()'s 20 s
+        return DirectMessageRow.fromJson(Map<String, dynamic>.from(row));
+      } on PostgrestException catch (e) {
+        if (e.code != '23505') rethrow; // only "already there" is success
+        final row = await _db
+            .from('direct_messages')
+            .select(_dmColumns)
+            .eq('id', id)
+            .single();
+        return DirectMessageRow.fromJson(Map<String, dynamic>.from(row));
+      } catch (e) {
+        if (attempt >= 3 || !_isConnectivity(e)) rethrow;
+      }
+    }
   }
 
   StorageFileApi get _chatMedia => _db.storage.from(kChatMediaBucket);

@@ -115,16 +115,15 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
     final text = _ctrl.text.trim();
     if (text.isEmpty || _sending) return;
     final chat = context.read<ChatController>();
-    setState(() => _sending = true);
+    // No lock while it sends: the next message can be typed and sent at once.
     _ctrl.clear();
     final ok = await chat.sendMessage(
       recipientId: widget.partner.userId,
       body: text,
     );
     if (!mounted) return;
-    setState(() => _sending = false);
     if (!ok) {
-      _ctrl.text = text;
+      if (_ctrl.text.isEmpty) _ctrl.text = text;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not send message')),
       );
