@@ -81,6 +81,12 @@ class PrayerBanner {
         when: next.next.time.millisecondsSinceEpoch,
         usesChronometer: true,
         chronometerCountDown: true,
+        // The app may not run when the prayer ends; Android removes the card
+        // then, so a stale one never counts below zero. Reposted on next open.
+        timeoutAfter: next.next.time
+            .difference(DateTime.now())
+            .inMilliseconds
+            .clamp(1000, 1 << 31),
 
         icon: '@drawable/ic_notification',
 
