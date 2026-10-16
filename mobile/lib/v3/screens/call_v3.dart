@@ -48,6 +48,7 @@ class _CallScreenV3State extends State<CallScreenV3> {
   void initState() {
     super.initState();
     s.addListener(_changed);
+    unawaited(NotificationBridge.keepScreenOn(true));
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
       if (s.phase == CallPhase.connected && mounted) setState(() {});
     });
@@ -70,6 +71,7 @@ class _CallScreenV3State extends State<CallScreenV3> {
     s.removeListener(_changed);
     // Leaving the screen (e.g. system back) never leaves a call running.
     unawaited(s.hangUp().whenComplete(s.release));
+    unawaited(NotificationBridge.keepScreenOn(false));
     unawaited(NotificationBridge.clearLockScreen());
     super.dispose();
   }

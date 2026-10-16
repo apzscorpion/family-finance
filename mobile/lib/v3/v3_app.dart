@@ -354,6 +354,13 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
         .timeout(const Duration(seconds: 2), onTimeout: () {});
     if (AppNotifications.hasPendingCall || _calls?.current != null) return;
 
+    // No fingerprint and no screen lock on this phone: there is nothing to
+    // check against, and asking would lock the owner out for good.
+    if (!await BiometricService.canAuthenticate()) {
+      if (mounted) setState(() => _unlocked = true);
+      return;
+    }
+
     if (!mounted) return;
     setState(() => _authenticating = true);
     final ok = await BiometricService.authenticate();

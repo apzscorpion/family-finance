@@ -117,6 +117,12 @@ class MainActivity : FlutterFragmentActivity() {
                     "openNotificationSettings" ->
                         result.success(DetectionSupport.openSettings(this))
                     "drainQueue" -> result.success(DetectionSupport.drainQueue(this))
+                    "keepScreenOn" -> {
+                        // During a call, like the phone's own call screen.
+                        val flag = WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        if (call.arguments == true) window.addFlags(flag) else window.clearFlags(flag)
+                        result.success(null)
+                    }
                     "leaveLockScreen" -> {
                         setOverLockScreen(false)
                         moveTaskToBack(true)
@@ -124,6 +130,13 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     "clearLockScreen" -> {
                         setOverLockScreen(false)
+                        // Opened by a call on a locked phone: step aside like
+                        // the phone's own call screen, so unlocking goes back
+                        // to whatever was open, not into the app.
+                        if (openedOverLock) {
+                            openedOverLock = false
+                            moveTaskToBack(true)
+                        }
                         result.success(null)
                     }
                     "peekQueueSize" -> result.success(DetectionSupport.queueSize(this))
@@ -346,7 +359,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (isPrayerAlert(intent)) setOverLockScreen(true)
+        if (isPrayerAlert(intent)) showOverLock()
         prefetchTextReader()
     }
 
@@ -366,7 +379,7 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIncomingShareIntent(intent)
-        if (isPrayerAlert(intent)) setOverLockScreen(true)
+        if (isPrayerAlert(intent)) showOverLock()
     }
 
     // Only the prayer alert and a ringing call may show over the lock screen;
@@ -374,6 +387,14 @@ class MainActivity : FlutterFragmentActivity() {
     // an unlock.
     private fun isPrayerAlert(i: Intent?) =
         i?.getStringExtra("payload")?.let { it.startsWith("prayer:") || it.startsWith("call:") } == true
+
+    private var openedOverLock = false
+
+    private fun showOverLock() {
+        val km = getSystemService(KEYGUARD_SERVICE) as android.app.KeyguardManager
+        openedOverLock = km.isKeyguardLocked
+        setOverLockScreen(true)
+    }
 
     private fun setOverLockScreen(on: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {

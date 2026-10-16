@@ -68,6 +68,14 @@ class NotificationBridge {
     }
   }
 
+  /// Keeps the screen awake while a call screen is open.
+  static Future<void> keepScreenOn(bool on) async {
+    if (!isSupported) return;
+    try {
+      await _channel.invokeMethod('keepScreenOn', on);
+    } catch (_) {}
+  }
+
   /// A call shown over the lock screen has closed: locked phones go back to
   /// needing an unlock.
   static Future<void> clearLockScreen() async {
