@@ -1282,6 +1282,17 @@ class _ChatImageViewer extends StatelessWidget {
         backgroundColor: p.bg,
         foregroundColor: p.text,
         elevation: 0,
+        title: allowSave
+            ? null
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _OnceBadge(color: p.text, size: 22),
+                  const SizedBox(width: 8),
+                  Text('View once',
+                      style: TextStyle(fontSize: 15, color: p.text)),
+                ],
+              ),
         actions: [
           if (allowSave) ...[
             IconButton(
@@ -1425,21 +1436,17 @@ class _MediaContent extends StatelessWidget {
 
     if (message.viewOnce) {
       final opened = message.viewedAt != null;
-      final String label;
-      if (opened) {
-        label = 'Opened';
-      } else if (isMine) {
-        label = 'View once photo · not opened yet';
-      } else {
-        label = 'View once photo · tap to open';
-      }
-      return _MediaCard(
-        icon: opened ? PhRegular.eyeSlash : PhRegular.eye,
-        title: 'View once photo',
-        subtitle: label,
+      return _ViewOnceChip(
+        key: ValueKey('chat_view_once_${message.id}'),
+        opened: opened,
+        hint: opened
+            ? null
+            : isMine
+                ? 'Not opened yet'
+                : 'Tap to view',
         fg: fg,
         sub: sub,
-        onTap: opened || isMine ? null : onOpen,
+        onTap: opened || isMine || pending ? null : onOpen,
       );
     }
 
@@ -1507,6 +1514,96 @@ class _MediaContent extends StatelessWidget {
         alignment: Alignment.center,
         child: Icon(icon, size: 28, color: fg),
       );
+}
+
+/// WhatsApp-style view-once bubble: a "1" badge and one short line.
+class _ViewOnceChip extends StatelessWidget {
+  final bool opened;
+  final String? hint;
+  final Color fg;
+  final Color sub;
+  final VoidCallback? onTap;
+
+  const _ViewOnceChip({
+    super.key,
+    required this.opened,
+    required this.hint,
+    required this.fg,
+    required this.sub,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = opened ? sub : fg;
+    return Semantics(
+      button: onTap != null,
+      label: opened ? 'View once photo, opened' : 'View once photo',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _OnceBadge(color: color, size: 26, dim: opened),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    opened ? 'Opened' : 'Photo',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: opened ? FontWeight.w400 : FontWeight.w600,
+                      fontStyle: opened ? FontStyle.italic : FontStyle.normal,
+                      color: color,
+                    ),
+                  ),
+                  if (hint != null)
+                    Text(hint!, style: TextStyle(fontSize: 11.5, color: sub)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A circled "1", the view-once mark.
+class _OnceBadge extends StatelessWidget {
+  final Color color;
+  final double size;
+  final bool dim;
+
+  const _OnceBadge({required this.color, required this.size, this.dim = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: color.withValues(alpha: dim ? 0.5 : 1), width: 1.6),
+      ),
+      child: Text(
+        '1',
+        textScaler: TextScaler.noScaling,
+        style: TextStyle(
+          fontSize: size * 0.5,
+          height: 1,
+          fontWeight: FontWeight.w700,
+          color: color.withValues(alpha: dim ? 0.5 : 1),
+        ),
+      ),
+    );
+  }
 }
 
 class _MediaCard extends StatelessWidget {
