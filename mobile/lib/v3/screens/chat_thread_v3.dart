@@ -211,11 +211,40 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
     if (choice == 'file') {
       await _pickAndSendFile();
     } else {
+      final hd = await _askPhotoQuality();
+      if (!mounted || hd == null) return;
       await _pickAndSendImage(
         choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
         viewOnce: viewOnce,
+        hd: hd,
       );
     }
+  }
+
+  /// true = HD, false = Standard, null = cancelled.
+  Future<bool?> _askPhotoQuality() {
+    final p = Nocturne.palette;
+    Widget option(bool hd, String title, String sub) => ListTile(
+          key: ValueKey(hd ? 'photo_quality_hd' : 'photo_quality_standard'),
+          leading: Icon(hd ? PhRegular.sparkle : PhRegular.lightning,
+              color: p.accent),
+          title: Text(title, style: TextStyle(color: p.text, fontSize: 14)),
+          subtitle: Text(sub, style: TextStyle(color: p.muted, fontSize: 12)),
+          onTap: () => Navigator.pop(context, hd),
+        );
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: p.surface,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            option(false, 'Standard', 'Smaller and faster to send and open'),
+            option(true, 'HD', 'Full detail, larger file'),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _call(CallKind kind) async {
@@ -258,13 +287,15 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
   Future<void> _pickAndSendImage(
     ImageSource source, {
     bool viewOnce = false,
+    bool hd = false,
   }) async {
     try {
+      // Standard is ~150-300 KB, HD ~1-2 MB.
       final file = await _picker.pickImage(
         source: source,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 80,
+        maxWidth: hd ? 2560 : 1280,
+        maxHeight: hd ? 2560 : 1280,
+        imageQuality: hd ? 90 : 70,
       );
       if (file == null || !mounted) return;
       final bytes = await file.readAsBytes();
@@ -411,7 +442,7 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
     final repo = context.read<ChatController>().repo;
     final bytes = await V3Repository.guard(
       'downloadChatMedia',
-      () => repo.downloadChatMedia(msg.mediaPath!),
+      () => _storedImageBytes(repo, msg.mediaPath!),
     );
     if (!mounted) return;
     if (bytes == null) {
@@ -1352,6 +1383,23 @@ Future<String> _signedChatUrl(V3Repository repo, String path) {
   return url;
 }
 
+/// Photo bytes shared by the bubble and the full-screen viewer, so opening a
+/// photo needs no second download.
+final _imageBytes = <String, Future<Uint8List>>{};
+
+Future<Uint8List> _storedImageBytes(V3Repository repo, String path) {
+  final hit = _imageBytes.remove(path);
+  if (hit != null) return _imageBytes[path] = hit; // re-insert: most recent
+  // shortcut: keeps the 40 latest photos in memory, enough for one thread.
+  if (_imageBytes.length >= 40) _imageBytes.remove(_imageBytes.keys.first);
+  final bytes = repo.downloadChatMedia(path);
+  _imageBytes[path] = bytes;
+  bytes.then((_) {}, onError: (_) {
+    _imageBytes.remove(path);
+  });
+  return bytes;
+}
+
 /// Photo thumbnail, file card, voice player or view-once card for a
 /// message whose media lives in Storage.
 class _MediaContent extends StatelessWidget {
@@ -1416,12 +1464,16 @@ class _MediaContent extends StatelessWidget {
             width: 220,
             child: pending
                 ? _mediaPlaceholder(p.bg, sub, PhRegular.image)
-                : FutureBuilder<String>(
-                    future: _signedChatUrl(repo, path),
+                : FutureBuilder<Uint8List>(
+                    future: _storedImageBytes(repo, path),
                     builder: (context, snap) => snap.hasData
-                        ? Image.network(
+                        ? Image.memory(
                             snap.data!,
                             width: 220,
+                            // Decode at bubble size, not full resolution.
+                            cacheWidth: (220 *
+                                    MediaQuery.devicePixelRatioOf(context))
+                                .round(),
                             fit: BoxFit.cover,
                             gaplessPlayback: true,
                             errorBuilder: (_, _, _) =>
