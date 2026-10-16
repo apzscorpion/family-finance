@@ -4,6 +4,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// google-services.json is kept out of the public repo, so a clone without it
+// still builds; push (calls/chat while closed) is then simply off.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.familyfinance.family_finance"
     compileSdk = 36

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/nocturne.dart';
@@ -13,6 +14,9 @@ import 'data/call_service.dart';
 import 'data/card_scan.dart';
 import 'data/chat_controller.dart';
 import 'data/notes_presence.dart';
+import 'data/notifications_core.dart';
+import 'data/prayer/prayer_ending_soon.dart' show islandStatus;
+import 'data/push_service.dart';
 import 'data/prayer/prayer_controller.dart';
 import 'data/v3_repository.dart';
 import '../services/widget_service.dart';
@@ -248,6 +252,53 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
     );
   }
 
+  static bool _fullScreenChecked = false;
+
+  /// Android 14+ blocks full-screen notifications until the user allows
+  /// them, and without that an incoming call on a locked phone is only a
+  /// banner. Explains and opens the setting, once.
+  Future<void> _askCallFullScreenOnce() async {
+    if (_fullScreenChecked || kIsWeb) return;
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    _fullScreenChecked = true;
+    const key = 'ff_call_fullscreen_asked';
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(key) ?? false) return;
+    if ((await islandStatus())['fullScreen'] != false) return;
+    await prefs.setBool(key, true);
+    if (!mounted) return;
+    final p = Nocturne.palette;
+    final allow = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: p.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: p.edge, width: 1),
+        ),
+        title: Text('Ring over the lock screen',
+            style: TextStyle(
+                color: p.text, fontSize: 18, fontWeight: FontWeight.w600)),
+        content: Text(
+          'Allow full-screen notifications so family calls ring like a '
+          'phone call, even when your phone is locked.',
+          style: TextStyle(color: p.subtle, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Not now', style: TextStyle(color: p.subtle)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Allow', style: TextStyle(color: p.accentMuted)),
+          ),
+        ],
+      ),
+    );
+    if (allow == true) await AppNotifications.requestFullScreen();
+  }
+
   Future<void> _checkBiometricAuth() async {
     final s = context.read<V3State>();
     final lockEnabled = s.prefs.lockApp;
@@ -373,6 +424,15 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
         );
         // Incoming calls ring while the app is open.
         calls?.bind(familyId: s.familyId, myId: s.myId);
+        // ...and by push when it is closed: tapping or answering that ring,
+        // or a ring arriving while open, lands in the incoming-call screen.
+        if (calls != null) {
+          PushService.onCall = calls.openFromPush;
+          AppNotifications.onCallAction =
+              (id, answer) => calls.openFromPush(id, answer: answer);
+        }
+        unawaited(PushService.register(Supabase.instance.client));
+        unawaited(_askCallFullScreenOnce());
       });
     }
 

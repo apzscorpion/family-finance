@@ -10,6 +10,7 @@ import '../../services/app_log.dart';
 import 'chat_media.dart';
 import 'chat_platform_io.dart'
     if (dart.library.js_interop) 'chat_platform_web.dart';
+import 'push_service.dart';
 import 'v3_models.dart';
 import 'v3_repository.dart';
 
@@ -975,6 +976,9 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
       ),
     );
     if (sent != null) {
+      // Alerts the recipient even when their app is closed.
+      final db = _db;
+      if (db != null) PushService.send(db, {'type': 'dm', 'message_id': sent.id});
       _notifiedIds.add(sent.id);
       _messages.removeWhere((m) => m.id == tempId);
       _upsertMessage(sent);

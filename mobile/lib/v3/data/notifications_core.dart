@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -5,6 +7,8 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../../services/app_log.dart';
 import 'pending_quick_add.dart';
+import 'push_logic.dart';
+import 'push_service.dart';
 
 /// Single owner of the notification plugin.
 ///
@@ -26,6 +30,7 @@ class AppNotifications {
   static const prayerBase = 300000;
   static const liveId = 400001;
   static const dmBase = 500000;
+  static const callBase = 600000;
 
   // ── Channels ──────────────────────────────────────────────────────────────
 
@@ -124,22 +129,113 @@ class AppNotifications {
     }
   }
 
-  /// A prayer alert that cold-started the app (full-screen intent while the
-  /// app was not running) arrives as launch details, not as a response.
+  /// Opens a ringing call: (callId, answer). Set by the app shell once the
+  /// call service is bound; until then the latest one waits.
+  static void Function(String callId, bool answer)? _onCall;
+  static (String, bool)? _pendingCall;
+
+  static set onCallAction(void Function(String callId, bool answer)? handler) {
+    _onCall = handler;
+    final pending = _pendingCall;
+    if (handler != null && pending != null) {
+      _pendingCall = null;
+      handler(pending.$1, pending.$2);
+    }
+  }
+
+  static void _deliverCall(String callId, bool answer) {
+    final handler = _onCall;
+    if (handler != null) {
+      handler(callId, answer);
+    } else {
+      _pendingCall = (callId, answer);
+    }
+  }
+
+  static const callAnswerAction = 'call_answer';
+  static const callDeclineAction = 'call_decline';
+
+  /// A prayer alert or ringing call that cold-started the app (full-screen
+  /// intent, tap or Answer while the app was not running) arrives as launch
+  /// details, not as a response.
   static Future<void> checkLaunchedByPrayer() async {
     await ensureInit();
     if (!_ready) return;
     try {
       final details = await plugin.getNotificationAppLaunchDetails();
       final payload = details?.notificationResponse?.payload;
-      if (details?.didNotificationLaunchApp == true &&
-          payload != null &&
-          payload.startsWith('prayer:')) {
-        _deliverPrayer(payload);
+      if (details?.didNotificationLaunchApp != true || payload == null) return;
+      if (payload.startsWith('prayer:')) _deliverPrayer(payload);
+      final callId = callIdFromPayload(payload);
+      if (callId != null) {
+        _deliverCall(callId,
+            details!.notificationResponse!.actionId == callAnswerAction);
       }
     } catch (err, stack) {
       AppLog.error('AppNotifications.checkLaunchedByPrayer', err, stack);
     }
+  }
+
+  static int callNotificationId(String callId) =>
+      callBase + stableHash(callId) % 90000;
+
+  /// The ringing call: full screen over the lock screen, ringtone looping
+  /// (FLAG_INSISTENT) until answered, declined, cancelled or 40 s pass.
+  static Future<void> showIncomingCall({
+    required String callId,
+    required String callerName,
+    required bool video,
+  }) async {
+    if (kIsWeb) return;
+    await ensureInit();
+    if (!_ready) return;
+    try {
+      await plugin.show(
+        callNotificationId(callId),
+        callerName,
+        video ? 'Incoming video call' : 'Incoming voice call',
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'ff_calls',
+            'Incoming calls',
+            channelDescription: 'Rings for family voice and video calls',
+            importance: Importance.max,
+            priority: Priority.max,
+            category: AndroidNotificationCategory.call,
+            visibility: NotificationVisibility.public,
+            fullScreenIntent: true,
+            ongoing: true,
+            autoCancel: false,
+            onlyAlertOnce: true,
+            playSound: true,
+            sound: const UriAndroidNotificationSound(
+                'content://settings/system/ringtone'),
+            audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+            enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 1000, 1000, 1000, 1000]),
+            additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT
+            timeoutAfter: 40000,
+            actions: const [
+              AndroidNotificationAction(callDeclineAction, 'Decline',
+                  cancelNotification: true),
+              AndroidNotificationAction(callAnswerAction, 'Answer',
+                  showsUserInterface: true, cancelNotification: true),
+            ],
+          ),
+        ),
+        payload: callPayload(callId),
+      );
+    } catch (err, stack) {
+      AppLog.error('AppNotifications.showIncomingCall', err, stack);
+    }
+  }
+
+  static Future<void> cancelCall(String callId) async {
+    if (kIsWeb) return;
+    await ensureInit();
+    try {
+      await plugin.cancel(callNotificationId(callId));
+    } catch (_) {}
   }
 
   static Future<bool> requestFullScreen() async {
@@ -201,6 +297,13 @@ class AppNotifications {
       _deliverPrayer(payload);
       return;
     }
+    final callId = callIdFromPayload(payload);
+    if (callId != null) {
+      // Decline never comes here: it has no UI and runs in the background
+      // isolate (notificationBackgroundTap).
+      _deliverCall(callId, response.actionId == callAnswerAction);
+      return;
+    }
     if (payload != null && payload.startsWith('dm:')) {
       final senderId = payload.substring(3);
       if (senderId.isNotEmpty) {
@@ -233,7 +336,9 @@ class AppNotifications {
     await ensureInit();
     if (!_ready) return;
     try {
-      final id = dmBase + (messageId.hashCode.abs() % 90000);
+      // Stable across isolates: the push handler and the open app post the
+      // same message to the same id.
+      final id = dmBase + stableHash(messageId) % 90000;
       final title = isPoke ? '👋 $senderName poked you!' : senderName;
       final preview = isPoke
           ? (body.isNotEmpty && body != '👋 Poked you!'
@@ -418,6 +523,12 @@ class AppNotifications {
 /// can: parse the text and put it on disk for the app to pick up.
 @pragma('vm:entry-point')
 void notificationBackgroundTap(NotificationResponse response) {
+  final callId = callIdFromPayload(response.payload);
+  if (callId != null &&
+      response.actionId == AppNotifications.callDeclineAction) {
+    unawaited(declineCallInBackground(callId));
+    return;
+  }
   if (response.actionId != AppNotifications.quickAddAction) return;
   final text = response.input;
   if (text == null || text.trim().isEmpty) return;

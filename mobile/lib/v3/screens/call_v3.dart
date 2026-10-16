@@ -8,6 +8,7 @@ import '../../theme/nocturne.dart';
 import '../../theme/nocturne_palette.dart';
 import '../data/call_logic.dart';
 import '../data/call_service.dart';
+import '../data/notification_bridge.dart';
 import '../phosphor_catalog.dart';
 
 IconData _icon(String name) => phosphorCatalog[name]!;
@@ -59,6 +60,7 @@ class _CallScreenV3State extends State<CallScreenV3> {
     s.removeListener(_changed);
     // Leaving the screen (e.g. system back) never leaves a call running.
     unawaited(s.hangUp().whenComplete(s.release));
+    unawaited(NotificationBridge.clearLockScreen());
     super.dispose();
   }
 

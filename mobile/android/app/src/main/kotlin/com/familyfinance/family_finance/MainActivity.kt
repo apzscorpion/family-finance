@@ -122,6 +122,10 @@ class MainActivity : FlutterFragmentActivity() {
                         moveTaskToBack(true)
                         result.success(null)
                     }
+                    "clearLockScreen" -> {
+                        setOverLockScreen(false)
+                        result.success(null)
+                    }
                     "peekQueueSize" -> result.success(DetectionSupport.queueSize(this))
                     else -> result.notImplemented()
                 }
@@ -365,10 +369,11 @@ class MainActivity : FlutterFragmentActivity() {
         if (isPrayerAlert(intent)) setOverLockScreen(true)
     }
 
-    // Only the prayer alert may show over the lock screen; closing it turns
-    // this off again so the finance screens always need an unlock.
+    // Only the prayer alert and a ringing call may show over the lock screen;
+    // closing them turns this off again so the finance screens always need
+    // an unlock.
     private fun isPrayerAlert(i: Intent?) =
-        i?.getStringExtra("payload")?.startsWith("prayer:") == true
+        i?.getStringExtra("payload")?.let { it.startsWith("prayer:") || it.startsWith("call:") } == true
 
     private fun setOverLockScreen(on: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {

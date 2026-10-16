@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState, WidgetsBinding;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -10,6 +11,8 @@ import 'call_logic.dart';
 import 'chat_controller.dart';
 import 'chat_platform_io.dart'
     if (dart.library.js_interop) 'chat_platform_web.dart';
+import 'notifications_core.dart';
+import 'push_service.dart';
 import 'v3_models.dart';
 
 /// Rings family members and runs the one active call.
@@ -57,12 +60,83 @@ class CallService extends ChangeNotifier {
           ),
           callback: (p) => _onRing(p.newRecord),
         )
+        // Status changes made outside the call channel (Decline on the
+        // notification, answered on another phone) end the call here too.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'calls',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'callee',
+            value: myId,
+          ),
+          callback: (p) => _onUpdate(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'calls',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'caller',
+            value: myId,
+          ),
+          callback: (p) => _onUpdate(p.newRecord),
+        )
         .subscribe();
+    final pending = _pendingOpen;
+    _pendingOpen = null;
+    if (pending != null) unawaited(openFromPush(pending.$1, answer: pending.$2));
+  }
+
+  (String, bool)? _pendingOpen;
+
+  /// A ringing call reached this phone by push (notification tap, Answer,
+  /// full-screen launch, or FCM while open). Rings in-app unless it already
+  /// is; [answer] picks it up straight away.
+  Future<void> openFromPush(String callId, {bool answer = false}) async {
+    final me = _myId;
+    if (me == null) {
+      _pendingOpen = (callId, answer);
+      return;
+    }
+    if (_current?.id != callId) {
+      try {
+        final row = await _db.from('calls').select().eq('id', callId).maybeSingle();
+        if (row == null || row['callee'] != me) return;
+        if (row['status'] != 'ringing') {
+          unawaited(AppNotifications.cancelCall(callId));
+          return;
+        }
+        _onRing(row);
+      } catch (e) {
+        AppLog.error('CallService.openFromPush', e);
+        return;
+      }
+    }
+    final s = _current;
+    if (answer && s != null && s.id == callId) unawaited(s.accept());
+  }
+
+  void _onUpdate(Map<String, dynamic> row) {
+    final s = _current;
+    if (s == null || row['id']?.toString() != s.id) return;
+    final status = row['status'];
+    if (status == 'declined') {
+      unawaited(s._end(CallEvent.declined, send: false, store: false));
+    } else if (status == 'accepted' && !s.isCaller && s.phase == CallPhase.incoming) {
+      s.endReason = 'Answered on another device';
+      unawaited(s._end(CallEvent.hangup, send: false, store: false));
+    } else if (status == 'missed' || status == 'ended') {
+      unawaited(s._end(CallEvent.hangup, send: false, store: false));
+    }
   }
 
   void _onRing(Map<String, dynamic> row) {
     if (row['status'] != 'ringing' || row['family_id'] != _familyId) return;
     final id = row['id'].toString();
+    if (_current?.id == id) return; // already ringing (Realtime and push both)
     final kind = row['kind'] == 'video' ? CallKind.video : CallKind.audio;
     final caller = row['caller'].toString();
     if (_current != null) {
@@ -225,6 +299,7 @@ class CallSession extends ChangeNotifier {
       switch (m['type']) {
         case 'ready': // callee answered: caller makes the offer
           if (!isCaller || _pc == null) return;
+          _stopRingPush(); // the callee's other phones stop ringing
           _advance(CallEvent.accepted);
           _timeout?.cancel();
           _timeout = Timer(connectTimeout, () => _end(CallEvent.timeout));
@@ -291,6 +366,9 @@ class CallSession extends ChangeNotifier {
         'callee': peerId,
         'kind': kind.name,
       });
+      // Rings the callee's phone even when their app is closed.
+      PushService.send(service._db, {'type': 'call', 'call_id': id});
+      _ringPushed = true;
       _timeout = Timer(ringTimeout, () => _end(CallEvent.timeout));
     } catch (e) {
       AppLog.error('CallSession.dial', e);
@@ -302,6 +380,7 @@ class CallSession extends ChangeNotifier {
   /// Callee: answer.
   Future<void> accept() async {
     if (phase != CallPhase.incoming) return;
+    unawaited(AppNotifications.cancelCall(id));
     _ringBuzz?.cancel();
     _timeout?.cancel();
     _advance(CallEvent.accepted);
@@ -476,29 +555,51 @@ class CallSession extends ChangeNotifier {
       ? Duration.zero
       : DateTime.now().difference(connectedAt!);
 
+  bool _ringPushed = false;
+
+  /// Caller: the call left ringing, so clear the callee's ring notification.
+  void _stopRingPush() {
+    if (!_ringPushed) return;
+    _ringPushed = false;
+    PushService.send(service._db, {'type': 'call_cancel', 'call_id': id});
+  }
+
   /// Incoming ring: buzz plus one notification, so a minimised app that is
-  /// still connected also alerts.
+  /// still connected also alerts. In the background that is the same
+  /// full-screen ring the push posts (same id), so the two never double up.
   void _buzz() {
     var first = true;
+    final background =
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed;
+    if (background) {
+      unawaited(AppNotifications.showIncomingCall(
+          callId: id, callerName: peerName, video: isVideo));
+    }
     void ring() => unawaited(notifyIncomingChat(
           messageId: 'call_$id',
           senderId: peerId,
           senderName: peerName,
           body: isVideo ? 'Incoming video call' : 'Incoming voice call',
           isPoke: true,
-          showSystemNotification: first,
+          showSystemNotification: first && !background,
         ).whenComplete(() => first = false));
     ring();
     _ringBuzz = Timer.periodic(const Duration(seconds: 3), (_) => ring());
   }
 
-  Future<void> _end(CallEvent reason, {bool send = true}) async {
+  /// [store] false: the row already holds the outcome (changed elsewhere).
+  Future<void> _end(CallEvent reason, {bool send = true, bool store = true}) async {
     if (_closing) return;
     _closing = true;
     final wasConnected = connectedAt != null;
     final talkedFor = talked;
     _timeout?.cancel();
     _ringBuzz?.cancel();
+    if (isCaller) {
+      _stopRingPush();
+    } else {
+      unawaited(AppNotifications.cancelCall(id));
+    }
     endReason ??= switch (reason) {
       CallEvent.declined => isCaller ? '$peerName declined' : 'Declined',
       CallEvent.timeout => wasConnected || phase == CallPhase.connecting
@@ -512,7 +613,7 @@ class CallSession extends ChangeNotifier {
       await _send('bye', {if (reason == CallEvent.declined) 'reason': 'declined'});
     }
     final status = finalStatus(wasConnected: wasConnected, reason: reason);
-    await service._setStatus(id, status);
+    if (store) await service._setStatus(id, status);
     // The caller leaves the chat entry, so it is written once.
     if (isCaller) {
       unawaited(service._chat.sendMessage(

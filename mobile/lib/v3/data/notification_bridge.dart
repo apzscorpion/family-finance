@@ -68,6 +68,15 @@ class NotificationBridge {
     }
   }
 
+  /// A call shown over the lock screen has closed: locked phones go back to
+  /// needing an unlock.
+  static Future<void> clearLockScreen() async {
+    if (!isSupported) return;
+    try {
+      await _channel.invokeMethod('clearLockScreen');
+    } catch (_) {}
+  }
+
   /// How many captures are waiting, without consuming them.
   static Future<int> pendingCount() async {
     try {

@@ -34,3 +34,6 @@ Thumbs.db
 # Release binaries (APKs should be published to GitHub Releases, not tracked in git)
 *.apk
 /releases/
+
+# Firebase config: kept out of the public repo.
+mobile/android/app/google-services.json

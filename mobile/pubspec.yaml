@@ -83,6 +83,10 @@ dependencies:
   just_audio: ^0.10.6
   # Profile photos: centre-crop to a square and re-encode as a small JPEG.
   image: ^4.3.0
+  # Push (FCM) so calls ring and chat alerts arrive while the app is closed.
+  # Android only; web never initialises Firebase.
+  firebase_core: ^5.0.0
+  firebase_messaging: ^17.0.0
 
 dev_dependencies:
   flutter_test:

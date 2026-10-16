@@ -13,6 +13,7 @@ import '../../theme/nocturne_palette.dart';
 import '../data/avatar_image.dart';
 import '../data/data_export.dart';
 import '../data/prayer/prayer_controller.dart';
+import '../data/push_service.dart';
 import '../data/v3_models.dart';
 import '../phosphor_icons.dart';
 import '../sheets/update_sheet_v3.dart';
@@ -1620,6 +1621,7 @@ class _SettingsV3State extends State<SettingsV3> {
             ),
             onPressed: () async {
               Navigator.pop(ctx);
+              await PushService.unregister(Supabase.instance.client);
               await Supabase.instance.client.auth.signOut();
               await s.bootstrap();
             },

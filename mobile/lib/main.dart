@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'services/supabase_service.dart';
+import 'v3/data/push_service.dart';
 import 'v3/v3_app.dart';
 
 /// The v3 shell is the app.
@@ -21,6 +22,8 @@ void main() async {
   // unlike the old entry point this one has to wait for initialisation.
   // Failures are swallowed inside init(); the auth screen reports them.
   await SupabaseService.ready;
+  // Calls and chat reach a closed app through FCM (Android only).
+  await PushService.init();
 
   runApp(const V3App());
 }
