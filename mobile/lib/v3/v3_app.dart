@@ -119,6 +119,14 @@ class V3App extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: getV3Theme(themeCtrl.palette),
           home: const V3Root(),
+          builder: (context, child) {
+            final mq = MediaQuery.of(context);
+            final scale = mq.textScaler.scale(1) * themeCtrl.textScale;
+            return MediaQuery(
+              data: mq.copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            );
+          },
         );
         },
       ),
@@ -231,8 +239,28 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
     _checkBiometricAuth();
   }
 
+  CallService? _calls;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final calls = context.read<CallService?>();
+    if (calls != _calls) {
+      _calls?.removeListener(_onCallChanged);
+      _calls = calls?..addListener(_onCallChanged);
+    }
+  }
+
+  // Calls skip the lock; once the call is over, ask for it.
+  void _onCallChanged() {
+    if (_calls?.current == null && !_unlocked && !_authenticating) {
+      _checkBiometricAuth();
+    }
+  }
+
   @override
   void dispose() {
+    _calls?.removeListener(_onCallChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -313,8 +341,25 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
       return;
     }
 
+    // A recent unlock still counts, so it doesn't ask on every open.
+    final prefs = await SharedPreferences.getInstance();
+    final last = prefs.getInt(_unlockedAtKey) ?? 0;
+    if (DateTime.now().millisecondsSinceEpoch - last < _unlockGrace.inMilliseconds) {
+      if (mounted) setState(() => _unlocked = true);
+      return;
+    }
+
+    // Opened by a ringing call: show the call, ask after it ends.
+    await AppNotifications.launchChecked
+        .timeout(const Duration(seconds: 2), onTimeout: () {});
+    if (AppNotifications.hasPendingCall || _calls?.current != null) return;
+
+    if (!mounted) return;
     setState(() => _authenticating = true);
     final ok = await BiometricService.authenticate();
+    if (ok) {
+      await prefs.setInt(_unlockedAtKey, DateTime.now().millisecondsSinceEpoch);
+    }
     if (mounted) {
       setState(() {
         _authenticating = false;
@@ -322,6 +367,9 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
       });
     }
   }
+
+  static const _unlockedAtKey = 'kp_unlocked_at';
+  static const _unlockGrace = Duration(minutes: 15);
 
   @override
   Widget build(BuildContext context) {
@@ -331,6 +379,29 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
     final calls = context.read<CallService?>();
     final palette =
         context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
+
+    // Bound before the lock check so calls ring and open while locked.
+    if (chat != null && s.family != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        chat.syncContext(
+          familyId: s.familyId,
+          myId: s.myId,
+          members: s.members,
+          onTapSender: (senderId) => nav.openChat(senderId),
+        );
+        // Incoming calls ring while the app is open.
+        calls?.bind(familyId: s.familyId, myId: s.myId);
+        // ...and by push when it is closed: tapping or answering that ring,
+        // or a ring arriving while open, lands in the incoming-call screen.
+        if (calls != null) {
+          PushService.onCall = calls.openFromPush;
+          AppNotifications.onCallAction =
+              (id, answer) => calls.openFromPush(id, answer: answer);
+        }
+        unawaited(PushService.register(Supabase.instance.client));
+        unawaited(_askCallFullScreenOnce());
+      });
+    }
 
     if (!_unlocked && s.prefs.lockApp && !kIsWeb) {
       return Scaffold(
@@ -412,28 +483,6 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
           ),
         ),
       );
-    }
-
-    if (chat != null && s.family != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        chat.syncContext(
-          familyId: s.familyId,
-          myId: s.myId,
-          members: s.members,
-          onTapSender: (senderId) => nav.openChat(senderId),
-        );
-        // Incoming calls ring while the app is open.
-        calls?.bind(familyId: s.familyId, myId: s.myId);
-        // ...and by push when it is closed: tapping or answering that ring,
-        // or a ring arriving while open, lands in the incoming-call screen.
-        if (calls != null) {
-          PushService.onCall = calls.openFromPush;
-          AppNotifications.onCallAction =
-              (id, answer) => calls.openFromPush(id, answer: answer);
-        }
-        unawaited(PushService.register(Supabase.instance.client));
-        unawaited(_askCallFullScreenOnce());
-      });
     }
 
     WidgetsBinding.instance

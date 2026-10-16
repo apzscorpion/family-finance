@@ -143,6 +143,13 @@ class AppNotifications {
     }
   }
 
+  /// A ring is waiting for the call screen (the app was opened by one).
+  static bool get hasPendingCall => _pendingCall != null;
+
+  /// Completes once the cold-start launch details have been read.
+  static Future<void> get launchChecked => _launchChecked ??= checkLaunchedByPrayer();
+  static Future<void>? _launchChecked;
+
   static void _deliverCall(String callId, bool answer) {
     final handler = _onCall;
     if (handler != null) {

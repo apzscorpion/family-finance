@@ -330,11 +330,16 @@ class ThemeController extends ChangeNotifier {
   KpThemeId _themeId = KpThemeId.dark;
   bool _matchDevice = false;
   bool _reduceMotion = false;
+  double _textScale = 1.0;
+
+  /// App-wide text size, multiplied on top of the phone's own font size.
+  static const textScales = [0.9, 1.0, 1.1, 1.25];
 
   KpThemeId get themeId => _themeId;
   NocturnePalette get palette => NocturnePalette.forTheme(_themeId);
   bool get matchDevice => _matchDevice;
   bool get reduceMotion => _reduceMotion;
+  double get textScale => _textScale;
 
   Future<void> load() async {
     try {
@@ -342,6 +347,8 @@ class ThemeController extends ChangeNotifier {
       final id = prefs.getString('kp_theme_id') ?? 'dark';
       _matchDevice = prefs.getBool('kp_match_device') ?? false;
       _reduceMotion = prefs.getBool('kp_reduce_motion') ?? false;
+      final scale = prefs.getDouble('kp_text_scale') ?? 1.0;
+      _textScale = textScales.contains(scale) ? scale : 1.0;
       _themeId = KpThemeId.values.firstWhere(
         (t) => t.id == id,
         orElse: () => KpThemeId.dark,
@@ -387,12 +394,19 @@ class ThemeController extends ChangeNotifier {
     _save();
   }
 
+  void setTextScale(double scale) {
+    _textScale = scale;
+    notifyListeners();
+    _save();
+  }
+
   Future<void> _save() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('kp_theme_id', _themeId.id);
       await prefs.setBool('kp_match_device', _matchDevice);
       await prefs.setBool('kp_reduce_motion', _reduceMotion);
+      await prefs.setDouble('kp_text_scale', _textScale);
     } catch (_) {}
   }
 }

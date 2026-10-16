@@ -796,6 +796,30 @@ class _SettingsV3State extends State<SettingsV3> {
             ],
           ),
         ),
+        _Kicker('TEXT SIZE', palette: palette),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              for (final (i, label)
+                  in const ['Small', 'Default', 'Large', 'Extra large'].indexed) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: _TextSizeChip(
+                    key: ValueKey('text_size_$i'),
+                    label: label,
+                    sample: 13 + i * 3.0,
+                    selected:
+                        themeCtrl.textScale == ThemeController.textScales[i],
+                    palette: palette,
+                    onTap: () =>
+                        themeCtrl.setTextScale(ThemeController.textScales[i]),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
         _Kicker('BEHAVIOUR', palette: palette),
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -2684,4 +2708,66 @@ Future<void> _pickHiddenFrom(BuildContext context, V3State s) async {
     ),
   );
   if (ok == true) await s.setHiddenFrom(chosen.toList());
+}
+
+class _TextSizeChip extends StatelessWidget {
+  final String label;
+  final double sample;
+  final bool selected;
+  final NocturnePalette palette;
+  final VoidCallback onTap;
+
+  const _TextSizeChip({
+    super.key,
+    required this.label,
+    required this.sample,
+    required this.selected,
+    required this.palette,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected
+                ? palette.accent.withValues(alpha: 0.18)
+                : palette.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: selected ? palette.accent : palette.line),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Fixed size so the samples compare at any text scale.
+              Text(
+                'Aa',
+                textScaler: TextScaler.noScaling,
+                style: TextStyle(
+                  fontSize: sample,
+                  fontWeight: FontWeight.w700,
+                  color: palette.text,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: palette.muted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

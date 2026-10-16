@@ -39,7 +39,7 @@ Future<bool> requestFullScreenPrayerAlerts() =>
 /// the app or arrived before this was called.
 Future<void> listenForPrayerAlerts(void Function(String slot) show) async {
   AppNotifications.onPrayerAlert = show;
-  await AppNotifications.checkLaunchedByPrayer();
+  await AppNotifications.launchChecked;
   final pending = AppNotifications.pendingPrayerAlert;
   AppNotifications.pendingPrayerAlert = null;
   if (pending != null) show(pending);

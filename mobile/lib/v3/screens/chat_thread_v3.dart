@@ -846,9 +846,8 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                     child: Container(
                       constraints: const BoxConstraints(
                         minHeight: _kComposerHeight,
-                        maxHeight: 140,
+                        maxHeight: 120,
                       ),
-                      alignment: Alignment.centerLeft,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
                         color: Nocturne.palette.bg,
@@ -859,7 +858,12 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                           width: 1,
                         ),
                       ),
-                      child: _recording
+                      // heightFactor keeps the box at its content height;
+                      // a plain alignment would stretch it to maxHeight.
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        heightFactor: 1,
+                        child: _recording
                           ? Row(
                               key: const ValueKey('chat_recording_indicator'),
                               children: [
@@ -898,7 +902,7 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                               key: const ValueKey('chat_composer_field'),
                               controller: _ctrl,
                               minLines: 1,
-                              maxLines: 5,
+                              maxLines: 4,
                               textInputAction: TextInputAction.send,
                               onChanged: (val) {
                                 if (val.trim().isNotEmpty) {
@@ -923,6 +927,7 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                                     const EdgeInsets.symmetric(vertical: 12),
                               ),
                             ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
