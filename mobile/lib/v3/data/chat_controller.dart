@@ -718,6 +718,8 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
   void _maybeNotifyIncoming(DirectMessageRow row) {
     final me = _myId;
     if (me == null || row.recipientId != me || row.senderId == me) return;
+    // The callee already saw the call itself; only a missed one alerts.
+    if (row.isCall && !row.body.startsWith('Missed')) return;
 
     final senderName = _memberNames[row.senderId] ?? 'Family member';
     final isViewingThreadInForeground =

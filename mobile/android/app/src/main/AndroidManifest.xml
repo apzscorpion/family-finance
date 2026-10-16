@@ -31,7 +31,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
 
     <!-- Explicitly strip any sensitive permissions that trigger Google Play Protect blocks -->
-    <!-- Voice assistant: in-app speech recognition, asked for on first use. -->
+    <!-- Voice assistant speech recognition and family calls; asked for on
+         first use. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove"/>
     <uses-permission android:name="android.permission.INSTALL_PACKAGES" tools:node="remove"/>
@@ -43,10 +44,15 @@
          GPS-grade accuracy — a city-sized fix drives prayer times fine — so it
          is stripped to keep the permission list as small as possible. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove"/>
-    <!-- image_picker hands off to the system camera app via ACTION_IMAGE_CAPTURE,
-         so the app itself never needs camera access. Stripped in case a
-         transitive manifest adds it, which would force a runtime prompt. -->
-    <uses-permission android:name="android.permission.CAMERA" tools:node="remove"/>
+    <!-- Family video calls stream the camera (WebRTC), asked for when a video
+         call starts. Trade-off: once declared, Android also makes the system
+         camera hand-off (bill capture via image_picker) ask for it first. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
+    <!-- Calls: route audio to the earpiece or the loudspeaker. Normal
+         permission, never prompts. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
 
     <application
         android:label="KinPurse"

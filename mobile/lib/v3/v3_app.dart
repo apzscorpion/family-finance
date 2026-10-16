@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/nocturne.dart';
 import '../theme/nocturne_palette.dart';
 import 'data/bill_scan.dart';
+import 'data/call_service.dart';
 import 'data/card_scan.dart';
 import 'data/chat_controller.dart';
 import 'data/notes_presence.dart';
@@ -22,6 +23,7 @@ import 'screens/activity_v3.dart';
 import 'screens/ai_settings_v3.dart';
 import 'screens/ask_kinpurse_v3.dart';
 import 'screens/auth_v3.dart';
+import 'screens/call_v3.dart';
 import 'screens/cards_v3.dart';
 import 'screens/chat_list_v3.dart';
 import 'screens/detected_v3.dart';
@@ -87,6 +89,11 @@ class V3App extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => ChatController(repo, db),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) => CallService(db, ctx.read<ChatController>())
+            ..present = (session) =>
+                navigatorKey.currentState?.push(CallScreenV3.route(session)),
         ),
         // Loads its own device-local config. Builds nothing and runs no timer
         // until the feature is switched on.
@@ -270,6 +277,7 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
     final nav = context.watch<V3Nav>();
     final s = context.watch<V3State>();
     final chat = context.read<ChatController?>();
+    final calls = context.read<CallService?>();
     final palette =
         context.watch<ThemeController?>()?.palette ?? Nocturne.palette;
 
@@ -363,6 +371,8 @@ class _V3ShellState extends State<V3Shell> with WidgetsBindingObserver {
           members: s.members,
           onTapSender: (senderId) => nav.openChat(senderId),
         );
+        // Incoming calls ring while the app is open.
+        calls?.bind(familyId: s.familyId, myId: s.myId);
       });
     }
 
