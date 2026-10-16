@@ -57,7 +57,8 @@ dependencies:
   geolocator: ^13.0.2
 
   # Bill capture hands off to the system camera app rather than embedding a
-  # preview, so there is no CAMERA permission and no GPU preview pipeline.
+  # preview. (CAMERA is declared for video calls, so Android asks for it
+  # before the hand-off too.)
   image_picker: ^1.1.2
 
   # "Scan card": on-device OCR of a card photo. Offline; the image never
@@ -71,6 +72,9 @@ dependencies:
   # "Download" on a chat photo saves it into the gallery via MediaStore, so
   # Android 10+ needs no storage permission.
   gal: ^2.3.3
+  # Family voice and video calls (WebRTC). Peer to peer; signaling rides
+  # the existing Supabase Realtime connection.
+  flutter_webrtc: ^1.6.2+hotfix.4
 
   # Chat voice messages: record (AAC .m4a on Android, browser MediaRecorder
   # on web; RECORD_AUDIO is already declared) and just_audio for inline

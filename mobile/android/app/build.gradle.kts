@@ -23,6 +23,17 @@ android {
         versionName = flutter.versionName
     }
 
+    // flutter_webrtc's native library ships every ABI (~35 MB). Flutter's
+    // --target-platform only trims its own libraries (and resets abiFilters),
+    // so drop the other ABIs for an arm64-only build.
+    if (project.findProperty("target-platform") == "android-arm64") {
+        packaging {
+            jniLibs {
+                excludes += listOf("lib/armeabi-v7a/**", "lib/x86_64/**", "lib/x86/**")
+            }
+        }
+    }
+
     // Google's enhanced sideloading protection refuses to install an APK that
     // declares BIND_NOTIFICATION_LISTENER_SERVICE when it comes from a browser
     // or file manager, with "App blocked to protect your device". It is a

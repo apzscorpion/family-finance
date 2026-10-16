@@ -11,12 +11,15 @@ import 'package:record/record.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../theme/nocturne.dart';
+import '../data/call_logic.dart';
+import '../data/call_service.dart';
 import '../data/chat_controller.dart';
 import '../data/chat_media.dart';
 import '../data/chat_media_io.dart'
     if (dart.library.js_interop) '../data/chat_media_web.dart';
 import '../data/v3_models.dart';
 import '../data/v3_repository.dart';
+import '../phosphor_catalog.dart';
 import '../phosphor_icons.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
@@ -214,6 +217,43 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
       );
     }
   }
+
+  Future<void> _call(CallKind kind) async {
+    final calls = context.read<CallService?>();
+    final started = await calls?.start(widget.partner, kind);
+    if (started == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Finish the current call first')),
+      );
+    }
+  }
+
+  Widget _headerButton({
+    required Key key,
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) =>
+      Tooltip(
+        message: tooltip,
+        child: GestureDetector(
+          key: key,
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Nocturne.palette.surface,
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: Nocturne.palette.edge, width: 1),
+            ),
+            child: Icon(icon, size: 17, color: color),
+          ),
+        ),
+      );
 
   Future<void> _pickAndSendImage(
     ImageSource source, {
@@ -640,6 +680,24 @@ class _ChatThreadV3State extends State<ChatThreadV3> {
                       ],
                     ),
                   ),
+                  if (context.read<CallService?>() != null) ...[
+                    _headerButton(
+                      key: const ValueKey('chat_voice_call_button'),
+                      icon: phosphorCatalog['phone']!,
+                      color: Nocturne.palette.income,
+                      tooltip: 'Voice call',
+                      onTap: () => _call(CallKind.audio),
+                    ),
+                    const SizedBox(width: 6),
+                    _headerButton(
+                      key: const ValueKey('chat_video_call_button'),
+                      icon: phosphorCatalog['video-camera']!,
+                      color: Nocturne.palette.accentLight,
+                      tooltip: 'Video call',
+                      onTap: () => _call(CallKind.video),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   GestureDetector(
                     key: const ValueKey('chat_poke_button'),
                     onTap: _poke,
@@ -1003,6 +1061,9 @@ class _MessageBubble extends StatelessWidget {
                 if (showBody) const SizedBox(height: 6),
               ],
               if (showBody)
+                if (message.isCall)
+                  _CallLogLine(message: message, isMine: isMine)
+                else
                 Text(
                   message.body,
                   style: TextStyle(
@@ -1067,6 +1128,44 @@ class _MessageBubble extends StatelessWidget {
     final m = dt.minute.toString().padLeft(2, '0');
     final ampm = dt.hour >= 12 ? 'PM' : 'AM';
     return '$h:$m $ampm';
+  }
+}
+
+/// "Voice call · 2:31" / "Missed video call" with a phone or camera icon.
+class _CallLogLine extends StatelessWidget {
+  final DirectMessageRow message;
+  final bool isMine;
+  const _CallLogLine({required this.message, required this.isMine});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Nocturne.palette;
+    final missed = !isMine && message.body.startsWith('Missed');
+    final video = message.body.contains('video');
+    final color = missed ? p.expense : (isMine ? p.accentLight : p.text);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          phosphorCatalog[missed
+              ? 'phone-x'
+              : (video ? 'video-camera' : (isMine ? 'phone-outgoing' : 'phone-incoming'))]!,
+          size: 16,
+          color: color,
+        ),
+        const SizedBox(width: 7),
+        Flexible(
+          child: Text(
+            callLogForViewer(message.body, isCaller: isMine),
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

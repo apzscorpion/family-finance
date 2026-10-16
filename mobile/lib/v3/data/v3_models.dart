@@ -1073,6 +1073,7 @@ class DirectMessageRow {
   bool get isRead => readAt != null;
   bool get hasMedia => mediaPath != null && mediaPath!.isNotEmpty;
   bool get isPoke => kind == 'poke';
+  bool get isCall => kind == 'call';
   bool get isImage =>
       kind == 'image' && imageData != null && imageData!.isNotEmpty;
 
