@@ -14,7 +14,9 @@ const DEFAULT_LIMIT = Number(Deno.env.get("AI_DAILY_LIMIT") ?? "30");
 const adminEmails = () =>
   (Deno.env.get("ADMIN_EMAILS") ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
-type Model = { id: string; label: string; vision: boolean };
+// auto: tried automatically; otherwise only when a member picks it (and an
+// owner or admin approved it).
+type Model = { id: string; label: string; vision: boolean; auto?: boolean };
 
 // Only providers whose key is set on the server are offered.
 function catalog(): Model[] {
@@ -28,8 +30,9 @@ function catalog(): Model[] {
     out.push({ id: "openrouter:anthropic/claude-haiku-5.5", label: "Claude Haiku 5.5 (low cost)", vision: true });
   }
   if (Deno.env.get("NVIDIA_API_KEY")) {
-    // NVIDIA's API catalog: free developer access, rate limited.
-    out.push({ id: "nvidia:meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B (NVIDIA)", vision: false });
+    // NVIDIA's free catalog was too slow in testing (60 s timeouts), so it
+    // is opt-in only. shortcut: make it automatic once it answers quickly.
+    out.push({ id: "nvidia:nvidia/nemotron-3.5-lightning-30b-a3b", label: "Nemotron 3.5 Lightning (NVIDIA)", vision: false, auto: false });
   }
   if (Deno.env.get("OPENAI_API_KEY")) {
     out.push({ id: "openai:gpt-4o-mini", label: "GPT-4o mini (OpenAI)", vision: true });
@@ -58,6 +61,7 @@ async function callGemini(model: string, b: any): Promise<Response> {
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: "POST",
+      signal: AbortSignal.timeout(15000),
       headers: {
         "Content-Type": "application/json",
         "x-goog-api-key": Deno.env.get("GEMINI_API_KEY") ?? "",
@@ -102,6 +106,8 @@ async function callOpenAiStyle(provider: string, model: string, b: any): Promise
     : String(b.input ?? "");
   return await fetch(p.url, {
     method: "POST",
+    // One slow provider must not stall the answer; the next one is tried.
+    signal: AbortSignal.timeout(15000),
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${Deno.env.get(p.key) ?? ""}`,
@@ -222,7 +228,7 @@ Deno.serve(async (req) => {
   const pick = typeof body.model === "string" && allowed.includes(body.model)
     ? models.filter((m) => m.id === body.model)
     : [];
-  const order = [...pick, ...models.filter((m) => m.id !== pick[0]?.id)]
+  const order = [...pick, ...models.filter((m) => m.id !== pick[0]?.id && m.auto !== false)]
     .filter((m) => !body.image || m.vision);
 
   let last = "The AI service is busy. Please try again shortly.";

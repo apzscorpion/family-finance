@@ -99,8 +99,9 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
     _running = true;
     while (_running && mounted) {
       _setPhase(_Phase.listening);
-      final text = await VoiceService.promptVoiceInput(
+      final text = await VoiceService.listen(
         prompt: _pending != null ? 'Say yes or no' : 'Listening…',
+        hints: _hints(),
       );
       if (!mounted || !_running) break;
       // Dismissed or silence: end the loop rather than reopen the dialog.
@@ -112,8 +113,21 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
     _setPhase(_Phase.idle);
   }
 
+  /// Words the recognizer should expect: accounts, categories, people.
+  List<String> _hints() {
+    final s = context.read<V3State>();
+    return [
+      if (_pending != null) ...['yes', 'no', 'cancel'],
+      for (final x in s.sources) x.name,
+      for (final c in s.categories) c.name,
+      for (final m in s.members) m.name,
+      'rupees',
+    ];
+  }
+
   void _stop() {
     _running = false;
+    VoiceService.cancel();
     _tts.stop();
     _setPhase(_Phase.idle);
   }
@@ -470,6 +484,36 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
               ),
             ],
           ),
+          // Live: what's being heard, and how loud, so you know it's working.
+          if (_phase == _Phase.listening) ...[
+            const SizedBox(height: 8),
+            ValueListenableBuilder<double>(
+              valueListenable: VoiceService.level,
+              builder: (_, v, _) => ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: v,
+                  minHeight: 4,
+                  color: p.accent,
+                  backgroundColor: p.edge,
+                ),
+              ),
+            ),
+            ValueListenableBuilder<String>(
+              valueListenable: VoiceService.partial,
+              builder: (_, t, _) => t.isEmpty
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('"$t"',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontStyle: FontStyle.italic,
+                              color: p.text)),
+                    ),
+            ),
+          ],
           const SizedBox(height: 12),
           Semantics(
             button: true,

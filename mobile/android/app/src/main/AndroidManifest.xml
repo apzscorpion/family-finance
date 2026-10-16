@@ -31,6 +31,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
 
     <!-- Explicitly strip any sensitive permissions that trigger Google Play Protect blocks -->
+    <!-- Voice assistant: in-app speech recognition, asked for on first use. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove"/>
     <uses-permission android:name="android.permission.INSTALL_PACKAGES" tools:node="remove"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>

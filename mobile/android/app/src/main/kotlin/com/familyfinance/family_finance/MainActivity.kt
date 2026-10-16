@@ -33,6 +33,9 @@ class MainActivity : FlutterFragmentActivity() {
     private val VOICE_REQ = 4092
     private var pendingResult: MethodChannel.Result? = null
     private var pendingVoiceResult: MethodChannel.Result? = null
+    private var inAppSpeech: InAppSpeech? = null
+    private var pendingMic: Triple<String, List<String>, MethodChannel.Result>? = null
+    private val MIC_REQ = 4093
     private var sharedTextFromIntent: String? = null
     private var sharedImagePath: String? = null
 
@@ -185,9 +188,35 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, VOICE_CHANNEL)
+        val voiceChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, VOICE_CHANNEL)
+        inAppSpeech = InAppSpeech(this, voiceChannel)
+        voiceChannel
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "listenInApp" -> {
+                        val speech = inAppSpeech
+                        if (speech == null || !speech.available) {
+                            result.error("UNAVAILABLE", "Speech recognition not available", null)
+                            return@setMethodCallHandler
+                        }
+                        val lang = call.argument<String>("lang") ?: "en-IN"
+                        val hints = call.argument<List<String>>("hints") ?: emptyList()
+                        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+                            android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                            speech.listen(lang, hints, result)
+                        } else {
+                            pendingMic = Triple(lang, hints, result)
+                            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), MIC_REQ)
+                        }
+                    }
+                    "stopListening" -> {
+                        inAppSpeech?.stop()
+                        result.success(null)
+                    }
+                    "cancelListening" -> {
+                        inAppSpeech?.cancel()
+                        result.success(null)
+                    }
                     "listen" -> {
                         if (pendingVoiceResult != null) {
                             result.error("BUSY", "Voice recognition already listening", null)
@@ -328,6 +357,25 @@ class MainActivity : FlutterFragmentActivity() {
                 null
             }
         }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != MIC_REQ) return
+        val (lang, hints, result) = pendingMic ?: return
+        pendingMic = null
+        if (grantResults.firstOrNull() == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            inAppSpeech?.listen(lang, hints, result)
+        } else {
+            result.error("NO_PERMISSION", "Microphone not allowed", null)
+        }
+    }
+
+    override fun onDestroy() {
+        inAppSpeech?.destroy()
+        super.onDestroy()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
