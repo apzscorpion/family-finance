@@ -10,6 +10,7 @@ import '../../services/app_log.dart';
 import '../../services/update_service.dart';
 import '../../theme/nocturne.dart';
 import '../../theme/nocturne_palette.dart';
+import '../data/avatar_image.dart';
 import '../data/data_export.dart';
 import '../data/prayer/prayer_controller.dart';
 import '../data/v3_models.dart';
@@ -19,6 +20,7 @@ import '../sheets/v3_sheets.dart';
 import '../v3_design.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
+import '../widgets/v3_primitives.dart';
 import 'categories_manager_v3.dart';
 import 'import_v3.dart';
 import 'sources_manager_v3.dart';
@@ -227,6 +229,20 @@ class _SettingsV3State extends State<SettingsV3> {
       _SettingsGroup(
         title: 'General',
         rows: [
+          _SettingsRowDef(
+            icon: PhRegular.camera,
+            label: 'Profile photo',
+            value: me?.avatarPath != null ? 'Set' : 'Add',
+            keywords: 'profile photo picture avatar dp image',
+            onTap: () => _showPhotoOptions(context, s),
+          ),
+          _SettingsRowDef(
+            icon: PhRegular.quotes,
+            label: 'About',
+            value: me?.about ?? 'Add',
+            keywords: 'about status bio profile line',
+            onTap: () => _showAboutDialog(context, s),
+          ),
           _SettingsRowDef(
             icon: PhRegular.palette,
             label: 'Appearance',
@@ -529,14 +545,21 @@ class _SettingsV3State extends State<SettingsV3> {
                         ],
                       ),
                     ),
-                    child: Text(
-                      me?.initial ?? '?',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFE9E9ED),
-                      ),
-                    ),
+                    child: me?.avatarUrl != null
+                        ? V3Avatar(
+                            imageUrl: me!.avatarUrl,
+                            initial: me.initial,
+                            color: me.color,
+                            size: 48,
+                            fontSize: 18)
+                        : Text(
+                            me?.initial ?? '?',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFE9E9ED),
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1297,6 +1320,129 @@ class _SettingsV3State extends State<SettingsV3> {
                 Navigator.pop(ctx);
                 await s.renameMe(val);
               }
+            },
+            child: const Text('Save',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void _showPhotoOptions(BuildContext context, V3State s) {
+    final messenger = ScaffoldMessenger.of(context);
+    final palette = NocturnePalette.current;
+
+    Future<void> pick() async {
+      try {
+        // Native downscale first so the pure-Dart crop stays quick.
+        final file = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+        if (file == null) return;
+        final jpeg = await compute(squareAvatarJpeg, await file.readAsBytes());
+        if (jpeg == null) {
+          messenger.showSnackBar(
+              const SnackBar(content: Text('That file is not a photo.')));
+          return;
+        }
+        final ok = await s.setMyAvatar(jpeg);
+        messenger.showSnackBar(SnackBar(
+            content: Text(ok
+                ? 'Profile photo updated.'
+                : 'Could not upload — check your connection.')));
+      } catch (err, stack) {
+        AppLog.error('Settings.pickAvatar', err, stack);
+      }
+    }
+
+    if (s.me?.avatarPath == null) {
+      pick();
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: palette.surface,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(PhRegular.image, color: palette.text),
+              title: Text('Choose new photo',
+                  style: TextStyle(color: palette.text)),
+              onTap: () {
+                Navigator.pop(ctx);
+                pick();
+              },
+            ),
+            ListTile(
+              leading: Icon(PhRegular.trash, color: palette.expense),
+              title: Text('Remove photo',
+                  style: TextStyle(color: palette.expense)),
+              onTap: () {
+                Navigator.pop(ctx);
+                s.setMyAvatar(null);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static void _showAboutDialog(BuildContext context, V3State s) {
+    final ctrl = TextEditingController(text: s.me?.about ?? '');
+    final palette = NocturnePalette.current;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: palette.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: palette.edge, width: 1),
+        ),
+        title: Text('About',
+            style: TextStyle(
+                color: palette.text,
+                fontSize: 18,
+                fontWeight: FontWeight.w600)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: 140,
+          style: TextStyle(color: palette.text),
+          decoration: InputDecoration(
+            hintText: 'e.g. Saving for Hajj',
+            hintStyle: TextStyle(color: palette.muted),
+            counterStyle: TextStyle(color: palette.muted),
+            filled: true,
+            fillColor: palette.raised,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: palette.subtle)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: palette.tint,
+              foregroundColor: palette.accentLight,
+              side: BorderSide(color: palette.tintEdge, width: 1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await s.setMyAbout(ctrl.text);
             },
             child: const Text('Save',
                 style: TextStyle(fontWeight: FontWeight.w600)),

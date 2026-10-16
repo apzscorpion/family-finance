@@ -343,6 +343,7 @@ class _OnlineMembersStrip extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 AvatarWithOnlineDot(
+                  imageUrl: partner.avatarUrl,
                   initial: partner.initial,
                   color: partner.color,
                   size: 46,
@@ -384,6 +385,7 @@ class AvatarWithOnlineDot extends StatelessWidget {
   final bool isOnline;
   final bool showOfflineDot;
   final Key? dotKey;
+  final String? imageUrl;
 
   const AvatarWithOnlineDot({
     super.key,
@@ -394,6 +396,7 @@ class AvatarWithOnlineDot extends StatelessWidget {
     required this.isOnline,
     this.showOfflineDot = true,
     this.dotKey,
+    this.imageUrl,
   });
 
   @override
@@ -403,6 +406,7 @@ class AvatarWithOnlineDot extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         V3Avatar(
+          imageUrl: imageUrl,
           initial: initial,
           color: color,
           size: size,
@@ -480,6 +484,7 @@ class _ThreadTile extends StatelessWidget {
         child: Row(
           children: [
             AvatarWithOnlineDot(
+              imageUrl: partner.avatarUrl,
               initial: partner.initial,
               color: partner.color,
               size: 42,

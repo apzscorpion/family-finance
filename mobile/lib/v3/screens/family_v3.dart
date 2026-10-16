@@ -615,6 +615,7 @@ class _MemberRowTile extends StatelessWidget {
       child: Row(
         children: [
           V3Avatar(
+              imageUrl: m.avatarUrl,
               initial: m.initial,
               color: m.color,
               size: 38,
@@ -998,19 +999,32 @@ class _SharedWithSheetState extends State<SharedWithSheet> {
             Row(
               children: [
                 V3Avatar(
+                    imageUrl: other?.avatarUrl,
                     initial: other?.initial ?? '?',
                     color: other?.color ?? palette.accent,
                     size: 40,
                     fontSize: 15),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('You & $name',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: palette.text)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('You & $name',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: palette.text)),
+                      if (other?.about != null)
+                        Text(other!.about!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                TextStyle(fontSize: 12.5, color: palette.subtle)),
+                    ],
+                  ),
                 ),
               ],
             ),

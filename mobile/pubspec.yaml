@@ -77,6 +77,8 @@ dependencies:
   # playback from a signed Storage URL. Neither adds a permission.
   record: ^7.1.2
   just_audio: ^0.10.6
+  # Profile photos: centre-crop to a square and re-encode as a small JPEG.
+  image: ^4.3.0
 
 dev_dependencies:
   flutter_test:

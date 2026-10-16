@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/supabase_service.dart';
 import '../v3_design.dart';
 import 'note_blocks.dart';
 
@@ -57,6 +58,11 @@ class MemberRow {
   final int? aiDailyLimit;
   final List<String> aiModels;
 
+  /// Profile photo in the public `avatars` bucket, and the short About line.
+  final String? avatarPath;
+  final DateTime? avatarUpdatedAt;
+  final String? about;
+
   const MemberRow({
     required this.userId,
     required this.name,
@@ -71,6 +77,9 @@ class MemberRow {
     this.hiddenFrom = const [],
     this.aiDailyLimit,
     this.aiModels = const [],
+    this.avatarPath,
+    this.avatarUpdatedAt,
+    this.about,
   });
 
   factory MemberRow.fromJson(Map<String, dynamic> j) {
@@ -81,6 +90,11 @@ class MemberRow {
     final upi = profile is Map
         ? profile['upi_id']?.toString()
         : j['upi_id']?.toString();
+    String? prof(String k) {
+      final v = (profile is Map ? profile[k] : j[k])?.toString().trim();
+      return (v == null || v.isEmpty) ? null : v;
+    }
+
     final isProtected = profile is Map
         ? (profile['is_protected_member'] as bool?)
         : (j['is_protected_member'] as bool?);
@@ -104,8 +118,17 @@ class MemberRow {
       aiModels: [
         for (final m in (j['ai_models'] as List?) ?? const []) m.toString()
       ],
+      avatarPath: prof('avatar_path'),
+      avatarUpdatedAt: DateTime.tryParse(prof('avatar_updated_at') ?? ''),
+      about: prof('about'),
     );
   }
+
+  /// Public URL of the photo; `?v=` changes on every upload so caches refresh.
+  String? get avatarUrl => avatarPath == null
+      ? null
+      : '${SupabaseService.supabaseUrl}/storage/v1/object/public/avatars/'
+          '$avatarPath?v=${avatarUpdatedAt?.millisecondsSinceEpoch ?? 0}';
 
   String get initial => name.isEmpty ? '?' : name[0].toUpperCase();
   Color get color => V3Design.hue(hue);

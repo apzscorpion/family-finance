@@ -381,6 +381,7 @@ class _InsightsV3State extends State<InsightsV3> {
                         child: Row(
                           children: [
                             V3Avatar(
+                              imageUrl: p.m.avatarUrl,
                               initial: p.m.initial,
                               color: p.m.color,
                               size: 30,

@@ -781,6 +781,7 @@ class _AddRecurringDialogState extends State<_AddRecurringDialog> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         V3Avatar(
+                                          imageUrl: m.avatarUrl,
                                           initial: m.initial,
                                           color: m.color,
                                           size: 22,
