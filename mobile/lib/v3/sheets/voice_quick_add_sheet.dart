@@ -47,6 +47,7 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
   _Phase _phase = _Phase.idle;
   bool _running = false;
   AiConfig _config = const AiConfig();
+  VoiceLang _lang = VoiceLang.english;
 
   /// An add waiting for yes or no.
   VoiceAction? _pending;
@@ -64,6 +65,7 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
       AppLog.error('VoiceSheet.tts', err);
     }
     _config = await AiConfigStore.load();
+    _lang = await VoiceLang.load();
     if (!mounted) return;
     if (!_config.isConfigured) {
       _add(false,
@@ -102,6 +104,8 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
       final text = await VoiceService.listen(
         prompt: _pending != null ? 'Say yes or no' : 'Listening…',
         hints: _hints(),
+        lang: _lang.code,
+        mixed: _lang.switches,
       );
       if (!mounted || !_running) break;
       // Dismissed or silence: end the loop rather than reopen the dialog.
@@ -138,6 +142,9 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
     if (!_running) return;
     _setPhase(_Phase.speaking);
     try {
+      // Malayalam replies in the phone's Malayalam voice, the rest in English.
+      await _tts.setLanguage(
+          VoiceAssistant.isMalayalam(text) ? 'ml-IN' : 'en-IN');
       await _tts.speak(VoiceAssistant.forSpeech(text));
     } catch (err) {
       AppLog.error('VoiceSheet.speak', err);
@@ -369,6 +376,36 @@ class _VoiceQuickAddSheetState extends State<VoiceQuickAddSheet> {
                 ),
               ),
               const Spacer(),
+              PopupMenuButton<VoiceLang>(
+                tooltip: 'Language',
+                color: p.surface,
+                initialValue: _lang,
+                onSelected: (l) {
+                  setState(() => _lang = l);
+                  l.save();
+                },
+                itemBuilder: (_) => [
+                  for (final l in VoiceLang.values)
+                    PopupMenuItem(
+                      value: l,
+                      child: Text(
+                          l == VoiceLang.mixed
+                              ? 'Mixed (Malayalam + English)'
+                              : l.label,
+                          style: TextStyle(color: p.text)),
+                    ),
+                ],
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: p.edge),
+                  ),
+                  child: Text(_lang.label,
+                      style: TextStyle(fontSize: 12.5, color: p.accent)),
+                ),
+              ),
               IconButton(
                 tooltip: 'Close',
                 icon: Icon(PhRegular.x, size: 20, color: p.subtle),

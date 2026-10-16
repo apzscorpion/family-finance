@@ -34,7 +34,7 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingResult: MethodChannel.Result? = null
     private var pendingVoiceResult: MethodChannel.Result? = null
     private var inAppSpeech: InAppSpeech? = null
-    private var pendingMic: Triple<String, List<String>, MethodChannel.Result>? = null
+    private var pendingMic: Triple<Pair<String, Boolean>, List<String>, MethodChannel.Result>? = null
     private val MIC_REQ = 4093
     private var sharedTextFromIntent: String? = null
     private var sharedImagePath: String? = null
@@ -201,11 +201,12 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                         val lang = call.argument<String>("lang") ?: "en-IN"
                         val hints = call.argument<List<String>>("hints") ?: emptyList()
+                        val mixed = call.argument<Boolean>("mixed") ?: false
                         if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
                             android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                            speech.listen(lang, hints, result)
+                            speech.listen(lang, hints, mixed, result)
                         } else {
-                            pendingMic = Triple(lang, hints, result)
+                            pendingMic = Triple(Pair(lang, mixed), hints, result)
                             requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), MIC_REQ)
                         }
                     }
@@ -364,10 +365,10 @@ class MainActivity : FlutterFragmentActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != MIC_REQ) return
-        val (lang, hints, result) = pendingMic ?: return
+        val (langMix, hints, result) = pendingMic ?: return
         pendingMic = null
         if (grantResults.firstOrNull() == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            inAppSpeech?.listen(lang, hints, result)
+            inAppSpeech?.listen(langMix.first, hints, langMix.second, result)
         } else {
             result.error("NO_PERMISSION", "Microphone not allowed", null)
         }

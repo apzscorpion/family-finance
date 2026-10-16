@@ -25,7 +25,8 @@ class InAppSpeech(private val context: Context, private val channel: MethodChann
 
     val available: Boolean get() = SpeechRecognizer.isRecognitionAvailable(context)
 
-    fun listen(lang: String, hints: List<String>, result: MethodChannel.Result) {
+    /** [mixed]: Malayalam and English in one sentence; Android 14+ switches between them. */
+    fun listen(lang: String, hints: List<String>, mixed: Boolean, result: MethodChannel.Result) {
         if (pending != null) {
             result.error("BUSY", "Already listening", null)
             return
@@ -81,6 +82,17 @@ class InAppSpeech(private val context: Context, private val channel: MethodChann
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L)
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1500L)
+            if (mixed && Build.VERSION.SDK_INT >= 34) {
+                putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_DETECTION, true)
+                putStringArrayListExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE_DETECTION_ALLOWED_LANGUAGES,
+                    arrayListOf("ml-IN", "en-IN")
+                )
+                putExtra(
+                    RecognizerIntent.EXTRA_ENABLE_LANGUAGE_SWITCH,
+                    RecognizerIntent.LANGUAGE_SWITCH_BALANCED
+                )
+            }
             if (Build.VERSION.SDK_INT >= 33 && hints.isNotEmpty()) {
                 putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, ArrayList(hints.take(100)))
             }

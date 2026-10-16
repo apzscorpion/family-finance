@@ -39,13 +39,14 @@ class VoiceService {
     String? prompt,
     List<String> hints = const [],
     String lang = 'en-IN',
+    bool mixed = false,
   }) async {
     _wire();
     partial.value = '';
     level.value = 0;
     try {
       final text = await _channel.invokeMethod<String>(
-          'listenInApp', {'lang': lang, 'hints': hints});
+          'listenInApp', {'lang': lang, 'hints': hints, 'mixed': mixed});
       level.value = 0;
       if (text == null || text.trim().isEmpty) return null;
       return text.trim();
