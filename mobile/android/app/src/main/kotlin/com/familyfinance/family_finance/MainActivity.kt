@@ -9,6 +9,9 @@ import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
+import android.content.ContentValues
 import android.view.WindowManager
 import android.provider.OpenableColumns
 import com.google.android.gms.common.moduleinstall.ModuleInstall
@@ -32,6 +35,8 @@ class MainActivity : FlutterFragmentActivity() {
     private val PICK_FILE_REQ = 4091
     private val VOICE_REQ = 4092
     private var pendingResult: MethodChannel.Result? = null
+    // Chat attachments: any file, returned as raw bytes (null when too big).
+    private var rawPickMaxBytes: Long? = null
     private var pendingVoiceResult: MethodChannel.Result? = null
     private var inAppSpeech: InAppSpeech? = null
     private var pendingMic: Triple<Pair<String, Boolean>, List<String>, MethodChannel.Result>? = null
@@ -130,6 +135,9 @@ class MainActivity : FlutterFragmentActivity() {
                         return@setMethodCallHandler
                     }
                     val typeFilter = call.argument<String>("type") ?: "any"
+                    rawPickMaxBytes = if (typeFilter == "raw") {
+                        call.argument<Number>("maxBytes")?.toLong() ?: Long.MAX_VALUE
+                    } else null
                     pendingResult = result
                     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                         addCategory(Intent.CATEGORY_OPENABLE)
@@ -141,6 +149,7 @@ class MainActivity : FlutterFragmentActivity() {
                         val mimeTypes = when (typeFilter) {
                             "csv" -> arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/csv", "*/*")
                             "pdf" -> arrayOf("application/pdf")
+                            "raw" -> arrayOf("*/*")
                             "md" -> arrayOf("text/markdown", "text/plain", "*/*")
                             "sheet" -> sheetTypes + arrayOf("text/csv", "application/csv", "*/*")
                             else -> arrayOf("application/pdf", "text/csv", "text/markdown", "text/plain") + sheetTypes + arrayOf("*/*")
@@ -173,6 +182,43 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // Chat downloads: Downloads/KinPurse through MediaStore, which needs
+        // no storage permission on Android 10+. Older versions answer false
+        // and the app falls back to the share sheet.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.familyfinance/downloads")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "save") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    result.success(false)
+                    return@setMethodCallHandler
+                }
+                val bytes = call.argument<ByteArray>("bytes") ?: ByteArray(0)
+                val name = call.argument<String>("name") ?: "file"
+                val mime = call.argument<String>("mime") ?: "application/octet-stream"
+                Thread {
+                    val ok = try {
+                        val values = ContentValues().apply {
+                            put(MediaStore.Downloads.DISPLAY_NAME, name)
+                            put(MediaStore.Downloads.MIME_TYPE, mime)
+                            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/KinPurse")
+                            put(MediaStore.Downloads.IS_PENDING, 1)
+                        }
+                        val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)!!
+                        contentResolver.openOutputStream(uri)!!.use { it.write(bytes) }
+                        values.clear()
+                        values.put(MediaStore.Downloads.IS_PENDING, 0)
+                        contentResolver.update(uri, values, null, null)
+                        true
+                    } catch (_: Exception) {
+                        false
+                    }
+                    runOnUiThread { result.success(ok) }
+                }.start()
+            }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -407,6 +453,32 @@ class MainActivity : FlutterFragmentActivity() {
         }
 
         val uri = data.data!!
+        val rawMax = rawPickMaxBytes
+        rawPickMaxBytes = null
+        if (rawMax != null) {
+            Thread {
+                try {
+                    val fileName = getFileName(uri)
+                    val size = contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)
+                        ?.use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else -1L } ?: -1L
+                    // Unknown size (-1) is read and checked after.
+                    val bytes = if (size <= rawMax) {
+                        contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                            ?.takeIf { it.size <= rawMax }
+                    } else null
+                    val map = mapOf(
+                        "fileName" to fileName,
+                        "mime" to contentResolver.getType(uri),
+                        "size" to (bytes?.size?.toLong() ?: size),
+                        "bytes" to bytes,
+                    )
+                    runOnUiThread { res.success(map) }
+                } catch (e: Exception) {
+                    runOnUiThread { res.error("READ_ERR", e.localizedMessage ?: "Could not read file", null) }
+                }
+            }.start()
+            return
+        }
         try {
             val fileName = getFileName(uri)
             val lower = fileName.lowercase()

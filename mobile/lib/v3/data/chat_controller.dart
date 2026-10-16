@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../services/app_log.dart';
+import 'chat_media.dart';
 import 'chat_platform_io.dart'
     if (dart.library.js_interop) 'chat_platform_web.dart';
 import 'v3_models.dart';
@@ -859,6 +862,7 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
     required String body,
     String kind = 'text',
     String? imageData,
+    Map<String, dynamic> media = const {},
   }) async {
     final fid = _familyId;
     final me = _myId;
@@ -870,16 +874,17 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
     final tempId =
         'temp_${DateTime.now().microsecondsSinceEpoch}_${_messages.length}';
     if (me != null && me.isNotEmpty) {
-      final optimistic = DirectMessageRow(
-        id: tempId,
-        familyId: fid,
-        senderId: me,
-        recipientId: recipientId,
-        body: trimmed,
-        kind: kind,
-        imageData: imageData,
-        createdAt: DateTime.now(),
-      );
+      final optimistic = DirectMessageRow.fromJson({
+        ...media,
+        'id': tempId,
+        'family_id': fid,
+        'sender_id': me,
+        'recipient_id': recipientId,
+        'body': trimmed,
+        'kind': kind,
+        'image_data': imageData,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      });
       _messages.add(optimistic);
       notifyListeners();
 
@@ -903,6 +908,7 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
         body: trimmed,
         kind: kind,
         imageData: imageData,
+        media: media,
       ),
     );
     if (sent != null) {
@@ -940,6 +946,93 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
     );
   }
 
+  /// Uploads [bytes] to the chat-media bucket, then sends the message that
+  /// points at it. [kind] is `image`, `file` or `voice`.
+  Future<bool> sendMedia({
+    required String recipientId,
+    required Uint8List bytes,
+    required String name,
+    required String mime,
+    required String kind,
+    bool viewOnce = false,
+    int? durationMs,
+    String caption = '',
+  }) async {
+    final fid = _familyId;
+    final me = _myId;
+    if (fid == null || fid.isEmpty || me == null || me.isEmpty) return false;
+    final id = const Uuid().v4();
+    final path = chatMediaPath(
+      familyId: fid,
+      userA: me,
+      userB: recipientId,
+      messageId: id,
+      fileName: name,
+    );
+    final uploaded = await V3Repository.guard(
+      'uploadChatMedia',
+      () => repo.uploadChatMedia(path, bytes, mime).then((_) => true),
+    );
+    if (uploaded != true) {
+      _error = 'Could not upload';
+      notifyListeners();
+      return false;
+    }
+    final ok = await sendMessage(
+      recipientId: recipientId,
+      body: chatMediaBody(
+        kind: kind,
+        name: name,
+        viewOnce: viewOnce,
+        caption: caption,
+      ),
+      kind: kind,
+      media: {
+        'id': id,
+        'media_path': path,
+        'media_name': name,
+        'media_mime': mime,
+        'media_size': bytes.length,
+        'media_kind': kind,
+        'media_duration_ms': ?durationMs,
+        'view_once': viewOnce,
+      },
+    );
+    if (!ok) unawaited(_removeMedia([path]));
+    return ok;
+  }
+
+  /// Opens a view-once photo: fetches it, then deletes it and marks the
+  /// message viewed. Returns null if it was already opened or is gone.
+  Future<Uint8List?> openViewOnce(DirectMessageRow msg) async {
+    final path = msg.mediaPath;
+    if (path == null || msg.viewedAt != null || msg.recipientId != _myId) {
+      return null;
+    }
+    final bytes = await V3Repository.guard(
+      'openViewOnce',
+      () => repo.downloadChatMedia(path),
+    );
+    // Storage API delete first (frees the file); the RPC is the backstop.
+    await _removeMedia([path]);
+    await V3Repository.guard('markViewedOnce', () => repo.markViewedOnce(msg.id));
+    final idx = _messages.indexWhere((m) => m.id == msg.id);
+    if (idx >= 0) {
+      _messages[idx] = _messages[idx].copyWith(viewedAt: DateTime.now());
+      notifyListeners();
+    }
+    return bytes;
+  }
+
+  Future<void> _removeMedia(List<String> paths) async {
+    if (paths.isEmpty) return;
+    try {
+      await repo.removeChatMedia(paths);
+    } catch (err, stack) {
+      AppLog.error('removeChatMedia', err, stack);
+    }
+  }
+
   /// Sends a quick poke ("👋 Poked you!") that vibrates and notifies the
   /// recipient's device immediately.
   Future<bool> pokeMember(String recipientId) {
@@ -972,6 +1065,8 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
 
     if (messageId.startsWith('temp_')) return true;
 
+    final path = removed?.mediaPath;
+    if (path != null) await _removeMedia([path]);
     var ok = true;
     try {
       await repo.deleteDirectMessage(messageId);
@@ -1021,6 +1116,10 @@ class ChatController extends ChangeNotifier with WidgetsBindingObserver {
       );
     }
 
+    await _removeMedia([
+      for (final m in backup)
+        if (m.mediaPath != null) m.mediaPath!,
+    ]);
     var ok = true;
     try {
       await repo.clearDirectThread(familyId: fid, partnerId: partnerId);

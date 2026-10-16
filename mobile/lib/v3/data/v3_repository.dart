@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/app_log.dart';
+import 'chat_media.dart';
 import 'v3_models.dart';
 
 /// All Supabase access for the v3 screens.
@@ -1370,6 +1371,11 @@ class V3Repository {
 
   // ── Direct messages ───────────────────────────────────────────────────────
 
+  static const _dmColumns =
+      'id,family_id,sender_id,recipient_id,body,kind,image_data,created_at,'
+      'read_at,media_path,media_name,media_mime,media_size,media_kind,'
+      'media_duration_ms,view_once,viewed_at';
+
   Future<List<DirectMessageRow>> directMessages(
     String familyId, {
     int limit = 300,
@@ -1378,8 +1384,7 @@ class V3Repository {
     if (uid == null) return const [];
     final rows = await _db
         .from('direct_messages')
-        .select(
-            'id,family_id,sender_id,recipient_id,body,kind,image_data,created_at,read_at')
+        .select(_dmColumns)
         .eq('family_id', familyId)
         .or('sender_id.eq.$uid,recipient_id.eq.$uid')
         .order('created_at', ascending: true)
@@ -1396,6 +1401,7 @@ class V3Repository {
     required String body,
     String kind = 'text',
     String? imageData,
+    Map<String, dynamic> media = const {},
   }) async {
     final uid = currentUserId!;
     final row = await _db
@@ -1407,12 +1413,33 @@ class V3Repository {
           'body': body.trim(),
           'kind': kind,
           'image_data': ?imageData,
+          ...media,
         })
-        .select(
-            'id,family_id,sender_id,recipient_id,body,kind,image_data,created_at,read_at')
+        .select(_dmColumns)
         .single();
     return DirectMessageRow.fromJson(Map<String, dynamic>.from(row));
   }
+
+  StorageFileApi get _chatMedia => _db.storage.from(kChatMediaBucket);
+
+  Future<void> uploadChatMedia(String path, Uint8List bytes, String mime) =>
+      _chatMedia.uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(contentType: mime),
+      );
+
+  Future<Uint8List> downloadChatMedia(String path) => _chatMedia.download(path);
+
+  /// Short-lived URL for playback, thumbnails and browser downloads.
+  Future<String> chatMediaUrl(String path, {int seconds = 3600}) =>
+      _chatMedia.createSignedUrl(path, seconds);
+
+  Future<void> removeChatMedia(List<String> paths) => _chatMedia.remove(paths);
+
+  /// Recipient only: marks a view-once message opened and deletes its file.
+  Future<void> markViewedOnce(String messageId) =>
+      _db.rpc('mark_viewed_once', params: {'p_message_id': messageId});
 
   Future<void> deleteDirectMessage(String messageId) async {
     try {

@@ -1014,6 +1014,19 @@ class DirectMessageRow {
   final DateTime createdAt;
   final DateTime? readAt;
 
+  /// Storage object in the chat-media bucket; null for text, pokes and the
+  /// older base64 photos.
+  final String? mediaPath;
+  final String? mediaName;
+  final String? mediaMime;
+  final int? mediaSize;
+
+  /// `image`, `file` or `voice`.
+  final String? mediaKind;
+  final int? mediaDurationMs;
+  final bool viewOnce;
+  final DateTime? viewedAt;
+
   const DirectMessageRow({
     required this.id,
     required this.familyId,
@@ -1024,9 +1037,18 @@ class DirectMessageRow {
     this.kind = 'text',
     this.imageData,
     this.readAt,
+    this.mediaPath,
+    this.mediaName,
+    this.mediaMime,
+    this.mediaSize,
+    this.mediaKind,
+    this.mediaDurationMs,
+    this.viewOnce = false,
+    this.viewedAt,
   });
 
   bool get isRead => readAt != null;
+  bool get hasMedia => mediaPath != null && mediaPath!.isNotEmpty;
   bool get isPoke => kind == 'poke';
   bool get isImage =>
       kind == 'image' && imageData != null && imageData!.isNotEmpty;
@@ -1041,6 +1063,14 @@ class DirectMessageRow {
         imageData: j['image_data']?.toString(),
         createdAt: _ts(j['created_at']),
         readAt: j['read_at'] == null ? null : _ts(j['read_at']),
+        mediaPath: j['media_path']?.toString(),
+        mediaName: j['media_name']?.toString(),
+        mediaMime: j['media_mime']?.toString(),
+        mediaSize: (j['media_size'] as num?)?.toInt(),
+        mediaKind: j['media_kind']?.toString(),
+        mediaDurationMs: (j['media_duration_ms'] as num?)?.toInt(),
+        viewOnce: j['view_once'] == true,
+        viewedAt: j['viewed_at'] == null ? null : _ts(j['viewed_at']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -1053,9 +1083,18 @@ class DirectMessageRow {
         if (imageData != null) 'image_data': imageData,
         'created_at': createdAt.toUtc().toIso8601String(),
         'read_at': readAt?.toUtc().toIso8601String(),
+        if (mediaPath != null) 'media_path': mediaPath,
+        if (mediaName != null) 'media_name': mediaName,
+        if (mediaMime != null) 'media_mime': mediaMime,
+        if (mediaSize != null) 'media_size': mediaSize,
+        if (mediaKind != null) 'media_kind': mediaKind,
+        if (mediaDurationMs != null) 'media_duration_ms': mediaDurationMs,
+        'view_once': viewOnce,
+        'viewed_at': viewedAt?.toUtc().toIso8601String(),
       };
 
-  DirectMessageRow copyWith({DateTime? readAt}) => DirectMessageRow(
+  DirectMessageRow copyWith({DateTime? readAt, DateTime? viewedAt}) =>
+      DirectMessageRow(
         id: id,
         familyId: familyId,
         senderId: senderId,
@@ -1065,6 +1104,14 @@ class DirectMessageRow {
         imageData: imageData,
         createdAt: createdAt,
         readAt: readAt ?? this.readAt,
+        mediaPath: mediaPath,
+        mediaName: mediaName,
+        mediaMime: mediaMime,
+        mediaSize: mediaSize,
+        mediaKind: mediaKind,
+        mediaDurationMs: mediaDurationMs,
+        viewOnce: viewOnce,
+        viewedAt: viewedAt ?? this.viewedAt,
       );
 }
 

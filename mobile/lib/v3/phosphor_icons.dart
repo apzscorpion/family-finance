@@ -137,6 +137,8 @@ class PhRegular {
   static const IconData bellSimpleRinging = IconData(0xe5e8, fontFamily: 'Phosphor');
   static const IconData database = IconData(0xe1de, fontFamily: 'Phosphor');
   static const IconData appUpdates = IconData(0xe1ae, fontFamily: 'Phosphor');
+  static const IconData microphone = IconData(0xe326, fontFamily: 'Phosphor');
+  static const IconData file = IconData(0xe230, fontFamily: 'Phosphor');
 }
 
 /// Phosphor bold weight.
@@ -371,4 +373,8 @@ class PhFill {
   static const IconData compass = IconData(0xe1c8, fontFamily: 'PhosphorFill');
   static const IconData image = IconData(0xe2ca, fontFamily: 'PhosphorFill');
   static const IconData sparkle = IconData(0xe6a2, fontFamily: 'PhosphorFill');
+  static const IconData play = IconData(0xe3d0, fontFamily: 'PhosphorFill');
+  static const IconData pause = IconData(0xe39e, fontFamily: 'PhosphorFill');
+  static const IconData stop = IconData(0xe46c, fontFamily: 'PhosphorFill');
+  static const IconData microphone = IconData(0xe326, fontFamily: 'PhosphorFill');
 }

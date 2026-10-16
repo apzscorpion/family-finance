@@ -90,6 +90,7 @@ class _TestRepo extends V3Repository {
     required String body,
     String kind = 'text',
     String? imageData,
+    Map<String, dynamic> media = const {},
   }) async {
     final row = DirectMessageRow(
       id: 'dm-${sentMessages.length + 1}',
@@ -629,9 +630,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ChatThreadV3), findsOneWidget);
+      // Empty composer offers the mic; typing swaps it for send.
+      expect(find.byKey(const ValueKey('chat_mic_button')), findsOneWidget);
       await tester.enterText(
         find.byKey(const ValueKey('chat_composer_field')),
         'Checking in!',
+      );
+      await tester.pump();
+      expect(find.byKey(const ValueKey('chat_mic_button')), findsNothing);
+      expect(
+        tester.getSize(find.byKey(const ValueKey('chat_send_button'))),
+        tester.getSize(find.byKey(const ValueKey('chat_attach_image_button'))),
       );
       await tester.tap(find.byKey(const ValueKey('chat_send_button')));
       await tester.pumpAndSettle();

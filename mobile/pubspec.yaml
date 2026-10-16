@@ -72,6 +72,12 @@ dependencies:
   # Android 10+ needs no storage permission.
   gal: ^2.3.3
 
+  # Chat voice messages: record (AAC .m4a on Android, browser MediaRecorder
+  # on web; RECORD_AUDIO is already declared) and just_audio for inline
+  # playback from a signed Storage URL. Neither adds a permission.
+  record: ^7.1.2
+  just_audio: ^0.10.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
