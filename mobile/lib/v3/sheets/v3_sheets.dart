@@ -872,6 +872,9 @@ class _V3AddSheetState extends State<V3AddSheet> {
       } else if (e.userId != null) {
         _selectedMembers.add(e.userId!);
       }
+    } else {
+      // A new entry starts on my main account (Salary), shown selected.
+      _sourceId = context.read<V3State>().mainSourceId;
     }
   }
 
@@ -1541,7 +1544,7 @@ class _V3AddSheetState extends State<V3AddSheet> {
                         icon: src.design.icon,
                         iconColor: src.design.color,
                         onTap: () => setState(() {
-                          _sourceId = _sourceId == src.id ? null : src.id;
+                          _sourceId = src.id;
                           final ok =
                               _methodsByKind[s.sourceById(_sourceId)?.kind] ??
                               _methods;
