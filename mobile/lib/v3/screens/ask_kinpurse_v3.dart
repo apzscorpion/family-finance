@@ -2,14 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/nocturne.dart';
+import '../../theme/nocturne_palette.dart';
 import '../data/ai/ai_config.dart';
 import '../data/ai/ask_kinpurse_engine.dart';
+import '../data/prayer/prayer_controller.dart';
 import '../phosphor_icons.dart';
+import '../sheets/update_sheet_v3.dart';
 import '../sheets/v3_sheets.dart';
 import '../v3_design.dart';
 import '../v3_nav.dart';
 import '../v3_state.dart';
 import '../widgets/v3_primitives.dart';
+import 'categories_manager_v3.dart';
+import 'import_v3.dart';
+import 'sources_manager_v3.dart';
 
 class AskKinPurseMessage {
   final bool isUser;
@@ -43,7 +49,7 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
     'How much did we spend on groceries last month vs this month?',
     'What was our biggest expense in the last 30 days?',
     'How much did we spend on food delivery recently?',
-    'Total spend on electricity and utility bills this year?',
+    'How do I set a budget?',
   ];
 
   @override
@@ -339,6 +345,15 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
                 m.text,
                 style: TextStyle(fontSize: 13.5, height: 1.4, color: Nocturne.palette.text),
               ),
+              if (_assist(res?.query) case (final label, final run)) ...[
+                const SizedBox(height: 10),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('ask_assist_action'),
+                  onPressed: run,
+                  icon: const Icon(PhRegular.sparkle, size: 16),
+                  label: Text(label),
+                ),
+              ],
               if (res != null && res.matchingTxns.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 const V3RowDivider(),
@@ -401,6 +416,102 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
     );
   }
 
+  /// The button under a 'help' answer: open a screen or switch a setting.
+  (String, VoidCallback)? _assist(AskKinPurseQuery? q) {
+    if (q == null || q.intent != 'help') return null;
+    final nav = context.read<V3Nav>();
+    final s = context.read<V3State>();
+    final theme = context.read<ThemeController>();
+
+    void done(String msg) => ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+
+    if (q.setting case final key?) {
+      final on = q.turnOn ?? true;
+      final p = s.prefs;
+      final (name, apply) = switch (key) {
+        'app_lock' => ('App lock', () => s.savePrefs(p.copyWith(lockApp: on))),
+        'hide_amounts' =>
+          ('Hide amounts', () => s.savePrefs(p.copyWith(hideOnOpen: on))),
+        'read_payments' =>
+          ('Read payments', () => s.savePrefs(p.copyWith(smsAuto: on))),
+        'prayer_times' => (
+            'Prayer times',
+            () => context.read<PrayerController>().setEnabled(on)
+          ),
+        'budget_alerts' =>
+          ('Budget alerts', () => s.savePrefs(p.copyWith(budgetAlerts: on))),
+        'family_alerts' =>
+          ('Family activity alerts', () => s.savePrefs(p.copyWith(familyAlerts: on))),
+        'approval_alerts' =>
+          ('Approval alerts', () => s.savePrefs(p.copyWith(approvalAlerts: on))),
+        'daily_digest' =>
+          ('Daily digest', () => s.savePrefs(p.copyWith(dailyDigest: on))),
+        'reduce_motion' =>
+          ('Reduce motion', () async => theme.setReduceMotion(on)),
+        _ => ('Match device theme', () async => theme.setMatchDevice(on)),
+      };
+      return (
+        '${on ? 'Turn on' : 'Turn off'} $name',
+        () async {
+          await apply();
+          done('$name ${on ? 'on' : 'off'}');
+        }
+      );
+    }
+    if (q.theme case final id?) {
+      final t = KpThemeId.values.firstWhere((x) => x.id == id);
+      return (
+        'Use the ${t.name} theme',
+        () {
+          theme.setTheme(t);
+          done('${t.name} theme on');
+        }
+      );
+    }
+    if (q.textSize case final size?) {
+      final i = AskKinPurseEngine.textSizes.indexOf(size);
+      return (
+        'Make text $size',
+        () {
+          theme.setTextScale(ThemeController.textScales[i]);
+          done('Text size changed');
+        }
+      );
+    }
+    final VoidCallback? open = switch (q.open) {
+      'home' => () => nav.goTab(0),
+      'activity' => () => nav.goTab(1),
+      'insights' => () => nav.goTab(2),
+      'more' => () => nav.goTab(3),
+      'settings' => () => nav.goPage(V3Page.settings),
+      'add' => () => V3Sheets.openAdd(context),
+      'voice' => () => V3Sheets.openVoiceAdd(context),
+      'detected' => () => nav.goPage(V3Page.detected),
+      'cards' => () => nav.goPage(V3Page.cards),
+      'notes' => () => nav.goPage(V3Page.notes),
+      'messages' => () => nav.goPage(V3Page.chat),
+      'notifications' => () => nav.goPage(V3Page.notifications),
+      'prayer' => () => nav.goPage(V3Page.prayer),
+      'prayer_settings' => () => nav.goPage(V3Page.prayerSettings),
+      'ai_settings' => () => nav.goPage(V3Page.aiSettings),
+      'monthly_recap' => () => nav.goPage(V3Page.monthlyRecap),
+      'spending_calendar' => () => V3Sheets.openSpendingCalendar(context),
+      'budget' => () => V3Sheets.openMagicAi(context),
+      'goals' => () => V3Sheets.openGoals(context),
+      'recurring' => () => V3Sheets.openRecurring(context),
+      'categories' => () => CategoriesManagerV3.open(context),
+      'money_sources' => () => SourcesManagerV3.open(context),
+      'import' => () => ImportV3.open(context),
+      'invite' => () => V3Sheets.openInvite(context),
+      'faith' => () => V3Sheets.openFaithSuite(context),
+      'guardian' => () => V3Sheets.openGuardian(context),
+      'updates' => () => UpdateSheetV3.check(context),
+      _ => null,
+    };
+    return open == null ? null : ('Take me there', open);
+  }
+
   Widget _buildInputBar() {
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -422,7 +533,7 @@ class _AskKinPurseScreenState extends State<AskKinPurseScreen> {
               onSubmitted: _ask,
               style: TextStyle(fontSize: 14, color: Nocturne.palette.text),
               decoration: InputDecoration(
-                hintText: 'Ask about spending, categories, or trends...',
+                hintText: 'Ask about your money or the app…',
                 hintStyle: TextStyle(fontSize: 13, color: Nocturne.palette.muted),
                 filled: true,
                 fillColor: Nocturne.palette.bg,

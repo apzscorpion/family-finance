@@ -43,4 +43,21 @@ void main() {
     expect(run({'shared_with_others': true, 'exclude_account': 'loan'}).primaryAmount, 20);
     expect(run({'account': 'Salary'}).primaryAmount, 120);
   });
+
+  test('help answers keep only actions the app knows', () {
+    final q = AskKinPurseQuery.fromJson({
+      'intent': 'help',
+      'explanation': 'x',
+      'setting': 'app_lock',
+      'turn_on': false,
+      'open': 'nowhere',
+      'theme': 'pink',
+      'text_size': 'large',
+    });
+    expect(q.setting, 'app_lock');
+    expect(q.turnOn, false);
+    expect(q.open, isNull);
+    expect(q.theme, isNull);
+    expect(q.textSize, 'large');
+  });
 }

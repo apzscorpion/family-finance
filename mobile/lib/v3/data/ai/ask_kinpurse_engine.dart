@@ -34,6 +34,15 @@ class AskKinPurseQuery {
   /// The reply to a 'help' question (how to use the app), not about data.
   final String? answer;
 
+  /// For 'help': a screen to open ([AskKinPurseEngine.screens]), a setting
+  /// to switch ([AskKinPurseEngine.settings]) to [turnOn], a theme id or a
+  /// text size ([AskKinPurseEngine.textSizes]). The app offers it as a button.
+  final String? open;
+  final String? setting;
+  final bool? turnOn;
+  final String? theme;
+  final String? textSize;
+
   /// What the model returned, so a follow-up can refine it.
   final Map<String, dynamic> raw;
 
@@ -52,6 +61,11 @@ class AskKinPurseQuery {
     this.account,
     this.excludeAccount,
     this.answer,
+    this.open,
+    this.setting,
+    this.turnOn,
+    this.theme,
+    this.textSize,
     this.raw = const {},
   });
 
@@ -80,6 +94,15 @@ class AskKinPurseQuery {
       account: j['account']?.toString(),
       excludeAccount: j['exclude_account']?.toString(),
       answer: j['answer']?.toString(),
+      open: AskKinPurseEngine.screens.contains(j['open']) ? j['open'] as String : null,
+      setting: AskKinPurseEngine.settings.contains(j['setting'])
+          ? j['setting'] as String
+          : null,
+      turnOn: j['turn_on'] is bool ? j['turn_on'] as bool : null,
+      theme: AskKinPurseEngine.themes.contains(j['theme']) ? j['theme'] as String : null,
+      textSize: AskKinPurseEngine.textSizes.contains(j['text_size'])
+          ? j['text_size'] as String
+          : null,
       raw: j,
     );
   }
@@ -117,6 +140,12 @@ class AskKinPurseResult {
 class AskKinPurseEngine {
   AskKinPurseEngine._();
 
+  /// What a 'help' answer may offer; the screen maps each to its action.
+  static const screens = ['home', 'activity', 'insights', 'more', 'settings', 'add', 'voice', 'detected', 'cards', 'notes', 'messages', 'notifications', 'prayer', 'prayer_settings', 'ai_settings', 'monthly_recap', 'spending_calendar', 'budget', 'goals', 'recurring', 'categories', 'money_sources', 'import', 'invite', 'faith', 'guardian', 'updates'];
+  static const settings = ['app_lock', 'hide_amounts', 'read_payments', 'prayer_times', 'budget_alerts', 'family_alerts', 'approval_alerts', 'daily_digest', 'reduce_motion', 'match_device_theme'];
+  static const themes = ['dark', 'light', 'blue', 'maroon', 'golden', 'yellow'];
+  static const textSizes = ['small', 'default', 'large', 'largest']; // ThemeController.textScales, in order
+
   static const _systemPrompt = '''
 You are KinPurse Query Assistant.
 Your task is to convert a user's natural language question about their family finances into a structured search filter.
@@ -135,17 +164,33 @@ Extract:
 9. "shared_with_others": true when the question is about spending for or with other people (split, shared, paid for someone), else null.
 10. "account": account name to limit to (e.g. "Salary"), or null.
 11. "exclude_account": account name to leave out (e.g. "exclude loan account" -> "Loan"), or null.
-12. "answer": only for "help": a short, friendly answer in plain text (no markdown), using the app guide below. If the guide does not cover it, say so and suggest Settings (More tab) instead of inventing steps. Otherwise null.
+12. "answer": only for "help": a short, friendly answer in plain text (no markdown) saying where the feature is and how to use it, from the app guide below. If the guide does not cover it, say so and suggest searching in Settings instead of inventing steps. Otherwise null.
+13. For "help" only, when it helps the user, also set ONE of:
+   - "open": a screen to take them to: home, activity, insights, more, settings, add, voice, detected, cards, notes, messages, notifications, prayer, prayer_settings, ai_settings, monthly_recap, spending_calendar, budget, goals, recurring, categories, money_sources, import, invite, faith, guardian, updates.
+   - "setting" + "turn_on" (true/false): when they ask to turn something on or off: app_lock, hide_amounts, read_payments, prayer_times, budget_alerts, family_alerts, approval_alerts, daily_digest, reduce_motion, match_device_theme.
+   - "theme": when they ask for a colour theme: dark, light, blue, maroon, golden, yellow.
+   - "text_size": when they ask for bigger or smaller text: small, default, large, largest.
+   The app shows it as a button the user taps, so say what the button does (e.g. "Tap below to turn it on.").
 
-App guide:
-- Add income or an expense: the + button at the bottom.
-- Set a budget limit: Home > "AI That Feels Like Magic" > What-If tab. Pick a category, slide how much to cut, then tap "Lock in this budget restriction". Budgets then show on Home under "Budgets".
+App guide (bottom bar: Home, Activity, +, Insights, More):
+- Add income or an expense: the + button, or Home > Add. By voice: Home > Voice (English or Malayalam).
+- Payments read from bank SMS and notifications: Home > Detected. Turn it on or off: More > Settings > Read payments.
+- Cards and accounts: Home > Cards. Manage money sources (bank, cash, wallet): More > Settings > Money sources.
+- Family notes: Home > Notes. Messages with family: More > Direct messages.
+- Set a budget limit: Home > "AI That Feels Like Magic" > What-If tab: pick a category, slide how much to cut, tap "Lock in this budget restriction". Budgets then show on Home under "Budgets".
 - Budget alerts and the alert threshold: More > Settings > Notifications.
 - Savings goals: Home > "Savings goals" > "+ Set goal".
-- Spending charts: the Insights tab. History: the Activity tab.
-- Profile photo, text size, theme, app lock: More > Settings.
-
-If a previous question and its filters are given and the new message refines it ("exclude loan account", "only last month", "and for Sara?"), keep the previous filters and apply only the change.
+- Duplicate subscriptions, polite money reminders, "price in hours of work": Home > "AI That Feels Like Magic".
+- Zakat, gold and sadaqah calculator: Home > "Faith & Charity". Prayer times: Home prayer card; settings: More > Settings > Prayer times.
+- Card guardian, refund watchdog, spend roast: Home > "Install Magnets & Security".
+- Charts and trends: Insights. Spending calendar and Monthly recap: Insights. Full history and search: Activity.
+- Family members, invite someone (owner or admin): More > Members > Invite. Approvals and who owes who, settle up and split a receipt: More.
+- Recurring bills and subscriptions: More > Settings > Recurring rules. Categories: More > Settings > Categories.
+- Import from CSV/Excel: More > Settings > Import expenses. Export: More > Settings > Export.
+- Profile photo and About line: tap your picture at the top of Settings. UPI ID: More > Settings > UPI ID.
+- Theme, text size, reduce motion: More > Settings > Appearance. App lock and Hide amounts: the tiles at the top of Settings.
+- Hide my money from some members: More > Settings > Hide my money from.
+- AI provider and keys: More > Settings > AI restructuring. App updates: More > Settings > App updates. Report a problem: More > Settings > Support & feedback.
 
 Return ONLY JSON matching the schema.
 ''';
@@ -173,6 +218,11 @@ Return ONLY JSON matching the schema.
           'account': {'type': ['string', 'null']},
           'exclude_account': {'type': ['string', 'null']},
           'answer': {'type': ['string', 'null']},
+          'open': {'type': ['string', 'null']},
+          'setting': {'type': ['string', 'null']},
+          'turn_on': {'type': ['boolean', 'null']},
+          'theme': {'type': ['string', 'null']},
+          'text_size': {'type': ['string', 'null']},
         },
         'required': ['intent', 'explanation'],
         if (strict) 'additionalProperties': false,
@@ -251,6 +301,7 @@ Return ONLY JSON matching the schema.
           primaryAmount: 0,
           count: 0,
           matchingTxns: const [],
+          query: query,
         );
       }
       final r = executeLocally(query, txns, categories, members,
