@@ -531,36 +531,65 @@ class _SettingsV3State extends State<SettingsV3> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          me?.color ?? palette.accent,
-                          V3Design.avatarDeep,
+                  // Tap your picture to add or change it.
+                  Semantics(
+                    button: true,
+                    label: 'Change profile photo',
+                    child: GestureDetector(
+                      key: const ValueKey('settings_profile_photo'),
+                      onTap: () => _showPhotoOptions(context, s),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              me?.color ?? palette.accent,
+                              V3Design.avatarDeep,
+                            ],
+                          ),
+                        ),
+                        child: me?.avatarUrl != null
+                            ? V3Avatar(
+                                imageUrl: me!.avatarUrl,
+                                initial: me.initial,
+                                color: me.color,
+                                size: 48,
+                                fontSize: 18)
+                            : Text(
+                                me?.initial ?? '?',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFE9E9ED),
+                                ),
+                              ),
+                      ),
+                          Positioned(
+                            right: -2,
+                            bottom: -2,
+                            child: Container(
+                              width: 20,
+                              height: 20,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: palette.accent,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: palette.surface, width: 2),
+                              ),
+                              child: Icon(PhBold.camera, size: 10, color: palette.bg),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    child: me?.avatarUrl != null
-                        ? V3Avatar(
-                            imageUrl: me!.avatarUrl,
-                            initial: me.initial,
-                            color: me.color,
-                            size: 48,
-                            fontSize: 18)
-                        : Text(
-                            me?.initial ?? '?',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFFE9E9ED),
-                            ),
-                          ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
