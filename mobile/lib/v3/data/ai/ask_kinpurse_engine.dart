@@ -13,7 +13,7 @@ import 'ai_structurer.dart';
 /// The AI only receives the user question + schema metadata (category names,
 /// member names, today's date), and outputs structured filtering rules.
 class AskKinPurseQuery {
-  final String intent; // 'sum', 'count', 'compare', 'list', 'average', 'max'
+  final String intent; // 'sum', 'count', 'compare', 'list', 'average', 'max', 'help'
   final String? category;
   final String? member;
   final String? merchant;
@@ -30,6 +30,9 @@ class AskKinPurseQuery {
   /// Account to keep, or to leave out (matched by name).
   final String? account;
   final String? excludeAccount;
+
+  /// The reply to a 'help' question (how to use the app), not about data.
+  final String? answer;
 
   /// What the model returned, so a follow-up can refine it.
   final Map<String, dynamic> raw;
@@ -48,6 +51,7 @@ class AskKinPurseQuery {
     this.sharedOnly = false,
     this.account,
     this.excludeAccount,
+    this.answer,
     this.raw = const {},
   });
 
@@ -75,6 +79,7 @@ class AskKinPurseQuery {
       sharedOnly: j['shared_with_others'] == true,
       account: j['account']?.toString(),
       excludeAccount: j['exclude_account']?.toString(),
+      answer: j['answer']?.toString(),
       raw: j,
     );
   }
@@ -119,7 +124,7 @@ IMPORTANT PRIVACY RULE: You NEVER see real transactions or monetary amounts. You
 
 Today's date and context will be provided in the user prompt.
 Extract:
-1. "intent": "sum" (default total), "count" (how many times), "compare" (comparing two periods or categories), "list" (show recent), "average", "max" (highest).
+1. "intent": "sum" (default total), "count" (how many times), "compare" (comparing two periods or categories), "list" (show recent), "average", "max" (highest), or "help" when the question is NOT about their transactions (how to use the app, a feature, a greeting).
 2. "category": Matching category name if mentioned (e.g. "Food", "Groceries", "Fuel", "Bills"), or null.
 3. "member": Member's name if mentioned (e.g. "Sara", "Dad", "myself"), or null.
 4. "merchant": Merchant/Store name if mentioned (e.g. "Swiggy", "Amazon", "Uber"), or null.
@@ -130,6 +135,15 @@ Extract:
 9. "shared_with_others": true when the question is about spending for or with other people (split, shared, paid for someone), else null.
 10. "account": account name to limit to (e.g. "Salary"), or null.
 11. "exclude_account": account name to leave out (e.g. "exclude loan account" -> "Loan"), or null.
+12. "answer": only for "help": a short, friendly answer in plain text (no markdown), using the app guide below. If the guide does not cover it, say so and suggest Settings (More tab) instead of inventing steps. Otherwise null.
+
+App guide:
+- Add income or an expense: the + button at the bottom.
+- Set a budget limit: Home > "AI That Feels Like Magic" > What-If tab. Pick a category, slide how much to cut, then tap "Lock in this budget restriction". Budgets then show on Home under "Budgets".
+- Budget alerts and the alert threshold: More > Settings > Notifications.
+- Savings goals: Home > "Savings goals" > "+ Set goal".
+- Spending charts: the Insights tab. History: the Activity tab.
+- Profile photo, text size, theme, app lock: More > Settings.
 
 If a previous question and its filters are given and the new message refines it ("exclude loan account", "only last month", "and for Sara?"), keep the previous filters and apply only the change.
 
@@ -141,7 +155,7 @@ Return ONLY JSON matching the schema.
         'properties': {
           'intent': {
             'type': 'string',
-            'enum': ['sum', 'count', 'compare', 'list', 'average', 'max']
+            'enum': ['sum', 'count', 'compare', 'list', 'average', 'max', 'help']
           },
           'category': {'type': ['string', 'null']},
           'member': {'type': ['string', 'null']},
@@ -158,6 +172,7 @@ Return ONLY JSON matching the schema.
           'shared_with_others': {'type': ['boolean', 'null']},
           'account': {'type': ['string', 'null']},
           'exclude_account': {'type': ['string', 'null']},
+          'answer': {'type': ['string', 'null']},
         },
         'required': ['intent', 'explanation'],
         if (strict) 'additionalProperties': false,
@@ -229,6 +244,15 @@ Return ONLY JSON matching the schema.
 
     try {
       final query = AskKinPurseQuery.fromJson(result.data!);
+      // A how-to question gets its answer, never a list of every transaction.
+      if (query.intent == 'help') {
+        return AskKinPurseResult(
+          answerText: query.answer ?? query.explanation,
+          primaryAmount: 0,
+          count: 0,
+          matchingTxns: const [],
+        );
+      }
       final r = executeLocally(query, txns, categories, members,
           sources: sources, sourceOf: sourceOf);
       return AskKinPurseResult(
